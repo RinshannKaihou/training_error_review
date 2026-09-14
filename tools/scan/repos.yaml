@@ -1,0 +1,27 @@
+# Stable query set for later daily scans. Do not copy this file per day.
+# Unauthenticated GitHub Search = 10 req/min. Keep daily queries ≤ 8.
+
+window_days: 7
+
+github:
+  - repo: NVIDIA/Megatron-LM
+    keywords: [NaN, "loss spike", "silent", "wrong gradient", checkpoint]
+  - repo: deepspeedai/DeepSpeed
+    keywords: [ZeRO, checkpoint, "silent", NaN, mismatch]
+  - repo: pytorch/torchtitan
+    keywords: [NaN, spike, correctness, "loss"]
+  - repo: verl-project/verl   # 2026-08-18: volcengine/verl renamed/moved; old qualifier returns 422
+    keywords: [mismatch, logprob, collapse, "importance sampling", GRPO]
+  - repo: OpenRLHF/OpenRLHF
+    keywords: [advantage, KL, mismatch, NaN]
+  - repo: huggingface/trl
+    keywords: [GRPO, "vLLM", mismatch, "importance sampling"]
+  - repo: modelscope/ms-swift
+    keywords: [packing, mask, template, GRPO]
+
+arxiv:
+  - "silent data corruption LLM training"
+  - "loss spike pre-training"
+  - "training inference mismatch RL"
+  - "GRPO advantage bias"
+  - "MoE expert collapse training"

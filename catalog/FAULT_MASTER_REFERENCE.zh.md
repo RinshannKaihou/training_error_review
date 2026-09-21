@@ -20,6 +20,8 @@
 
 ## 滚动汇总
 
+> 2026-09-15—21 补扫：GitHub 断点窗口回填，新增 ACT.06–.07、PAR.12–.13、OPT.16、CKPT.25–.27、DATA.13、SFT.16、RL-ADV.09–.10、RL-RO.18–.19、NUM.13、OBS.13，共 **16 条**；主编目 **185 → 201 条**。arXiv export API 仍不可用（连接超时），以 arXiv 网页检索作补充，未发现满足收录边界的新论文。
+
 > 2026-08-17：种子编目初版。矿源：训练 SDC / loss-spike / TIM / GRPO 文献 + DeepSpeed / Megatron / OpenRLHF 已核实 issue + 本地 Megatron 实验。**64 条**。
 > 2026-08-18：每日扫描首跑（GitHub 7 仓库 + arXiv 4 查询）。新增 CKPT.06 / DATA.06 / OBS.04，补 RL-RO.01 / RL-RWD.03 来源。**67 条**。
 > 2026-08-19：每日扫描。新增 NUM.05 / NUM.06 / PAR.04 / LOSS.05 / CKPT.07 / CKPT.08 / RL-RO.07，补 RL-RO.01 来源（MIPI/MIPU）。**74 条**。
@@ -282,6 +284,16 @@ stage: `rl` · Cov: `var:bf16_vs_fp16_rl_engine_mismatch` · 置信度 `verified
 
 # PAR · 并行 / 梯度归约
 
+
+### NUM.13 `gkd_mixed_precision_jsd_sign_flip`
+
+stage: `sft` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：Megatron GKD 的 teacher BF16 / student FP32 JSD 计算在同一 logits 上偏离 FP32/FP64 reference，甚至把本应非负的 JSD 算为负值。
+- **来源**：[ms-swift #10156](https://github.com/modelscope/ms-swift/issues/10156)。
+- **行为效应**：loss 与梯度在不报错的情况下改变符号和幅度，蒸馏优化方向失真。
+- **发现来源**：2026-09-16 每日扫描
+
 ## PAR
 
 ### PAR.01 `zero2_bf16_multi_subgraph_incomplete_reduce`
@@ -386,6 +398,25 @@ stage: `pretrain` · Cov: `var:fsdp_degenerate_dp_group_grad_doubling` · 置信
 ---
 
 # CKPT · 检查点
+
+
+### PAR.12 `mfsdp_hybridep_eager_bad_gradients`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：MFSDP v2 与 HybridEP 组合在 eager 训练中间歇产生跨 rank 不一致的 gradient。
+- **来源**：[Megatron-LM #7400](https://github.com/NVIDIA/Megatron-LM/issues/7400)。
+- **行为效应**：非确定性坏梯度可进入 optimizer；不是 fail-fast 通信错误。
+- **发现来源**：2026-09-15 每日扫描
+
+### PAR.13 `liger_dpo_kto_ddp_gradient_sync_skipped`
+
+stage: `sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：TRL DPO/KTO 启用 `use_liger_kernel=True` 时跳过 DDP gradient synchronization，各 rank 用本地梯度独立更新。
+- **来源**：[trl #7245](https://github.com/huggingface/trl/issues/7245)。
+- **行为效应**：作业持续运行但参数逐 rank 分叉，训练目标已不再是声明的 data-parallel 优化。
+- **发现来源**：2026-09-18 每日扫描
 
 ## CKPT
 
@@ -609,6 +640,34 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 
 # DATA · 数据管线
 
+
+### CKPT.25 `to_empty_rotary_inv_freq_uninitialized`
+
+stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：torchtitan transformers-modeling backend 经 `to_empty()` 后 rotary `inv_freq` 未重新初始化。
+- **来源**：[torchtitan #4783](https://github.com/pytorch/torchtitan/issues/4783)。
+- **行为效应**：模型可继续进入训练/前向，但位置旋转使用未初始化值而产生静默数值错误。
+- **发现来源**：2026-09-16 每日扫描
+
+### CKPT.26 `async_save_auto_resume_missing_latest_marker`
+
+stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl 的 FSDP/veomni/torchtitan 异步保存不写 `latest_checkpointed_iteration.txt`，`resume_mode=auto` 无法定位最新检查点并从头重启。
+- **来源**：[verl #7952](https://github.com/verl-project/verl/issues/7952)。
+- **行为效应**：恢复命令成功而训练进度静默回退，数据/更新被重复消费。
+- **发现来源**：2026-09-17 每日扫描
+
+### CKPT.27 `asyncgrpo_stale_group_resume_cursor_pinned`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：AsyncGRPO 丢弃 stale group 后未把它记入已解决集合，checkpoint cursor 永远锚在该 group。
+- **来源**：[trl #7274](https://github.com/huggingface/trl/issues/7274)。
+- **行为效应**：恢复后已训练的 rollout 大量重复训练，而日志仍显示正常 resume。
+- **发现来源**：2026-09-18 每日扫描
+
 ## DATA
 
 ### DATA.01 `rank_shuffle_seed_desync`
@@ -722,6 +781,16 @@ stage: `pretrain/sft` · Cov: `NEW` · 置信度 `verified`
 ---
 
 # OPT · 优化器
+
+
+### DATA.13 `deepseekv4_sparse_attention_cross_document_leak`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：DeepSeek-V4 sparse attention 忽略 packed-document boundary，使 token 可跨样本文档互相注意。
+- **来源**：[torchtitan #4801](https://github.com/pytorch/torchtitan/issues/4801)。
+- **行为效应**：训练可持续且 loss 正常，但因果/样本隔离被破坏。
+- **发现来源**：2026-09-16 每日扫描
 
 ## OPT
 
@@ -864,6 +933,16 @@ stage: `pretrain` · Cov: `var:muon_update_applied_per_microbatch` · 置信度 
 
 # ACT · 重计算
 
+
+### OPT.16 `deepspeed_subgroup_fp32_grad_repeated_clear`
+
+stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：DeepSpeed `_prepare_fp32_grad_for_sub_group` 对每个 subgroup 重复清空全体参数梯度，后续 subgroup 的实际更新依赖错误的残留/清零状态。
+- **来源**：[DeepSpeed #8586](https://github.com/deepspeedai/DeepSpeed/issues/8586)。
+- **行为效应**：无配置错误提示；优化步可能静默遗漏或篡改梯度。
+- **发现来源**：2026-09-16 每日扫描
+
 ## ACT
 
 ### ACT.01 `moe_data_dependent_recompute_diverge`
@@ -914,6 +993,16 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 ---
 
 # KER · 训练 kernel
+
+
+### ACT.06 `activation_offload_reload_overlaps_d2h`
+
+stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron fine-grained activation offloading 在 `tensor_pop` 中对尚未完成 D2H 的缓冲区内联 reload；同一 warmup iteration 可读取被在途 copy 覆写/未完成的数据。
+- **来源**：[Megatron-LM #7398](https://github.com/NVIDIA/Megatron-LM/issues/7398)。
+- **行为效应**：训练不会因配置非法而停止，但该 iteration 的 activation/backward 可静默偏离。
+- **发现来源**：2026-09-15 每日扫描
 
 ## KER
 
@@ -1362,6 +1451,16 @@ stage: `sft` · Cov: `var:loss_scale_reweights_rounds` · 置信度 `verified`
 
 # RL-RWD · reward
 
+
+### SFT.16 `qdora_magnitude_vector_bf16_noop_updates`
+
+stage: `sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：SFTTrainer 的 QLoRA fp16/bf16 downcast 同时作用到 QDoRA `lora_magnitude_vector`；小更新落在 BF16 分辨率以下。
+- **来源**：[trl #7268](https://github.com/huggingface/trl/issues/7268)。
+- **行为效应**：参数保持“可训练”、无报错，却持续数值不变；恢复该向量 FP32 后更新恢复。
+- **发现来源**：2026-09-18 每日扫描
+
 ## RL-RWD
 
 ### RL-RWD.01 `format_reward_hacking`
@@ -1508,6 +1607,25 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 ---
 
 # RL-KL
+
+
+### RL-ADV.09 `pfppo_advantage_trajectory_mispair`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl v1 trainer 在 `algorithm.use_pf_ppo` 下把 advantages 与 trajectories 错配。
+- **来源**：[verl #7956](https://github.com/verl-project/verl/issues/7956)。
+- **行为效应**：更新顺利执行但 credit assignment 指向错误轨迹。
+- **发现来源**：2026-09-18 每日扫描
+
+### RL-ADV.10 `gmpo_liger_dispatches_grpo_objective`
+
+stage: `rl` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：`GMPOTrainer` 启用 Liger 时继承 GRPO 的 dispatch，实际调用 fused GRPO loss 而非 GMPO objective。
+- **来源**：[trl #7270](https://github.com/huggingface/trl/issues/7270)。
+- **行为效应**：无 crash；一完整 optimizer step 的梯度相对 L2 与 GMPO 相差约 0.20，训练目标被静默替换。
+- **发现来源**：2026-09-18 每日扫描
 
 ## RL-KL
 
@@ -1737,6 +1855,25 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 # OBS · 观测性
 
+
+### RL-RO.18 `free_cache_engine_sleep_resume_stale_rollout_weights`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl 使用 `free_cache_engine=true` 时，vLLM sleep/resume 后 rollout engine 的权重状态被损坏/陈旧。
+- **来源**：[verl #7904](https://github.com/verl-project/verl/issues/7904)。
+- **行为效应**：权重同步表面成功，但 rollout 输出变为乱码，行为策略与训练策略失配。
+- **发现来源**：2026-09-16 每日扫描
+
+### RL-RO.19 `ipc_weight_sync_ack_precedes_tp_copy_completion`
+
+stage: `rl` · Cov: `NEW` · 置信度 `speculative`
+
+- **机制**：ms-swift Ray Megatron IPC weight sync 在所有 TP rank 完成读取前由 driver ACK，sender 可复用同一 bucket 覆写慢 rank 仍在读取的权重。
+- **来源**：[ms-swift #10204](https://github.com/modelscope/ms-swift/issues/10204)。
+- **行为效应**：已观察到初次 rollout 乱码/重复；共享缓冲区生命周期竞态是公开代码定位出的候选根因，尚缺端到端定因。
+- **发现来源**：2026-09-19 每日扫描
+
 ## OBS
 
 ### OBS.01 `stability_monitor_env_lost_in_torchrun`
@@ -1846,4 +1983,14 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 - **来源**：DeepSpeed #8456（2026-09-08；间隔解析表、`raise Warning` 语义坑、测试盲区三段式分析）。https://github.com/deepspeedai/DeepSpeed/issues/8456
 - **行为效应**：无 crash、无日志——自管 dataloader 的 ZenFlow run 用**第一步选出的列**训完整个 run：重要性列从不轮换，训练动态与配置语义（按 epoch 重选）背离；`auto`+整数 interval 组合还会在初始化期以一条「描述 fallback 的报错」崩掉，掩盖真正语义。与 OBS.02（空指标当健康）同族但更隐蔽：**指标全正常、行为整体退化**；「测试断言不 crash 而非断言语义」的掩体与 OBS.07/KER.10 的假绿同型；与 CKPT.07（配置被静默忽略）的差异：这边不是死配置，是**配置语义依赖一个未传入的运行时对象**，签名上完全合法。
 - **发现来源**：2026-09-12 每日扫描
+
+
+### OBS.13 `conditional_distributed_metric_key_desync`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：GRPO/RLOO 各 rank 按本地条件键集合调用 gather；不同集合既可导致 collective 死锁，也可在键序恰巧对齐时把不同指标静默混合，且 local-mean 的无权平均进一步扭曲数值。
+- **来源**：[trl #7310](https://github.com/huggingface/trl/issues/7310)。
+- **行为效应**：除 fail-loud deadlock 外，存在更隐蔽的 cross-metric contamination 与错误全局均值，监控曲线不再对应实际训练量。
+- **发现来源**：2026-09-20 每日扫描
 

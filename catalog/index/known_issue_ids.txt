@@ -174,6 +174,7 @@ pytorch/torchtitan#4511
 pytorch/torchtitan#4598
 pytorch/torchtitan#4688
 pytorch/torchtitan#4692
+pytorch/torchtitan#4783
 pytorch/torchtitan#4801
 verl-project/verl#7401
 verl-project/verl#7405
@@ -212,3 +213,4 @@ verl-project/verl#7844
 verl-project/verl#7904
 verl-project/verl#7931
 verl-project/verl#7952
+verl-project/verl#7956

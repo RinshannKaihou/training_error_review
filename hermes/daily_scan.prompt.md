@@ -60,7 +60,7 @@ python3 tools/export_faults.py
 ### 4. 本库 Git 提交与远程核验（每日必做）
 
 - **扫描前置检查：**仅在 `/workspace/training_error_review` 操作。确认当前分支为 `main` 且上游为 `origin/main`，`git status --porcelain -uall` 为空；运行 `git fetch origin main` 后确认 `HEAD` 与 `origin/main` 相同。已有脏文件、暂存变更、本地待推提交、远程领先或 fetch 失败时，不要扫描、更不要自动覆盖/暂存/推送存量；立即报告阻塞。不得 `git pull`、`reset`、`push --force`。
-- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/FAULT_MASTER_REFERENCE.zh.md`、`catalog/index/known_issue_ids.txt`、`catalog/index/known_arxiv_ids.txt`、`catalog/index/known_names.txt`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`、`exports/fault_catalog.csv`、`exports/fault_catalog.xlsx`；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/索引运行 `git diff --cached --check -- . ':!exports/fault_catalog.csv'`（CSV 的 CRLF 由编目校验器核验，Git 会误报行尾）；无变更注明无需提交，不造空提交。
+- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/FAULT_MASTER_REFERENCE.zh.md`、`catalog/index/known_issue_ids.txt`、`catalog/index/known_arxiv_ids.txt`、`catalog/index/known_names.txt`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`、`exports/fault_catalog.csv`；`exports/fault_catalog.xlsx` 按现有 `.gitignore` 仅生成并校验，不强行入 Git；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/索引运行 `git diff --cached --check -- . ':!exports/fault_catalog.csv'`（CSV 的 CRLF 由编目校验器核验，Git 会误报行尾）；无变更注明无需提交，不造空提交。
 - 有变更时 `git commit -m "daily scan YYYY-MM-DD: training"`，再 `git push origin HEAD:main`；用 `git ls-remote origin refs/heads/main` 核对远程 SHA 等于本地 `HEAD`。提交/推送/核验失败要明确报告本地 commit ID、错误及远程未同步事实，不强推、不追加重复提交。Git 操作在最终摘要前完成。
 
 ### 5. 飞书摘要（中文，术语保留英文）

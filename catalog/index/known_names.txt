@@ -67,6 +67,7 @@ CKPT.25	mfsdp_ckpt_stage_local_layer_keys_pp_resize
 CKPT.26	async_resume_cursor_pinned_by_stale_dropped_group
 CKPT.27	async_save_skips_tracker_write_non_megatron_scratch_restart
 CKPT.28	swiglu_interleave_layout_unconverted_on_load
+CKPT.29	hf_rotary_inv_freq_uninitialized_after_to_empty
 DATA.01	rank_shuffle_seed_desync
 DATA.02	packing_cross_document_attention
 DATA.03	loss_mask_includes_prompt
@@ -180,6 +181,7 @@ RL-ADV.06	replay_buffer_shape_contract_degenerates
 RL-ADV.07	singleton_group_vectorized_zero_path
 RL-ADV.08	guess_path_spurious_advantage
 RL-ADV.09	filter_metric_predicate_mismatch_phantom_advantage
+RL-ADV.10	pfppo_v1_resampled_advantage_trajectory_mispair
 RL-KL.01	k1_cancels_tim_early_collapse
 RL-KL.02	reverse_kl_as_loss_wrong_is_weight
 RL-KL.03	entropy_collapse_to_repetition

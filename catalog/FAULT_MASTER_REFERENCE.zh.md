@@ -2,7 +2,7 @@
 
 > **本文档是什么**：预训练 / SFT / RL 已编目故障的**单一自包含参考**。对照仓库是 `../inference_error_review`（推理 serving）。本文档只收**训练期**机制；与推理交叉的条目写指针，不复制正文。
 >
-> **当前阶段**：Phase 1 种子编目（2026-08-17 基础调研）。条数以正文 `### PREFIX.NN` 标题为准，禁止硬编码。
+> **当前阶段**：种子编目始于 2026-08-17，现已进入持续每日扫描。条数以正文 `### PREFIX.NN` 标题为准，禁止硬编码。
 
 ---
 
@@ -47,6 +47,16 @@
 > 2026-09-12：每日扫描（09-11 中途未产出报告，本轮并合 09-11 原始数据 + 09-12 新搜索，窗口 `created:>=2026-09-05`、按 issue 号去重）。新增 PAR.10 / PAR.11 / CKPT.21 / CKPT.22 / DATA.12 / OPT.13 / OPT.14 / OPT.15 / ACT.05 / KER.11 / NUM.12 / RL-KL.07 / RL-RO.15 / RL-RO.16 / OBS.12（DeepSpeed Ulysses 交换被 torch.compile inline 后 tracer 不建模「empty 张量+写出参 collective」→q/k/v 梯度恒零、forward 数值正确；Megatron GTP expert 梯度 ×GTP/EGTP 静默放大（#7160/#7165 256×GB300 grad-norm 偏 8.4×）；DeepSpeed pipeline ckpt 文件名两位 pad 溢出+字典序→TP≥100 时 rank 11 静默加载 rank 100 分片；torchtitan TorchFT 缓存 optimizer state 标量 LR 陈旧+scheduler 恢复不回填→joining replica 错 LR 权重分叉；DeepSpeed AutoSP 序列分片切断 shift-by-one labels 边界；DeepSpeed AutoEP FP32 clip 把不相交专家范数取平均→clip_coef 随专家放置漂移 0.20；FusedAdam 每 dtype 单 step 计数器在间歇梯度参数间漂移→bias correction 错；Muon 谱缩放把 GTP 对齐 padding 行计入逻辑形状（~27% 偏差）；DeepSpeed partition_activations recompute 参数表每非张量参后插 None、全右移；Megatron op-fuser grouped-MLP 只读全局 autocast→per-layer precision override 永不生效（纯 TE 静默量化、GTP 才炸）；OpenRLHF BF16 RM 组基线被舍入 [1,1,1,1.0078]→advantage [0,0,0,2]；OpenRLHF k3 clamp 前向有限而 backward 经 0×inf 出 NaN 梯度污染参数；verl FSDP2 `to_empty()` 断 tied embedding 别名→静默 untied 训练；ms-swift GRPO response_prefix 生成侧属 prompt、训练侧属 completion→策略按未采样 token 计分、ppl_ratio 爆炸；DeepSpeed ZenFlow 自管 dataloader 时 select_interval=0→首步选列训全程、全部既有测试跑在错路径上恒绿），补 CKPT.20（verl #7820 nccl_timeout 死键）/ CKPT.11（Megatron #7186 MFSDP v2 缺 no_sync 只剩末 microbatch 梯度）/ CKPT.13（修复 PR #8460）/ SFT.13（verl #7844 SGLang 多模态 pad id clip）/ RL-RO.05（verl #7805 R2 replay revert-regression 史）来源。**176 条**。
 > 2026-09-13：每日扫描。新增 CKPT.23 / KER.12 / MOE.10 / LOSS.09 / SFT.14 / SFT.15（ms-swift on-policy resume 把 rollout 行数 offset 原样喂 query 行 sampler→n 倍跳过+data_seed 死键；trl #7181 维护者 root-cause 的 cuDNN SDPA backward kernel bug——显式 mask+`L%128==64`+logsumexp<−88.7 时 pad tile 打 0 分→dQ NaN、有限窗口静默错梯度；ms-swift Megatron colocate 路径 int device ordinal 使 vLLM post-load 处理从未执行且被宽 except 吞掉→rollout 用未 pack/未 fusion 权重采样；ms-swift DAPO/CISPO/FIPO 全局 token 归一后被 Trainer 再除 G→有效学习率随梯度累积漂移；ms-swift padding-free LD-DPO 用物理段长定共享前缀→prompt 位挤进 completion 折扣；ms-swift 显式 loss_type 路径丢 token weights→配置的 loss_scale 全部无效、零权重位泄漏），补 CKPT.20（verl #7815 独立 issue）/ RL-RO.15（verl #7834 关联 issue 正文：untied 路径 grad norm 0.3548→0.2271 实测）来源。09-12 报告的「下轮首查」两条（ms-swift #10100/#10072）本轮收录为 SFT.15/SFT.14。Megatron #7201（base-image 26.08 num-zeros 漂移）连续第二周无评论，继续跟踪。**182 条**。
 > 2026-09-14：每日扫描。新增 MOE.11 / CKPT.24 / RL-RO.17（Megatron global_aux_loss 累积 expert 计数配当前 microbatch 瞬时分母→router 梯度相对 L2 偏 0.25、物理等长 padding 掩盖触发；DeepSpeed ZeRO-3 tag 加载 FP32 重建分支不透传 tag 重新解析 `latest`→显式请求 earlier 实际进模型 later、日志反指正确版本；trl vLLM sync_weights 只清 KV prefix cache 漏清多模态 encoder cache→视觉 encoder 训练中图像复现命中旧权重 embedding、扰动权重后 logprob 不变）。**arXiv export API 连续第二天 Rate exceeded**（https/http 双端点 + 退避重试无效），4 查询未完成。**185 条**。
+> 2026-09-15：每日扫描。新增 KER.13（ms-swift 序列并行 ChunkedCrossEntropyLoss backward 把梯度 chunk 就地写进 saved logits 并把输入当梯度返回——叶子/非叶子/version-counter 形状 fail-fast，但单一 logits 消费者的 SP 训练路径静默跑通、backward 后调用方 logits 已被梯度值覆写），补 CKPT.20 来源（verl #7815 随 commit 2083eeb 修复关闭）。arXiv export API **连续第三天** Rate exceeded；Semantic Scholar 替代源未认证池同样大面积 429（仅 1 查询成功，唯一候选判 RL-ADV 已知机制的 VLA 域应用、边界外，未编号未入库）。**186 条**。
+> 2026-09-16：每日扫描。新增 ACT.06 / OPT.16 / RL-ADV.09 / RL-KL.08（torchtitan SAR pass 只重放 clone 不重放 schema 正确的 in-place 写→backward 拿变异前值、前向正确梯度静默错；Megatron 混精 clip 把 bf16/fp32 梯度塞进同一 TE multi_tensor launch、bf16 在前时 fp32 梯度被按 2 字节读出垃圾 norm/clip 不 crash；GRPO 动态采样按 shaped 分过滤时 all-fail 组内 shaping 离差被 std 归一提升为满幅 phantom advantage、只换 filter metric 即 EM 0.160 vs 0.763；trl GRPO KL bias correction 把 sequence-mean IS 权重 (B,1) 广播到 per-token KL、多出 spurious 梯度项且默认配置即中招），补 KER.13（#10129 无评论关闭）/ OPT.13（#8478 修复 commit `338ed51` + PP 下零专家参数 rank 场景由 all-reduced flag 解决）来源。arXiv export API 恢复（5/5 成功，此前三天 429）。**190 条**。
+> 2026-09-17：每日扫描。新增 PAR.12 / PAR.13 / ACT.07 / NUM.13（Megatron MFSDP v2 + Flex/HybridEP + 专家 outer optimizer sharding 间歇坏梯度/NaN——eager/无图/无裁剪三重排除仍存、alltoall 对照 3/3 健康而 HybridEP 复现 spike 3254；trl DPO/KTO 在 `use_liger_kernel=True` + plain DDP 下 unwrap 跑 loss 绕过 `DDP.forward`→reducer hooks 早退从不 all-reduce、2×H100 25/25 参数梯度跨 rank 不同；Megatron 细粒度激活 offload `tensor_pop` inline reload 对 D2H 无排序边→warmup 迭代梯度静默算在陈旧 staging buffer 上、B300 19/20 损坏而加边 0/20、文档承诺 compute stream 等待但 inline 路径不等；ms-swift GKD `jsd_loss` 接受 student FP32/teacher BF16 混精 logits→JSD 恒非负性破、符号翻转 −0.000170 vs FP32 +0.000509），补 OPT.16（#7338 归属裁决留在 Megatron-LM + 修复 PR #7279）/ RL-RO.01（QUADS 2607.15810：NVFP4 RL 不稳定主因是激活误差而非权重误差）来源。**194 条**。
+> 2026-09-18：每日扫描。新增 NUM.14 / PAR.14 / PAR.15 / CKPT.25 / OPT.17 / OPT.18 / KER.14 / KER.15 / MOE.12 / LOSS.10 / LOSS.11 / RL-RO.18 共 **12 条**（10 条来自 Megatron-LM #7452——ezyang 用 Astra+spmd_types 对 mcore `7a9e59de7` 的并行正确性审计，13 finding 逐条 CPU/Gloo repro + Appendix B：trl QLoRA fp16 下转型打到 QDoRA magnitude vector→更新量小于 BF16 精度静默 no-op；显式 ProcessGroupCollection 五路径静默回落全局 MPU 组→重算/SP gather/eval 混入别的 replica 数据；Bridge Wan decoder SP gather 默认 grad 模式与「每 rank 全 loss」不匹配→梯度恒 ×TP；MFSDP ckpt 按 stage 局部层号做 key→PP resize 后 strict load 成功但各 stage 恢复第一阶段层；GPT-OSS learnable sink 参数未标 TP 标志→grad norm 只剩 rank 0 的 head 梯度；GDN out_norm 不在 finalize 白名单→TP>1+SP off 梯度漏 all-reduce 副本确定性分叉；vocab-parallel CE label smoothing 尾按本地词表平均→per-rank loss 不等；gathered logits 被喂 vocab-parallel CE→loss 恒偏 +log(TP)、target 梯度项消失；MoE aux loss 就地归约覆写 token 计数→aux 梯度恒 ×TP/CP；CP-local loss mean-of-means→梯度方向畸变；MTP per-token loss 本地 token 比率→梯度随 rank token 分布漂移；另 verl #7904 colocated 默认 `free_cache_engine=true` 的 vLLM sleep/resume 周期静默损坏 rollout 权重→多语言乱码 reward 全零、表象伪装成 GRPO reward collapse），补 PAR.12（#7400 根因突破：独立 CUDA C++ repro 直指 cublasLt+NCCL 并发 retained-output、NV bug 6798870）/ PAR.13（trl 维护者测量更正：DPO 需先迁 #7243 chunked 路径）/ ACT.07（#7399 评审中）来源。**206 条**。
+> 2026-09-19：每日扫描。新增 HW.09 / PAR.16 / PAR.17 / CKPT.26 / KER.16 / MOE.13 共 **6 条**（FP-Sketch 事后 GEMM SDC 验证器、#7452 Appendix C 两条常数尺度误差转正：global_aux_loss 梯度经 DDP AVG 缩小 DP× / MFSDP v1 `average_in_collective=True` 忽略 scaling_factor 梯度恒 ×DP；trl AsyncGRPO stale-dropped group 把 resume 游标钉死→147/150 行重训；DeepSpeed Triton int32 偏移 2^31 回绕越界读写；over-dispersed routing 下 router 概率重要性信号塌缩、ppl 与下游能力反转），补 MOE.12（0z5a main `d564dd01d` 真实 NCCL 复现 + 隔离实验 aux 梯度精确线性 ×global/local + 修复 PR #7481）/ OPT.16（#7279 DeepSeek-V4-Pro 32 节点生产验证）/ RL-KL.04（trl #7270 GMPO+Liger 完整更新级复现、关闭为 #6808 duplicate、修复走向结构性移除分叉）/ NUM.14（修复认领）来源；KER.14 补昨日漏写的「发现来源」行。**212 条**。
+> 2026-09-20：每日扫描。新增 DATA.13 / RL-RO.19 共 **2 条**（verl FSDP value-model 引擎按外层模块显式签名探测 packed 边界能力——TRL value-head wrapper 只有 `**kwargs` → `use_remove_padding=True` 下 critic 静默丢 `cu_seqlens`、Qwen3.5 linear-attention 状态跨样本泄漏、SP=1 即中招；ms-swift Ray Megatron IPC 权重同步 ACK 在 TP barrier 之前、发送端即刻复用共享 bucket——慢 TP rank 读到半新半旧权重、rollout 静默损坏且无同步异常），补 DATA.11（trl #6626：MiniLLM `_compute_advantage` gamma_pow 按绝对位置索引——`length_normalization=False` 时 advantage 恒多乘 γ^t、`=True` 时 float32 下溢出 0/0=NaN，修复 #6635 open 自 8 月；#7295 维护者提案移除该 trainer 把它列为论据）/ OPT.08（torchtitan #4692 RFC 全量融合矩阵×逻辑矩阵清单、K3 生产侧逐逻辑矩阵 NS + aspect-ratio lr）来源。**214 条**。
+> 2026-09-21：每日扫描。新增 CKPT.27 / DATA.14 共 **2 条**（verl v0/v1 trainer 在非 Megatron 策略下 `async_save=True` 跳写 `latest_checkpointed_iteration.txt` 而 FSDPCheckpointManager 从不补写——ckpt 完好落盘但 `resume_mode=auto` 判无 ckpt、静默从 step 0 重训并覆写；trl GRPO/RLOO metric flush 按本地 key 集合调 collective——rank 间 key 集合分叉时指标混列 + mean-of-means 错权、reward/KL 诊断静默失准），补 RL-RO.19（修复 PR ms-swift #10207 已于 09-20 merge）、KER.16（修复 PR DeepSpeed #8591 已于 09-19 merge）、OPT.17（#7452 finding 8 被 dundysm 认领）、DATA.13（#7931 维护者确认 bug 在 veRL 能力探测侧）来源。**216 条**。
+> 2026-09-22：每日扫描。新增 NUM.15（trl #7320 维护者 root-cause：transformers<5 `TrainingArguments` 把 mixed precision 发布为进程级环境变量并读回作默认值——`bf16=False` 无法清除先前 trainer 钉下的 bf16，同进程后续 fp32 阶段/bare `Accelerator` 静默继承 bf16 autocast；trl 默认 `bf16=True` 使第一个 trainer 即钉死进程；修复 PR #7321 已 merge），补 KER.14（修复 PR #7466 draft）/ LOSS.10（修复 PR #7513）/ OPT.17（修复 PR #7530 已开）/ OPT.18（vipulsarode 认领）/ MOE.12（Connor-XY 请 zhongbozhu 评审 #7481）/ KER.10（#7463 同 packed+CP 路径 256K crash 面补充：oncall 分配 hxbai triage）来源。**217 条**。
+> 2026-09-23：每日扫描。新增 CKPT.28 / DATA.15 / MOE.14 / RL-KL.09 共 **4 条**（Megatron 原生路径加载 contiguous SwiGLU ckpt 缺 gate/up interleave 转换——SwiGLU 配错通道、initial loss 0.2→2.2 无 crash、Bridge 已转换而 main 缺步；torchtitan DSV4 重写 `get_attention_masks()` 丢 positions/文档边界元数据——sparse attention 窗口跨 packed 文档边界、position 重置契约被 override 破坏；trl `router_aux_loss_coef` 用可选字段 `output_router_logits` 推断 MoE——64 个 MoE config 中 30 个不声明（DeepSeek/GLM4-MoE/Kimi-Linear 全中）、近半架构 aux loss 静默 no-op；全管线 FP8 RL 复合量化噪声把负 advantage token 的 ratio 推出 trust region——惩罚梯度被错误归零、entropy surge + 乱码、Calibrated Clipping 缓解），补 RL-RO.01 来源（2609.22870 TIM 残差经非线性 clip 放大）；#7310 报告者给出 20 行最小 repro 坐实 DATA.14 死锁面；verl #7987（#7978 修复）1×B200 验证通过。**221 条**。
+> 2026-09-24：每日扫描。新增 RL-RWD.08（trl OpenReward `env.reward` 哨兵 0.0 与合法 0 分坍缩——从未打分的 rollout 与真 0 分 bit 级同值、`unscorable_mask` 失效、放弃/超限被当真实负信号进 advantage；先行修复 PR #6430 曾获维护者正评后被关未合、缺陷在 HEAD 仍活），补 KER.14（Megatron #7464 第三方独立复现：TP1 vs TP2 全梯度相对 L2 0.0515、三机复现）/ OPT.18（vipulsarode scoped 修复 PR #7613 已开：GDN/GDN2 × RMSNorm/LayerNorm 全覆盖 + finalizer 恰好一次求和单测）/ CKPT.26（修复 PR trl #7294 cross-ref 落定，仍 open）来源。窗口内其余候选均判边界外（trl #7362 fail-fast + 纯成本、#7354 启动期 KeyError、#7353 文档；DeepSpeed #8639 初始化 fail-fast、#8572 启动期校验放宽边界；Megatron #7464 即 KER.14 独立复现；verl #7990 closed completed）。**222 条**。
 
 | 轴 | 分布 |
 |---|---|
@@ -60,21 +70,21 @@
 
 | 前缀 | 主题 | 条数 |
 |---|---|---|
-| HW | 硬件 / 训练期 SDC | 8 |
-| NUM | 数值 / 混精 / 非确定性 | 12 |
-| PAR | 并行 / 梯度归约 | 11 |
-| CKPT | 检查点 / resume | 24 |
-| DATA | 数据管线 | 12 |
-| OPT | 优化器 | 15 |
-| ACT | 重计算 / 卸载 | 5 |
-| KER | 训练 kernel | 12 |
-| MOE | MoE 路由 / EP | 11 |
-| LOSS | loss spike / 长跑退化 | 9 |
+| HW | 硬件 / 训练期 SDC | 9 |
+| NUM | 数值 / 混精 / 非确定性 | 15 |
+| PAR | 并行 / 梯度归约 | 17 |
+| CKPT | 检查点 / resume | 28 |
+| DATA | 数据管线 | 15 |
+| OPT | 优化器 | 18 |
+| ACT | 重计算 / 卸载 | 7 |
+| KER | 训练 kernel | 16 |
+| MOE | MoE 路由 / EP | 14 |
+| LOSS | loss spike / 长跑退化 | 11 |
 | SFT | 模板 / packing / 标签 | 15 |
-| RL-RWD | reward | 7 |
-| RL-ADV | advantage / GRPO 统计 | 8 |
-| RL-KL | KL / entropy | 7 |
-| RL-RO | rollout ↔ train（TIM） | 17 |
+| RL-RWD | reward | 8 |
+| RL-ADV | advantage / GRPO 统计 | 9 |
+| RL-KL | KL / entropy | 9 |
+| RL-RO | rollout ↔ train（TIM） | 19 |
 | OBS | 观测性骗过 | 12 |
 
 ---
@@ -163,6 +173,15 @@ stage: `pretrain/shared` · Cov: `NEW` · 置信度 `documented`
 - **来源**：Xia, Xu, Yun, Lin, Liu, Li, "TrainSDC: Characterizing and Mitigating Silent Data Corruption in Large Language Model Training", arXiv:2608.30769（2026-08-31，窗口内）。https://arxiv.org/abs/2608.30769
 - **行为效应**：单次瞬态 SDC 是否演化为轨迹级偏差由落点决定——Q/K 路径、大梯度指数位的故障无 Xid、无 NaN 地把训练推离原轨迹；对 Transformer 计算接口均匀设防的方案（ABFT 类）对这两类热点覆盖差。与 HW.01（节点级 optima-shift 现象学）、HW.06（永久故障的层/位 RTL 刻画）互补：这条给出**前向位置 × 反向梯度指数**的可操作易损性地图，也解释了 HW.01 中「ABFT 覆盖大多失败」的原因。
 - **发现来源**：2026-09-02 每日扫描
+
+### HW.09 `fp_sketch_post_hoc_gemm_sdc_localization`
+
+stage: `pretrain/shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：半精度（fp16/bf16）操作数、FP32 累加交付的 tensor core GEMM 上的 SDC **事后验证器**能力边界刻画：ABFT 须 fused 进 kernel 或编码操作数、且每次校验和至多定位一个错误；FP-Sketch 在**未修改**的 GEMM 之后跑——sum sketch 每次调用检出损坏、hashed first-moment sketch + 独立重算确认可定位多个损坏条目（构造上无假阳性），每个故障给出坐标+幅度供 fleet 诊断；浮点下限制因素是 sketch 噪声而非桶碰撞，其常数依赖 BLAS 与操作数格式。
+- **来源**："Sketching the Error, Not the Product: Post Hoc Fault Recovery for Half Precision GPU Matrix Multiplication"（FP-Sketch），arXiv:2609.19758（2026-09-17，窗口内）。https://arxiv.org/abs/2609.19758
+- **行为效应**：这条是检测侧证据而非注入面：部署它的 run 可以在坏 GEMM 输出进梯度**之前**截获（对比 HW.01：未设防时 SDC 把训练推入另一局部最优）；「坐标+幅度」输出可直接对接 HW.03 的 fleet 级基率统计。与 HW.07（共识离群定位故障 rank）互补：那边 DP 副本间对称对照、这边单 kernel 输出域校验；与 HW.08（易损性地**图**）正交：那边告诉你哪里值得设防、这边提供不必改 kernel 的设防手段。
+- **发现来源**：2026-09-19 每日扫描
 
 ---
 
@@ -278,6 +297,33 @@ stage: `rl` · Cov: `var:bf16_vs_fp16_rl_engine_mismatch` · 置信度 `verified
 - **行为效应**：无 crash——BF16 RM 下组内小幅 reward 差被舍入抹平：GRPO 的组相对信号**劣化为阶跃**（要么全零要么放大），细粒度偏好学习静默失效；混合 dtype 管线（RM bf16、trainer fp32）最脆弱。与 NUM.02（bf16/fp16 RL 引擎 mismatch）同族：**RL 管线 dtype 边界的精度契约**，这边打击点在 reward→advantage 的组统计入口；与 RL-ADV.01（组 std=0 零学习）症状相似但根因不同：那边统计上真无差、这边**有差被舍入掉**。
 - **发现来源**：2026-09-12 每日扫描
 
+### NUM.13 `gkd_jsd_mixed_precision_sign_flip`
+
+stage: `sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：ms-swift Megatron GKD 的 `jsd_loss` 接受 **student FP32 / teacher BF16 混精 logits**，温度 scaling 前不统一提升精度：BF16 teacher logits 进 log-softmax/log-sum-exp 时精度不足，使数学上恒非负的 JSD = 0.5·KL(P_s‖M) + 0.5·KL(P_t‖M) 算出**负值**。同输入、同 mask、同 beta/temperature，仅把 loss 计算精度提到 FP32 → +0.000509（与 FP64 参照 +0.000509 吻合），原混精路径 −0.000170——符号翻转、幅度错约 3×。16 个捕获案例（2 步 × 8 rank）CUDA replay 与原 loss 全部吻合 1e-8（排除捕获错误）；最小合成 repro 直接调用安装版 `swift/rlhf_trainers/gkd_loss.py` 的 `jsd_loss`，无需模型/数据/通信。top-64 稀疏化（`gkd_logits_topk=64`）进一步放大敏感性。
+- **来源**：ms-swift #10156（2026-09-16；ms-swift 4.5.3 + Megatron-Core 0.18.0 + mcore-bridge 1.6.3，Qwen3.5-9B teacher / Qwen3.5-0.8B student，TP1/DP8 H100）。https://github.com/modelscope/ms-swift/issues/10156 ；修复草案 PR #10102（`SWIFT_GKD_JSD_FP32=1` opt-in，默认关、未合）。https://github.com/modelscope/ms-swift/pull/10102
+- **行为效应**：无 crash、无 NaN——**JSD loss 符号翻转**：loss 值与梯度相对高精度参照出现符号级偏差，训练日志只显示一个「小负数 loss」，极易当数值噪声忽略。与 NUM.12（BF16 reward 舍入掉组基线）同族：**RL/蒸馏管线的 dtype 边界精度契约**，这边打击点在散度计算的 teacher/student logits 混精入口；与 LOSS.08（GKD mean-of-means 归约错权）同文件域不同机制——那边归约几何错、这边输入精度错。
+- **发现来源**：2026-09-17 每日扫描
+
+### NUM.14 `qdora_magnitude_vector_downcast_silent_noop`
+
+stage: `sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：trl `SFTTrainer` 的 QLoRA 低精度训练路径在 trainer setup 时把参数**统一下转型**，连带把 DoRA/QDoRA 的 `lora_magnitude_vector` 从 FP32 降到 BF16——该向量的每步优化器更新量小于 BF16 可表示精度，`param += update` 被舍入吞掉：**参数保持 trainable、optimizer 正常 step、存储值永不变化**。Colab 三臂对照：DoRA（magnitude 保持 FP32）正常更新；QDoRA（被降到 BF16）训练全程 magnitude 逐位不变；QDoRA + trainer init 后把 magnitude cast 回 FP32 → 更新恢复。DoRA/QDoRA 参考实现均用 FP32 持有该向量但未成文契约。TRL 1.13.0 + PEFT 0.20.0 + bitsandbytes 0.50.2。
+- **来源**：trl #7268（2026-09-18；Colab repro + 三臂对照表）。https://github.com/huggingface/trl/issues/7268 ；2026-09-18 arcusbuilds 认领修复（评论区）。
+- **行为效应**：无 crash、无 warning——magnitude vector 静默冻结，DoRA 的方向/幅度解耦更新只剩方向分量，loss 可能照常下降（Base+A·B 仍在更新），质量偏差延迟可见；「trainable 参数零变化」这一事实只能靠显式 diff 前后值发现。与 NUM.09（混精 cast 扫过量化参数）/NUM.08（BF16 计数间距 256）同族「dtype 边界的更新量小于表示精度」，差异在这边是 **optimizer 更新被舍入完全吞掉**（不是偏差是 no-op）；与 OPT.06（有效更新缩小 32768 倍训练停滞）症状面同为「名义在训、实际不更新」，那边是 scale 除错、这边是精度不够；「setup 期统一下转型打到特殊参数」与 NUM.09 的 Float16Module 打法同型。
+- **发现来源**：2026-09-18 每日扫描
+
+### NUM.15 `training_args_env_leak_sticky_bf16_precision`
+
+stage: `sft/rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：transformers <5 的 `TrainingArguments.__post_init__` 把 mixed precision 作为**进程级环境变量**（`ACCELERATE_MIXED_PRECISION`）发布，并在下一次实例化时把**同一变量读回作默认值**：`bf16=False` 与「未设置」在该路径不可区分——一个 bf16 值**从此无法被后续配置清除**（只能被显式 `fp16=True`/`bf16=True` 覆盖）。TRL 配置默认 `bf16=True`（`base_config.py:105`），于是同进程里**第一个** trainer 把整个 worker 进程钉在 bf16；之后任何 `bf16=False` 的 trainer / bare `Accelerator` 在 transformers<5 + accelerate 旧版（不显式传 `mixed_precision`、回落读环境变量）组合下**静默继承 bf16 autocast**。trl CI 实测（维护者 root-cause）：chunked logps 路径自管 autocast 跑 bf16、full-logits 路径（未 `train()`、model 未被 prepare、forward 无 autocast 包装）跑 fp32——同测试两路径精度分叉，1709/2200 元素 mismatch、最大绝对差 8.1e-4（bf16 投影舍入、超 fp32 容差两个量级）、逐位确定（非顺序敏感）。transformers v5 显式传参构造 `Accelerator`、不再写环境变量。
+- **来源**：trl #7320（closed；albertvillanova 2026-09-21 root-cause：transformers 4.56.2 `training_args.py` L1867-1873 的发布/读回 + accelerate 1.4.0 `state.py` L866-874 的环境变量回落；明确「测试外真实影响面」= 同进程第二配置或 bare Accelerator：notebook 重跑、bf16 训练后接 fp32 阶段、in-process sweep——单 run 脚本拿到自己配置的精度）。https://github.com/huggingface/trl/issues/7320 ；修复 PR trl #7321（`Restore ACCELERATE_MIXED_PRECISION between tests`，已 merge——修复形状是测试侧 autouse fixture 清理进程态，transformers v5 上游已结构性移除该泄漏）。https://github.com/huggingface/trl/pull/7321
+- **行为效应**：无 crash、无 NaN——**显式请求 fp32 的阶段被静默换成 bf16 autocast**：评测/打分/第二阶段拿到的是低精度前向，误差 1e-4 量级、被普遍当作数值噪声。生产暴露面（维护者划定）：同进程多配置工作流（bf16 训练 → fp32 评测/sweep/notebook cell 重跑）；RL 管线里 policy/reference 模型若经不同构建路径（一方被 prepare、一方没有）也可能踩到同型 autocast 不对称。与 NUM.02（bf16/fp16 RL 引擎 mismatch）同族「精度选择的进程级粘性」：那边是两引擎显式配置不同、这边是**环境变量把一个配置的决定泄漏给后续全部配置**；与 KER.06（torch.compile 冻结 float kwarg）同为「首次调用的状态钉死后续语义」，断点一个在编译期常量、一个在进程环境；与 NUM.09（混精 cast 扫过量化参数）同为「dtype 决策越过了配置声明的边界」。
+- **发现来源**：2026-09-22 每日扫描
+
 ---
 
 # PAR · 并行 / 梯度归约
@@ -382,6 +428,60 @@ stage: `pretrain` · Cov: `var:fsdp_degenerate_dp_group_grad_doubling` · 置信
 - **来源**：Megatron-LM PR #7160（2026-09-09，closed merged；「失败是静默的——无 error 无 NaN，只表现为收敛差距」）。https://github.com/NVIDIA/Megatron-LM/pull/7160 ；Megatron-LM PR #7165。https://github.com/NVIDIA/Megatron-LM/pull/7165
 - **行为效应**：无 NaN、无 crash；expert 梯度恒放大 GTP 倍（或 prescale 错），方向不变——全局 clip 开启时被归一掩盖（连坐 OPT.04），MoE 与 dense 的学习率平衡被系统性打破，收敛 gap 无日志可查。与 PAR.05（退化 DP 组 2^N 翻倍）同型：并行轴重切后**梯度归一因子与实际副本数失配**，dense 路径自愈、expert 路径漏掉；与 OPT.05（expert 被优化器遗忘）互补：那边专家不动、这边专家被过度驱动。
 - **发现来源**：2026-09-12 每日扫描
+
+### PAR.12 `hybridep_intermittent_bad_gradients`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron MFSDP v2 + **Flex/HybridEP dispatcher**（`NVTE_CUTEDSL_FUSED_GROUPED_MLP=1`）+ 专家 outer optimizer sharding（`expert_outer_dp_sharding_strategy=optim`）下，全局梯度范数**间歇性**异常放大或 NaN。已排除的必要条件：CUDA graphs（训练/优化器图全关，eager 复现）、梯度裁剪（`clip_grad=0.0` 下复现）、rank-capacity 模式（unset 时同样 spike 到 3,254）、FP32 主梯度存储（FP16 主梯度 2/3 异常）。隔离对照：同模型 `alltoall` dispatcher 3/3 健康十步跑、轨迹贴合；换回 Flex/HybridEP 即复现 spike/NaN（65.97 @step3 / 3254.10 @step2）。根因尚未定位（issue 提供约化 repro，疑点在 flex dispatcher 的专家梯度归约路径）；敏感于插桩、健康跑也会出现，两节点 8×GB200 DeepSeek-V3 proxy（MLA + 16 专家 top-8，EP=2，4 个分布式优化器实例）。
+- **来源**：Megatron-LM #7400（2026-09-16；PRE_OPT 仪器读数 6.2→107.7→84.6→NaN 的原始序列 + 四臂隔离表；MCore `7a9e9c6` + #7277、DeepEP hybrid-EP `de0dd11`、TE 2.18.0）。https://github.com/NVIDIA/Megatron-LM/issues/7400 ；根因突破（2026-09-17/18 补）：报告者先在双 GB200 上以纯 Python 脚本（TE grouped GEMM + NCCL all-gather/reduce-scatter 并发异流、无 HybridEP/FSDP/autograd/优化器/图）复现，再以**独立 CUDA C++ reproducer**（直接 `cublasLtMatmul` + `ncclAllGather`/`ncclReduceScatter`，单进程每 GPU 一 host 线程、无 PyTorch/TE 依赖）复现同一「retained output」症状——8×BF16 GEMM M=N=2048/K=4096、FP32 累加、beta=0 本应覆写每个输出元素，检查却见 `2**100` 预填值残留；已提交 NVIDIA 内部 bug 6798870。https://nvbugspro.nvidia.com/bug/6798870 ；关联线索 #7232（HybridDeviceOptimizer 被 distributed optimizer 双重实例化，同域 c=0 未定）。https://github.com/NVIDIA/Megatron-LM/issues/7232
+- **行为效应**：无 crash：标准训练日志在 clip 关闭时打印 `grad norm: 0`（不代表梯度为零），异常只能靠独立 PRE_OPT 仪器看见；间歇性 + 对插桩敏感使复现困难，健康跑与坏跑交替。与 PAR.06（verl `fsdp_size=1` 静默关同步）区分：那边是配置面同步被关、数值恒错；这边数值**间歇**坏且 eager/无图/无裁剪三重排除后仍存，指向 dispatcher/归约路径本身的竞争或错值。clip 开启时会被裁剪吃掉变成「间歇性梯度被错误压制」（连坐 OPT 家族裁剪面）。
+- **发现来源**：2026-09-17 每日扫描
+
+### PAR.13 `liger_gate_skips_ddp_reducer_hooks`
+
+stage: `sft` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：trl `DPOTrainer`/`KTOTrainer` 的 `compute_loss` 在 **unwrapped model** 上跑 loss，只对 ZeRO-3/FSDP 走 `_forward_redirection`——plain DDP 下两个条件都不成立，`DistributedDataParallel.forward()` 从不执行 → `Reducer::prepare_for_backward()` 不被调用 → `expect_autograd_hooks_` 保持 false，reducer 的 autograd hooks 全部早退、**从不 all-reduce**，每个 rank 保留本地梯度。触发门是 `use_liger_kernel=True`（依赖 liger-kernel 安装，恰好是 unwrap 的动机）；由修复 ZeRO-3 的 #6372 引入（此前传 wrapped model、DDP 正确），v1.10.0–v1.12.0 在内。2×H100 实测：liger 开 → 25/25 参数跨 rank 梯度不同（max_abs_diff 1.265e-01）；liger 关 → 0/25（Qwen3-0.6B 310/310 同结论）。分布式测试 `test_dpo` 参数化 `ddp` 但从不传 `--use_liger_kernel`，且只断言 exit 0——静默失同步恰好骗过。
+- **来源**：trl #7245（2026-09-16；最小 repro + GradProbe all-gather 对比；修复方向 = 复用 `kto_trainer.py:1322`/#7077 已有的 DDP-aware 条件 `is_fsdp_enabled or model is not unwrapped_model`）。https://github.com/huggingface/trl/issues/7245 ；维护者测量更正（2026-09-16/18 补，qgallouedec 评论）：KTO 本体走 `_ChunkedLogProbFunction` 吃 redirect 无碍；DPO 在 main 上加同 guard 会让每 rank 抛 `NotImplementedError`（`FusedLinearDPOFunction` 内部 `torch.func.grad_and_value` 不能在 `DistributedDataParallel.forward()` 里跑）——**DPO 需先等 #7243 迁到 chunked 路径**，迁移后同 guard 达 0/310 参数跨 rank 差异；KTO 侧 chunked logprob 本身不 all-reduce 是既有独立缺口
+- **行为效应**：无 error、无 warning——N-GPU DDP 跑退化成 N 个独立单卡跑（各 `per_device_train_batch_size`），保存的 ckpt 只是 rank 0 的；收敛表象正常、有效数据量与多样本语义全部失效。与 PAR.09（CPU 类型串分桶跳过 allreduce）同症状面「梯度归约静默缺失」：那边是 ZeRO 分桶谓词失配、这边是 DDP reducer 生命周期被 unwrap 路径绕过——又是「fused/快捷路径绕过包装层」家族（cf. RL-KL.04/#7009 Liger 提前 return 丢 aux loss、#7062 vendored Liger 凿穿配置面）的第 6 个实例。
+- **发现来源**：2026-09-17 每日扫描
+
+### PAR.14 `explicit_pg_collection_group_fallback`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron-Core 传入与全局 MPU 组不同的显式 `ProcessGroupCollection`（Bridge decentralized-PG / 训推不同并行度评估真实使用）时，五条路径静默回落到**全局 MPU 组**执行集体通信：① MTP full-recompute 的 TE checkpoint 路径与非 TE `tensor_parallel/random.py` split/gather 都取 `get_tensor_model_parallel_group()` 而非 `self.tp_group`（#7403 只修了相邻的 MTP 输入投影）；② GPT MoE `padding_mask` scatter 漏传 `group=`（gpt_model.py:369，同函数上方 hidden-state scatter 传了）；③ `CrossAttention` 的 `linear_q/linear_kv` 构造不传 `tp_group/pg_collection`（stock T5 decoder spec 可达）；④ `LLaVAModel` embedding scatter 无 group；⑤ attention forward 把 `pg_collection.cp` **覆写回 build-time CP 组**且变异调用方共享的 collection（df4996f9f 引入）。后果都是「同形状、混数据」：4-rank repro 中 MTP 重算恢复 `[0,1,12,13]` 而非 `[0,1,2,3]`；LLaVA 样本 A 变 `[0,1,0,1]`；eval batch 2/3 输出误差 0.51/0.29 而 batch 1 吻合 1.2e-7——首 batch 掩盖。
+- **来源**：Megatron-LM #7452（ezyang 2026-09-17；Astra + spmd_types 对 `7a9e59de7` 的审计，findings 4/5/6/7/13，每条附 CPU/Gloo 2–4 rank 自包含 repro 与 checker 拒绝见证）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash、无 NaN——重算激活 / SP all-gather / eval 分片拿到**别的 replica 的数据**，错误随 batch 与路径组合静默滚动。与 DATA.09（caller mask 被库内默认值顶掉）同打击「调用方运行时上下文被全局默认覆盖」；与 PAR.06（`fsdp_size=1` mesh 混淆）同族「显式进程组语义与全局 MPU 状态分叉」，这边断在**集体通信的组选择**；⑤的 eval-CP 回退与 OBS.07（eval 混入训练态）表现面相邻但机制独立。
+- **发现来源**：2026-09-18 每日扫描
+
+### PAR.15 `bridge_wan_gather_default_grad_sums_tp_copies`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron-Bridge 的 Wan 扩散模型 decoder（wan_model.py:267，Bridge `34d8d4b8`）对 `gather_from_sequence_parallel_region(x)` 用**默认** `tensor_parallel_output_grad=True`——backward 变 reduce-scatter。但 Wan 在每个 TP rank 上计算**同一个完整 loss**，于是 backward 把 TP 份相同梯度**求和**：TP=2 时 decoder 权重梯度范数 7.8876387 而非 3.9438193（恰好 ×TP），forward 输出各 rank 一致（错值只在梯度）。H100 Wan perf recipe 用 TP=2、CP=4、SP——默认即中招。修复 = 该 gather 传 `tensor_parallel_output_grad=False`，并与模型逐参数 TP 梯度平均标志一起复核。报告时点尚未对 Bridge 单独开 issue（审计报告注明 to be filed）。
+- **来源**：Megatron-LM #7452 Appendix B（2026-09-17；ezyang 审计；数值 + 修复 + recipe 暴露面）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash、无 NaN——**decoder 参数的有效学习率恒 ×TP**，forward 全对、loss 正常下降，唯一表象是 Wan decoder 收敛动态随 TP 度不可比。与 PAR.11（GTP 梯度 ×GTP/EGTP）/MOE.12（aux 梯度 ×TP/CP）同病「梯度恒乘并行组大小」的第 3 个实例，这边断点是 **SP gather 算子的 grad 模式默认值与「每 rank 全 loss」的模型写法不匹配」；与 LOSS.09（G 缩放漂移）同为「并行度旋钮静默改有效学习率」。
+- **发现来源**：2026-09-18 每日扫描
+
+### PAR.16 `ddp_normalization_shrinks_aux_loss_grad_dp_factor`
+
+stage: `pretrain` · Cov: `var:aux_loss_normalization_domain` · 置信度 `documented`
+
+- **机制**：Megatron `--global-aux-loss` 的 aux 梯度路径把全局（跨 microbatch 累积、已对 aux loss 归一化的）aux loss 梯度交给 DDP 归约——DDP all-reduce 带 `1/DP` 平均，而该梯度的语义是**每步一份的标量损失梯度**（每个 DP rank 对同一 aux loss 贡献同一份、不是各持 partial）：AVG 之后 aux 梯度被**缩小 DP×**（audit 实测 DP=2 时 norm 0.3794 vs 正确 0.7588）。#7452 Appendix C 列为「常数尺度误差、无数值 dataflow 见证不计数」；09-19 裁决收录——**「应 SUM 的语义量被 AVG」本身就是分布类型错**，与 MOE.11（分母时序域）同一 aux-loss 归一化语义域、不同断点（归约算子选择），报表者注明 Qwen3-Next Bridge recipe 选中该路径。审核方（0z5a，#7481 作者）已声明其修复**不覆盖**本项（`global aux-loss normalization` 是独立在跟踪的工作）。
+- **来源**：Megatron-LM #7452 Appendix C（2026-09-17；ezyang Astra+spmd_types 审计；DP=2 数值对照）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash——**aux loss 的有效系数随 DP 度静默缩小 DP×**：负载均衡压力不足，专家分布漂向不均衡；DP 扩容（常用吞吐手段）即改变训练目标语义，且 loss 曲线不显任何异常。与 PAR.11 / PAR.15 / MOE.12 同族「并行度旋钮 × 恒定因子改梯度」，方向相反（缩小而非放大）；与 MOE.11 互补成对：同一 aux loss 的分子域（累积计数）与归约域（SUM/AVG）各有一个静默断点；与 PAR.05（退化 DP 组 2^N）都打击「对什么求平均」的假设，这边是**语义整体量被当可平均量**。
+- **发现来源**：2026-09-19 每日扫描
+
+### PAR.17 `gradient_reduce_preprocessing_ignores_scaling_factor`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron-FSDP v1 `gradient_reduce_preprocessing` 在 `average_in_collective=True` 时**忽略 `scaling_factor`**：该模式把梯度平均折进集合通信算子执行，预处理阶段本应配平的缩放不再应用——expert 梯度 `[6, 10]` 而非 `[3, 5]`（**恒 ×2**，DP=2 repro）。#7452 Appendix C 第二条；09-19 裁决收录：与 PAR.05「应累加的梯度被乘 2」互为镜像（**应缩放的梯度没缩放**），且经 Qwen3.5-35B-A3B MFSDP recipe（EP=2）真实可达。修复 = preprocessing 阶段对 `average_in_collective` 分支同样施加 scaling（或显式拒绝该组合）。
+- **来源**：Megatron-LM #7452 Appendix C（2026-09-17；audit 数值对照）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash——MFSDP v1 + `average_in_collective=True` 的 run 里**有效学习率恒 ×DP**，loss 照常下降、收敛动态随 DP 度不可比。与 PAR.05 同族「FSDP 梯度缩放算术」第 2 个实例（那边 2^N 翻倍、这边 DP× 不缩）；与 PAR.16 同日收录且方向相反（16 缩小 / 17 放大）——同一 audit 揭示 FSDP/DDP 缩放语义的两个对偶断点；与 PAR.13（liger 绕过 reducer）不同：那边梯度从不归约、这边归约了但系数错。
+- **发现来源**：2026-09-19 每日扫描
 
 ---
 
@@ -565,7 +665,7 @@ stage: `sft/pretrain` · Cov: `var:from_pretrained_silent_random_init` · 置信
 stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：verl V1 trainer（`trainer.use_v1=true`，`ppo_trainer.yaml` 默认）的保存条件只有 last-step / `save_freq` 整数倍，从不 import `should_save_ckpt_esi`、不跟踪 `max_steps_duration`——文档化的 `trainer.esi_redundant_time`（Volcengine MLP / SageMaker 容量块到期前 force-save 的缓冲窗口）在默认 trainer 上是**静默 no-op**。V0、Ray SFT、experimental separation、fully-async 四条路径都实现了 ESI force-save，V1 迁移时丢了。容量块在两个 `save_freq` tick 之间到期时，preemption 丢掉的不只是「进行中的 step」而是整个未落盘窗口。
-- **来源**：verl #7757（代码对照：V0 `ray_trainer.py` 的 `esi_close_to_expiration` 条件 vs V1 `trainer_base.py` 的两条件 save；配置 `save_freq=100 / esi_redundant_time=30 / total_training_steps=3` + 到期时间戳落在非 tick 步，实测无 force-save 日志、无 `global_step_*` 写出）。https://github.com/verl-project/verl/issues/7757 ；verl #7820（2026-09-12 补：同族 worker 进程组配置——`actor_rollout_ref.nccl_timeout` / `critic.nccl_timeout` 自 #6067 起被 `engine_workers.py:88` 的硬编码 `timeout_second=None` 短路，7 个官方示例脚本设置死键、`megatron_critic.yaml` 文档还主动教用户调大；grep 证实只剩 dataclass 字段与 docstring，无任何读取）。https://github.com/verl-project/verl/issues/7820 ；verl #7815（2026-09-13 补：#7820 的独立 issue 正文——dead key 从 #6067（2026-05 合入）起存在，7 个官方示例脚本设死键；修复 PR #7820 于 2026-09-10 开出，把超时线程进 worker 进程组构造）。https://github.com/verl-project/verl/issues/7815
+- **来源**：verl #7757（代码对照：V0 `ray_trainer.py` 的 `esi_close_to_expiration` 条件 vs V1 `trainer_base.py` 的两条件 save；配置 `save_freq=100 / esi_redundant_time=30 / total_training_steps=3` + 到期时间戳落在非 tick 步，实测无 force-save 日志、无 `global_step_*` 写出）。https://github.com/verl-project/verl/issues/7757 ；verl #7820（2026-09-12 补：同族 worker 进程组配置——`actor_rollout_ref.nccl_timeout` / `critic.nccl_timeout` 自 #6067 起被 `engine_workers.py:88` 的硬编码 `timeout_second=None` 短路，7 个官方示例脚本设置死键、`megatron_critic.yaml` 文档还主动教用户调大；grep 证实只剩 dataclass 字段与 docstring，无任何读取）。https://github.com/verl-project/verl/issues/7820 ；verl #7815（2026-09-13 补：#7820 的独立 issue 正文——dead key 从 #6067（2026-05 合入）起存在，7 个官方示例脚本设死键；修复 PR #7820 于 2026-09-10 开出，把超时线程进 worker 进程组构造）。https://github.com/verl-project/verl/issues/7815 ；2026-09-15 补：#7815 已随 commit 2083eeb 修复关闭（closed completed 2026-09-14）。
 - **行为效应**：无报错；配置项被接受、resolve 正常、run 正常推进——被抢占后才发现 ckpt 停在最近 tick，租约成本换来的冗余窗口没有兑现任何保护。与 CKPT.07（死配置参数静默 no-op）同形：**契约在配置面存在、在执行面缺席**，差异是这条的代价按真实训练进度计（窗口内全部 step 作废）；与 CKPT.15（异步 ckpt worker 异常被吞）互补：那边是保存动作失败被瞒，这边是保存决策根本不发生。
 - **发现来源**：2026-09-09 每日扫描
 
@@ -604,6 +704,42 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 - **来源**：DeepSpeed #8499（真实训练 + 双 ckpt + 参数逐比对 repro，作者建议 severity: high；master 71d316d）。https://github.com/deepspeedai/DeepSpeed/issues/8499
 - **行为效应**：无报错、无警告——rollback、eval 或新微调 run 静默用错模型，且唯一可见线索（返回路径/client_state）指向「正确」那份，日志无法自证。与 CKPT.01/CKPT.21（reshard 错位/文件名字典序错 rank）同族：**load 语义成功 + 内容错误**；差异在这边不是分片错位，而是**版本选择被 `latest` 文件劫持**——元数据来源与权重来源分离，显式 tag 的契约在重建分支断掉。
 - **发现来源**：2026-09-14 每日扫描
+
+### CKPT.25 `mfsdp_ckpt_stage_local_layer_keys_pp_resize`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `TransformerBlock` 在本地 `ModuleList` 里按 **stage 局部索引**（`decoder.layers.0..n-1`）注册层，只有 `sharded_state_dict`（transformer_block.py:782，offset 在 837）加上全局层号偏移；MFSDP adapter 把 `state_dict_for_save_checkpoint` 别名到普通 `state_dict`（mcore_fsdp_adapter.py:304），其 DTensor 元数据只描述 TP/DP 分片、不含层位。于是 MFSDP `fsdp_dtensor` ckpt 在 **PP=1 存、PP=2 加载**（Bridge MFSDP 文档明确支持该 resize）时：strict DCP load **成功**，但 stage 1 恢复的是 layers 0..n-1（第一阶段的层）而不是自己的 3–4——每个后续 stage 被第一阶段的层静默填充。4-MLP repro：输出 `[1.4989,1.6989,1.8989,2.0989]` 变 `[0.4661,0.6661,0.8661,1.0661]`（max err 1.0328）；换全局命名 exact 恢复。修复 = MFSDP state-dict key 加 pipeline 层偏移（或走 `sharded_state_dict`）、修复前拒绝 PP 不匹配加载。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 12，231 行 CPU/Gloo repro 含/不含真实 MFSDP buffer manager 双验证；Llama3-70B B300 recipe 用 MFSDP PP=1 暴露面确认）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：load 无报错、strict 校验绿——**每个 PP stage 训练第一阶段层的复制**，权重系统性错位但训练完全正常地跑下去；loss 不一定立刻异常（各 stage 内部一致）。与 CKPT.03（reshard 错位）/ CKPT.21（两位 pad 字典序错 rank）同族「load 成功 + 内容错位」，差异在这边是**key 语义域错误**（局部层号当全局层号）而非分片几何；「adapter 用普通 state_dict 别名绕开 sharded 契约」与 CKPT.05（非 sharded 路径丢 reshard 元数据）同型。
+- **发现来源**：2026-09-18 每日扫描
+
+### CKPT.26 `async_resume_cursor_pinned_by_stale_dropped_group`
+
+stage: `rl` · Cov: `var:async_rollout_buffer_state_lost_on_resume` · 置信度 `documented`
+
+- **机制**：trl AsyncGRPO `_save_checkpoint` 用「不在 `_trained_groups` 中的最小 group id」推 resume 位置——但 `RolloutQueueDataset.__iter__` 的 staleness 检查**丢弃**的 group（如慢 group 超 `max_staleness=4`）永远到不了 collator、永远不会进 `_trained_groups`：一个 stale-dropped group 把保存的 resume 游标**钉死**在它的位置。ckpt 正常写出、无任何错误。无 GPU 12 秒 repro（150 组、1 慢组）：run 1 实际训完 150 组、saved `prompt_index=2`（被 group 2 钉住）；resume 后从行 2 重启——**147/150 行被训练两次**、只有 3 行是新的。`AsyncDistillationTrainer._save_checkpoint` 的 `_trained_prompts` 同代码同病。修复 = resume 游标对 `_trained_groups ∪ _dropped_groups` 取（在途组仍照旧压住游标）。
+- **来源**：trl #7274（2026-09-18；纯 CPU repro gist + 双 run 对照）。https://github.com/huggingface/trl/issues/7274 ；修复 PR trl #7294（cross-ref 于 2026-09-18，仍 open）——修法即「`_trained_groups ∪ _dropped_groups`」并加在途组照旧压游标，与本条记载的修复方向一致。https://github.com/huggingface/trl/pull/7294
+- **行为效应**：无 crash、ckpt 可加载、指标正常——**resume 后近全量数据被重复训练**（数据分布被旧样本主导），有效样本量与预算核算系统性失真；「保存的数字看起来合理」（在合法范围内）使其不被怀疑。与 CKPT.16（异步 RL resume 丢在途 rollout 状态）同族**异步 RL 的 resume 契约缺状态面**第 4 个实例：那边丢 buffer 内容、这边游标被死键钉住，方向相反（丢 vs 重）；与 CKPT.18（sampler 重建丢 epoch 种子 → 81% 重复）行为效应同型「resume 后大比例样本重复」，这边重复是**staleness 丢弃副作用**而非种子丢失。
+- **发现来源**：2026-09-19 每日扫描
+
+### CKPT.27 `async_save_skips_tracker_write_non_megatron_scratch_restart`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl v0/v1 trainer 的 `_save_checkpoint` 都有一个无条件分支：`actor.checkpoint.async_save=True` 时只 `logger.info("skip write latest_checkpointed_iteration.txt ...")` 后 `return`——**不检查 `actor.strategy`**。该跳过假设「checkpoint manager 稍后会写 tracker」，但只有 `MegatronCheckpointManager` 自己写 tracker（megatron_checkpoint_manager.py:1136-1146，`async_save && rank==0` 守卫）；backing `fsdp`/`fsdp2`/`veomni`/`torchtitan` 全部引擎的 `FSDPCheckpointManager` 里 `async_save` **零次出现**——同步存分片、从不碰 tracker。于是非 Megatron 策略下 tracker 被两边同时跳过：trainer 跳（等 manager）、manager 无实现。`config.py:37` 注释明写「Only implemented for Megatron as of now」但无校验，`async_save: False` 存在于**每个** backend 的 actor.yaml:142——FSDP 上是可达旋钮。
+- **来源**：verl #7952（2026-09-20；驱动真实 `RayPPOTrainer._save_checkpoint` 的对照 repro：async_save=False → tracker 写出、`find_latest_ckpt_path` 返回 global_step_3；async_save=True → 只有 `global_step_3/`、tracker 不存在、返回 None；`grep -c async_save` megatron=10 / fsdp=0；upstream main `23a341e3`）。https://github.com/verl-project/verl/issues/7952 ；同日补：修复 PR verl #7955（方向 a——`ActorConfig.__post_init__` 拒绝 `async_save` + 非 Megatron strategy 组合 + CPU 单测）已开出。
+- **行为效应**：ckpt 数据完整落盘、run 正常推进、无 error 无 warning（唯一日志是一条 INFO）——重启时 `find_latest_ckpt_path` 返回 None → `resume_mode=auto` 判「无 ckpt」→ **静默从 step 0 重训并覆写盘上全部完好 ckpt**（长 run 的整段进度作废）。SFT 不受影响（CheckpointHandler 无条件写 tracker）。与 CKPT.20（V1 ESI force-save 不接线）同形「契约在配置面、执行面缺席」、同是 verl trainer 的保存决策面，差异：那边该存的时刻没存、这边存了但**指针（可达性）没写**；与 CKPT.15（ckpt worker 异常被吞返回 success）互补：那边内容坏、这边内容完好但不可达；「跳过方与善后方分属两层、互不知情」的断裂与 CKPT.16（异步 RL resume 契约漏在途状态）同族——异步保存契约没有单一 owner。
+- **发现来源**：2026-09-21 每日扫描
+
+### CKPT.28 `swiglu_interleave_layout_unconverted_on_load`
+
+stage: `pretrain/sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron-LM `--moe-mlp-glu-interleave-size 32` 改变激活侧对 FC1 输出的解释（gate/up 按 32 通道交织），但**不重排 ckpt 权重**——原生 Megatron-LM 加载 contiguous SwiGLU ckpt（`[all gate | all up]`）时不做 `[gate 0:32 | up 0:32 | gate 32:64 | ...]` 的 interleave 转换，SwiGLU 配对错误通道；grouped-weight load hook 只 stack/split 专家张量、不做该置换。Megatron-Bridge 已在 load 时显式 interleave / save 时 de-interleave（Megatron-Bridge #2841），原生路径（含 main）缺这步。
+- **来源**：Megatron-LM #7576（2026-09-22；Qwen3.5-35B-A3B text SFT、16×GB200、TP1/PP1/CP8/EP16、DCP、seqlen 131072；三配置对照 + Bridge 同 MXFP8/CuTeDSL/GroupedTensor 配置正常训练的反证——排除 single-weight / FP8 param gather 因素；launcher 已设 interleave flag）。https://github.com/NVIDIA/Megatron-LM/issues/7576
+- **行为效应**：无 crash、无 warning——initial LM loss ~0.2（BF16+GroupedTensor 正确路径）→ ~2.2（MXFP8+CuTeDSL 两配置同样中招），训练正常推进但激活-权重通道系统错配（报告者明确：layout mismatch 而非 FP8 rounding）。与 CKPT.09（MXFP8 round-trip 丢 requant scale）同族「ckpt 边界的布局/量化契约断裂」，差异在这边 **BF16 同样中招的纯置换缺失**、不经量化放大；与 MOE.07 / RL-RO.09（量化专家布局 republish 破坏训推同步契约）共享「容器/引擎对权重布局假设不一致」病根——这边打击静态 load、那边打击在线 sync；「flag 改变解释约定但转换不在其职责内」的契约空洞与 CKPT.06（config 默认吞 CLI override）同型。
+- **发现来源**：2026-09-23 每日扫描
 
 ---
 
@@ -706,7 +842,7 @@ stage: `rl` · Cov: `var:chat_template_train_serve_mismatch` · 置信度 `docum
 stage: `rl` · Cov: `var:loss_mask_includes_prompt` · 置信度 `documented`
 
 - **机制**：trl MiniLLM trainer 构造 completion mask 时判 `input_ids[:, prompt_lengths:] != -100`——但 `-100` 填充写在 `labels`（几行前由 attention_mask 构建），`input_ids` 从不含 -100：**mask 恒全 1**，padding 位保留 reward、每个更早位置的 advantage 把 pad 位的 reward 折进折扣和。同函数第二缺陷：长度归一化把 masked 位替换成 1e-4 再除——短 completion 的分母混入每个 pad 位的 `1e-4·γ^(i-t)`（reward=1.0、γ=1.0 时单 token pad 到 512 得 0.9514 而非 1.0），**advantage 的大小取决于 batch padding 而非序列本身**。修复 = mask 改读 labels、长度只数未掩位。
-- **来源**：trl PR #7044（fixes #7024；指正 issue 里「labels 同时当 gather 索引」的一行修法会把 -100 喂进 `torch.gather`）。https://github.com/huggingface/trl/pull/7044
+- **来源**：trl PR #7044（fixes #7024；指正 issue 里「labels 同时当 gather 索引」的一行修法会把 -100 喂进 `torch.gather`）。https://github.com/huggingface/trl/pull/7044 ；2026-09-20 补：**该 trainer 家族仍带第二处未修复静默错值**——#6626（open since 2026-08）：`_compute_advantage` 的 `gamma_pow[i] = gamma**i` 用**绝对位置**索引而非 `i−t`，`length_normalization=False` 时每个 advantage 多乘一个 `gamma^t`（常 reward=1、T=512、γ=0.9 下 t=200 处实测 advantage 缩小 1.4e9 倍——后段 token 指数级压制、无任何异常）；`=True` 时 `gamma^t` 分子分母相消，但 `gamma**i` float32 下溢为 0.0 后 0/0=NaN（γ=0.5 T=512 首 NaN t=150，NaN 位与下溢位逐点重合）。修复 PR #6635 open 自 8 月。trl #7295（2026-09-19，维护者提案移除 MiniLLMTrainer）把 #6626/#6635 列为「两个 open bug 均住在序列级 reverse-KL + gamma 折扣路径」的移除论据——若移除落地，本条机制面随模块消亡。https://github.com/huggingface/trl/issues/6626 ；https://github.com/huggingface/trl/issues/7295
 - **行为效应**：无 crash；MiniLLM 的 advantage 系统性错值（pad 越多偏得越大），策略更新方向随 batch 组成漂移。与 DATA.03（loss mask 含 prompt）同族——都在 mask 构造处检查了错误的张量；与 RL-ADV.03（token 长度偏置）症状互补：那边是设计内的长度偏置，这边是 padding 泄漏制造的外生长度偏置。
 - **发现来源**：2026-09-06 每日扫描
 
@@ -718,6 +854,33 @@ stage: `pretrain/sft` · Cov: `NEW` · 置信度 `verified`
 - **来源**：DeepSpeed PR #8457（2026-09-08；AutoSP 编译器正确性：跨 sequence-shard 边界保留 causal-LM 目标 + 按有效 token 数聚合分片 loss + 校验 mesh/头数布局）。https://github.com/deepspeedai/DeepSpeed/pull/8457
 - **行为效应**：无 crash——每个 SP 边界丢监督 + 边界 token 监督错位 + 分片 loss 加权错值，SP>1 的预训练 loss 带结构性 bias，与 SP=1 基线不可比。与 DATA.07（变长 packing off-by-one 丢尾样本）同族：**数据切分边界 vs 目标对齐契约**的 off-by-one；与 LOSS.08（mean-of-means 归约）共享「分片/分批独立归一再等权平均」的病根；与 PAR.08（AutoTP 漏插 collective）互为 AutoSP/AutoTP 编译路径对偶的同类覆盖缺口。
 - **发现来源**：2026-09-12 每日扫描
+
+### DATA.13 `wrapper_signature_probe_drops_packed_boundaries`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl FSDP/FSDP2 value-model 引擎用 `"cu_seqlens" in signature(module.forward).parameters` 探测 packed 边界能力——只看**返回的外层模块**的显式签名。当 value head 走 TRL fallback（`AutoModelForCausalLMWithValueHead`）时，wrapper 的 forward 只有 `**kwargs`、无显式 `cu_seqlens` 参数（但会把 kwargs 透传给底座），探测返回 False → `use_remove_padding=True` 下 `prepare_model_inputs` 对 critic 静默省略 `cu_seqlens`/`cu_seqlens_cpu`；被 patch 的 Qwen3.5 linear-attention 分支只认显式 `cu_seqlens`、**不从 position_ids 重置恢复边界**，同一 microbatch 里独立打包的样本在 critic 的线性注意力状态上互相可见。SP=1 即中招（不需要 SP>1）；actor 路径 #6660 已修，TRL critic wrapper 是漏网实例。修复方向 = 对「已验证的透明 wrapper」解析能力或显式能力契约（把任意 `**kwargs` 当支持不安全）。source 级复现器（AST 抽取原始谓词/语句 + 记录 stub、纯标准库）：underlying=True / TRL wrapper=False、critic inputs 无边界键、显式供给时**同一** forward 体原样透传——已证边界参数缺失，数值影响未测（报告者明示不主张）。
+- **来源**：verl #7931（2026-09-19；Qwen3.5 + TRL v0.27.0 value-head critic + FSDP 引擎，commit `3efe38c75`；关联 #6660/#6780/#7471）。https://github.com/verl-project/verl/issues/7931 ；2026-09-20 补：维护者 wuxibin89 确认遗漏发生在 **veRL 的能力探测**（早于 TRL forward 被调用）、非 TRL 版本回归——bug 定位在 verl 侧，等修复方向（bump trl 依赖 vs 修探测逻辑）落定。
+- **行为效应**：无 crash——critic 对 packed 样本的隔离静默失效（线性注意力态跨样本泄漏面由机制成立；真实 ckpt 的 value/PPO 更新差未测量）。与 DATA.02（attention 边界丢失）/ DATA.06（边界恢复推断错）同族不同位：这里边界在**引擎输入组装层被能力探测错判丢弃**；「按显式签名探测能力」的病根与 CKPT.19（类名白名单漏 norm）同型——结构探测遇上透明包装即静默降级。
+- **发现来源**：2026-09-20 每日扫描
+
+### DATA.14 `metric_flush_key_set_rank_local_contamination`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：trl GRPO/RLOO trainer 的 metric flush 遍历**本进程本地**的 pending key 集合并对每个 key 调 collective（`gather_object(self._pending_extra_logs[column])`、`accelerator.gather(local_mean)`）——各 rank 的 key 集合来自**条件触发的用户 reward 函数**（如「只在触发解析器/证明验证时 `log_metric`」），天然因 rank 而异。三种交错：① 某 rank 有 key、另一 rank 无 → 单边进 collective → 分布式死锁（活性面）；② 两个 rank 各持有不同 key 集合但同 step 都进循环 → `gather` 在不匹配的 key 上配对——**两条无关指标互相混进对方的聚合历史**；③ 都有 key 但样本数不同 → `gather(mean)` 之后再 mean 是**未加权平均 of means**，全局指标被各 rank 触发频次加权，系统性偏离真值。
+- **来源**：trl #7310（2026-09-20；DDP/Accelerate 路径 flush 逻辑逐行分析 + 修复方案先行自证：跨 rank 同步 key 并集、`[sum, count]` 成对 gather 做精确加权归约、未触发列 `[None]` padding）。https://github.com/huggingface/trl/issues/7310
+- **行为效应**：①是 hang（有信号）；②③**无 crash 无 warning**——logged metric 值静默错（混列 + 错权），reward 曲线/KL/reward-hacking 诊断的可信度被破坏。修复侧备注：`local_sum/local_count` 成对 gather 的加权均值属正确形状、但 `tot_cnt==0` 时除零守卫返回 0.0（把「全 rank 都没触发」记成 0 而非 NaN/缺失——低频指标的分母语义仍需看护）。与 OBS.09（gather_for_metrics 对已聚合标量无法去重 padding → 尾批偏置）同族「**指标聚合的 rank 几何假设破裂**」不同断点：那边假设行对齐、这边假设 **key 集合对齐**；与 RL-KL.04/OBS.06（KL/entropy/reward 指标路径不掩 padding）同理是「诊断仪表先于训练目标坏掉」——训练损失本身不受影响，正是 RL-RO/TIM 类故障依赖的观测面失准。
+- **发现来源**：2026-09-21 每日扫描
+
+### DATA.15 `sparse_attn_window_crosses_packed_document_boundary`
+
+stage: `pretrain/sft` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：torchtitan DeepSeek V4 [重写 `get_attention_masks()`](https://github.com/pytorch/torchtitan/blob/6c2dadbb3109998092d1164e990c6377b2b8fb50/torchtitan/models/deepseek_v4/model.py#L222-L232) 时**丢弃 positions、padding 与文档边界元数据**，sparse attention 窗口从**整条扁平 token 流的偏移**构建——position id 重置（文档边界信号）被无视，query 64（第二文档 position 0）允许 attend key 63（第一文档末 token）。共享 decoder 把 position 重置当文档边界处理，DSV4 override 破坏该契约；报告者指明只修 sliding window 不够（compressed-KV 与 indexer 行为同样未验）。
+- **来源**：torchtitan #4801（2026-09-20；CPU 复现调真实 mask hook 构建实际 block mask：`DSV4 sparse mask: True` vs `shared packed-document mask: False` + 单文档对照 True；TorchTitan `6c2dadb`、PyTorch 2.12.0+cpu；未量化训练 loss 影响）。https://github.com/pytorch/torchtitan/issues/4801
+- **行为效应**：无 crash——packing 文档隔离静默失效，跨文档注意力泄漏（DATA.02 的模型架构侧实例）；修复回归还应检查「改一条文档、另一条文档输出不变」。与 DATA.02（packing mask 未按文档边界切断）同族同现象，差异在断点位于**模型侧 mask hook override** 而非数据管线 mask 构造；与 DATA.06（padding-free 边界合并序列）互补：那边序列粘连、这边窗口越界；与 DATA.13（wrapper 签名探测丢 packed 边界能力 → cu_seqlens 丢失）共享「packed 几何元数据在某层被静默丢弃」病根。tianyu-l 09-21 已 cc 维护者（@drisspg @floatingtrees）。
+- **发现来源**：2026-09-23 每日扫描
 
 ---
 
@@ -793,7 +956,7 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：gated MLP（SwiGLU/GEGLU）的 `linear_fc1.weight` 是**两个逻辑矩阵的物理拼接**（`[gate_weight; up_weight]`，TP 下 partition_stride=2）。Muon/NorMuon 家族对参数做 Newton-Schulz 正交化时把融合矩阵当**单一矩阵**处理：gate 与 up 两个独立投影被当成一个几何对象联合正交化——耦合了本应独立的更新、用了错误的矩阵几何。修复 = 按 TP-local 切成 gate/up 两半各自 NS 后拼回（GTP-remat 参数需先 gather 去 padding 再切）；参数形状与 ckpt 格式不变。torchtitan 侧同期在演进 per-head NS（DeepSpeed #8384），说明 Muon 更新几何是当前活跃故障面。
-- **来源**：Megatron-LM PR #6688（修复：检测 2D `linear_fc1` + `gated_linear_unit` 时挂 TP-local split metadata，gate/up 各自 NS 后拼回；TensorParallelAdaptiveMuon 同步处理）+ 追踪 issue #7077（closed as duplicate of #6688）。https://github.com/NVIDIA/Megatron-LM/pull/6688 ；dev 分支端口 PR #7085（2026-09-06 补：`--muon-split-qkv-per-head` 把 per-head NS 推广到 QKV 融合权重——TP>num_query_groups 时梯度跨 TP 维重组后按**逻辑布局**逐 head NS 再还原各 rank 本地 shard，并用 `QKVLayout` 注解把 split 从名字匹配泛化到 MLA/DSv4 hybrid 投影；`muon_tp_mode=distributed` 对不完整 query-group 的投影一次性警告后回退非 TP NS——「Muon 更新矩阵几何」仍是活跃故障面）。https://github.com/NVIDIA/Megatron-LM/pull/7085 ；DeepSpeed #8437（2026-09-07 补）：AutoTP 列并行 shard 上跑整矩阵 NS——正交化依赖**全部行**，shard 是行的真子集，shard 的正交化 ≠ 全矩阵正交化的对应行块（Llama tp=2 实测：梯度一致到 7e-7，update 相对差 **3.9e-01**、cosine 0.936）——同一参数的 Muon 更新随 TP 度变化，TP 度从并行几何变成隐形超参；#8420（Kimi-K3 KDA / GLM-5.2 DSA indexer 的头几何不在 tagger 读取的字段里、留在 full-matrix 路径——当前保守正确，跟踪在案）。https://github.com/deepspeedai/DeepSpeed/issues/8437
+- **来源**：Megatron-LM PR #6688（修复：检测 2D `linear_fc1` + `gated_linear_unit` 时挂 TP-local split metadata，gate/up 各自 NS 后拼回；TensorParallelAdaptiveMuon 同步处理）+ 追踪 issue #7077（closed as duplicate of #6688）。https://github.com/NVIDIA/Megatron-LM/pull/6688 ；dev 分支端口 PR #7085（2026-09-06 补：`--muon-split-qkv-per-head` 把 per-head NS 推广到 QKV 融合权重——TP>num_query_groups 时梯度跨 TP 维重组后按**逻辑布局**逐 head NS 再还原各 rank 本地 shard，并用 `QKVLayout` 注解把 split 从名字匹配泛化到 MLA/DSv4 hybrid 投影；`muon_tp_mode=distributed` 对不完整 query-group 的投影一次性警告后回退非 TP NS——「Muon 更新矩阵几何」仍是活跃故障面）。https://github.com/NVIDIA/Megatron-LM/pull/7085 ；DeepSpeed #8437（2026-09-07 补）：AutoTP 列并行 shard 上跑整矩阵 NS——正交化依赖**全部行**，shard 是行的真子集，shard 的正交化 ≠ 全矩阵正交化的对应行块（Llama tp=2 实测：梯度一致到 7e-7，update 相对差 **3.9e-01**、cosine 0.936）——同一参数的 Muon 更新随 TP 度变化，TP 度从并行几何变成隐形超参；#8420（Kimi-K3 KDA / GLM-5.2 DSA indexer 的头几何不在 tagger 读取的字段里、留在 full-matrix 路径——当前保守正确，跟踪在案）。https://github.com/deepspeedai/DeepSpeed/issues/8437 ；2026-09-20 补：torchtitan #4692（RFC，2026-09-13）给出**全量融合矩阵 × 逻辑矩阵清单**并确认 upstream main 的 K3 调试配方仍用 AdamW（无 per-head Muon 路径，#4272 P0.5）：`w13` 行交错存储 `[2F,D]`（#4676 改叠放 `[2,F,D]`）、routed `w1_EFD`/`w3_EFD` 两张 `[E,F,D]`、`wkv_b` 按 head 连续块交错 K/V、`wkv_a` latent+rope 行拼接、`wq_b` 每 head nope+rope、KDA `q/k/v_proj` 等 `[H*d,*]`——Kimi 生产侧对 MLA 各投影逐逻辑矩阵独立 NS + aspect-ratio lr（kexue.fm/archives/11126）。「融合权重必须拆逻辑矩阵再 NS」是跨栈共识，本条机制面的 RFC 级枚举。https://github.com/pytorch/torchtitan/issues/4692
 - **行为效应**：无 crash、无 NaN——Muon 更新量级/方向系统性错，训练照常收敛但每步优化几何被污染；与 OPT.01（矩未 resume）同为优化器数学契约破坏，本条是**更新算子的矩阵语义**而非状态丢失。#8437 面叠加：换 TP 度重跑或对比实验时 Muon 更新悄然不同（与 NUM.07 的「调优器把不同树钉进各 rank」同属并行度外溢进优化语义）。
 - **发现来源**：2026-09-05 每日扫描
 
@@ -838,7 +1001,7 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 stage: `pretrain` · Cov: `var:clip_dispatch_ignores_fsdp_owner_grad_location` · 置信度 `verified`
 
 - **机制**：DeepSpeed FP32 梯度裁剪路径（`clip_fp32_gradients`）结尾把 per-rank 范数在 DP 组上 all-reduce **取平均**——前提是每个 rank 持有相同参数。AutoEP 下各 rank 拥有**不同专家**，rank 局部范数描述互不相交的参数集：`sqrt(20)` 与 `sqrt(100)` 平均得 7.24 而非「每专家计一次」的 `sqrt(120)=10.95`——同一组唯一梯度、仅改变专家放置就能改变 `clip_coef` 达 0.20。修复（PR #8476/#8478）= 专家梯度不进复制范数、经精确的 `get_norm_with_moe_layers`（bf16/fp16 路径早已正确调用；fp32 内联的近似版警告注释所在的具名拷贝**零调用者**，警告从未到达出事地点）按各自 moe_ep_group 归约后 `(Σ norm_i^p)^(1/p)` 合并。上游 #8469（closed as dup of #8475）+ #8475 独立复现同一机制（owner-sharded vs replicated 布局 clip 系数差 0.2000005，修复后为 0，第二台主机复核）。
-- **来源**：DeepSpeed #8475（2026-09-10，2×CUDA rank / ZeRO-0 / L2 clip / mpu=None 布局对照实验）。https://github.com/deepspeedai/DeepSpeed/issues/8475 ；修复 PR #8476。https://github.com/deepspeedai/DeepSpeed/pull/8476 ；PR #8478（`sqrt(120)`=10.954 vs 平均 7.236、34% 差，2×H20 四专家独立复现）。https://github.com/deepspeedai/DeepSpeed/pull/8478
+- **来源**：DeepSpeed #8475（2026-09-10，2×CUDA rank / ZeRO-0 / L2 clip / mpu=None 布局对照实验）。https://github.com/deepspeedai/DeepSpeed/issues/8475 ；修复 PR #8476。https://github.com/deepspeedai/DeepSpeed/pull/8476 ；PR #8478（`sqrt(120)`=10.954 vs 平均 7.236、34% 差，2×H20 四专家独立复现；09-15 进展评论：#8478 内两缺陷已随 `338ed51` 修复——先在 2×H20 复现，且 #8469 发现的更深处场景「pipeline 并行下**完全不拥有任何专家参数**的 rank」改由单次 all-reduced flag + `_EXPERT_PARALLEL_GROUP` 组名解决，uneven 布局测试通过）。https://github.com/deepspeedai/DeepSpeed/pull/8478
 - **行为效应**：无 crash；clip 活跃时每次更新的 `clip_coef` 取决于**专家落在哪些 rank**而非梯度本身——同一 MoE 模型换 EP 拓扑 = 换有效 clip 阈值，跨布局实验不可比；无 MoE 时行为不变（原代码路径）。与 OPT.09（clip 判据按优化器类型而非参数 owner）同根：**裁剪几何假设参数复制，EP 打破假设**；与 PAR.11（GTP/EGTP expert 梯度缩放错）互补：那边梯度本身错倍、这边梯度对但裁剪参考范数错。
 - **发现来源**：2026-09-12 每日扫描
 
@@ -859,6 +1022,33 @@ stage: `pretrain` · Cov: `var:muon_update_applied_per_microbatch` · 置信度 
 - **来源**：Megatron-LM PR #7236（2026-09-11；三种 TP×GTP 布局的 spectral scale 对照 + 单测/功能测试）。https://github.com/NVIDIA/Megatron-LM/pull/7236
 - **行为效应**：无 crash、无 NaN——凡 GTP 行数不对齐的矩阵，Muon 更新带一个 layout 相关的缩放偏差；同一模型在不同 GTP 度下有效更新幅度不同（跨并行度实验不可比）。与 OPT.10（每 micro-batch 重复 NS）/OPT.11（stage0 不跑 NS）/OPT.08（门控 fc1 联合正交化）同为 **Muon 契约破坏**家族新面：算法执行了、缩放的**形状语义**错——「通信填充不是逻辑参数」的契约在优化器层失守；与 PAR.11（GTP/EGTP）同属 GTP 引入的静默缩放面，那边打击梯度归约、这边打击更新缩放。
 - **发现来源**：2026-09-12 每日扫描
+
+### OPT.16 `mixed_dtype_grad_list_single_multi_tensor_launch`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `--use-precision-aware-optimizer` + bf16 梯度 buffer（`grad_reduce_in_fp32=False`、`main_grads_dtype=bf16`）下，bf16 参数暴露 bf16 `decoupled_grad`，而 `mark_keep_in_fp32` 的原生 fp32 参数（DeepSeek-V4 hyper-connection alpha/bias、`ape`、`attn_sink` 一类）持有 fp32 梯度。`get_grad_norm_fp32` / `clip_grad_by_total_norm_fp32` 把两种 dtype 塞进**同一个** TE `multi_tensor` launch——kernel 按**列表首张量**的 dtype 派发、按该元素大小读全部张量：fp32 在前时 bf16 张量越界读出 illegal memory access（crash 面）；**bf16 在前时 fp32 梯度被按 2 字节读——静默算出垃圾 norm/clip，不 crash**。`assert grad.dtype in (float32, bfloat16)` 放行混 dtype 但从不分组。修复 = 按 dtype 分组各跑一次 kernel、范数平方累加后单次 all-reduce（collective 数与同质列表语义完全一致）；实测分组 `{'float32': 7, 'bfloat16': 295}`，DeepSeek-V4-Pro SFT（TP1/PP32/EP8）32/64 节点正常训练。已知非 TE #2918（int32 numel 溢出）。
+- **来源**：Megatron-LM #7338（crash 站点 `CUDA_LAUNCH_BLOCKING=1` 定位到 `clip_grads.py:114`；修复已验证；oncall 建议转 TE 仓库跟踪，2026-09-15）。https://github.com/NVIDIA/Megatron-LM/issues/7338 ；归属裁决 + 修复 PR（2026-09-17 补）：NVIDIA oncall 一度建议转 TE 仓库，报告者以「混 dtype 列表由 MCore `clip_grads.py` 自己拼装、TE kernel 按首张量 dtype 派发是其文档化契约」反驳；Connor-XY 09-16 裁定留在 Megatron-LM——norm 与 scalar/tensor 双裁剪路径均缺 dtype 分组，draft 修复 #7279 按 dtype 分组并保持 collective 顺序不变。https://github.com/NVIDIA/Megatron-LM/pull/7279 ；PR #7279 生产验证（2026-09-18 补）：linmuchuiyang 在 DeepSeek-V4-Pro（~1.6T MoE）full-param SFT、32 节点 ×8 H100、TP1/PP32/EP8、bf16 梯度 buffer + CPU-offload precision-aware optimizer 上验证 head `333ecc95`——原 crash 路径干净运行，grad norm 与其自研 dtype 分组 workaround 一致（#7338 评论区）。
+- **行为效应**：两种截然不同的可见面由**列表顺序**决定：fp32 梯度排前 → 首 `get_grad_norm_fp32` 即 NCCL illegal memory access（fail-fast，易误诊为通信故障）；bf16 梯度排前 → 混 dtype 梯度范数/clip 系数静默错值，grad norm 曲线照常打印但数值无意义，clip 保护面失效。与 OPT.09（clip 判据按优化器类型）/OPT.13（clip 范数跨不相交专家取平均）同族：**裁剪路径的 dtype/所有权几何假设被打破**；与 NUM 家族 cast 类不同：那边是数值精度转换错、这边是 kernel dispatch 按 dtype 分组缺失；`grad_reduce_in_fp32=True` 可回避但梯度 buffer 翻倍（12.7B 专家桶 +23.6 GiB，H100 80GB PP32 下 OOM）。
+- **发现来源**：2026-09-16 每日扫描
+
+### OPT.17 `tp_sharded_param_unmarked_skipped_by_grad_norm_filter`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `DotProductAttention.softmax_offset`（`softmax_type="learnable"`，GPT-OSS learnable attention sink）按**每本地 head 一项**创建——本质是跨 TP head-sharded 参数，却**从不标 `tensor_model_parallel`**（TEDotProductAttention + TE 2.15 同样漏标）。`MegatronOptimizer` 的 `_filter_grads_for_norm`（optimizer.py:299）按 `param_is_not_tensor_parallel_duplicate` 只在 **TP rank 0** 保留该参数：其余 rank 的 sink 梯度被从 grad-norm 里**静默丢弃**。2-rank repro：sink 梯度 3 与 4 → norm 算出 3 而非 5；`clip_grad=4` 时 clip 被跳过（scale 1.0 而非 0.8）。真实小 attention 块：norm 1.22608447 vs 1.22774088，一步 clipped 更新后输出误差 2.4e-4——**该 norm 用于裁剪全部参数**。修复 = 给 `softmax_offset` 设 `tensor_model_parallel=True, partition_dim=0`。同类错误：#5916（expert grouped-linear 梯度被 clip norm 漏计，2026-07-25 已修）。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 8，166 行 CPU/Gloo repro 把 fused multi-tensor L2 kernel 换 CPU sum 后跑真实 `clip_grads.get_grad_norm_fp32` + Gloo collective；Bridge GPT-OSS GB200 recipe 用 TP=2 CP=4 暴露面确认）。https://github.com/NVIDIA/Megatron-LM/issues/7452 ；2026-09-20 补：dundysm 认领 finding 8（计划 `softmax_offset` 标 `tensor_model_parallel`，与条目修复方向一致），修复 PR 待开出。修复 PR #7530 已开（2026-09-22 补：`mark learnable softmax_offset as tensor parallel for clip norm`，自述「Fixes Finding 8 of #7452 only」），尚未 merge。https://github.com/NVIDIA/Megatron-LM/pull/7530
+- **行为效应**：无 crash、无 NaN——grad norm 略偏小、clip 阈值行为错位，所有共享该 norm 的参数的裁剪强度漂移；误差量级小（1e-3 相对）且随 head 数分布变化，极难从曲线上归因。与 OPT.09（clip 读错张量）/OPT.13（clip 平均不相交专家范数）/OPT.16（混 dtype 列表）同族「clip 路径的参数归属/几何假设破裂」的第 4 个实例，这边断点是**参数未标的 TP 分片标志**；与 MOE.08（负载均衡 hook 漏扫 mtp_layers）同型「过滤器按名字/标志白名单、新参数不在名单」。
+- **发现来源**：2026-09-18 每日扫描
+
+### OPT.18 `gdn_shared_out_norm_missing_tp_grad_sum`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron GDN（GatedDeltaNet）的 `out_norm`（common.py:267）建在 `value_head_dim` 上——**一个向量施加到所有 head**，而 head 被 TP 切分。`finalize_model_grads.py:452` 只在 **SP 开启**或参数名含 `q_layernorm`/`k_layernorm` 时对该类共享向量做 TP 梯度求和；GDN + TP>1 + **SP 关**时 `out_norm.weight` 的梯度从不 all-reduce，两个 TP 副本各自持有部分和。TP=2 全 GDN 模块 repro：其余参数梯度与未分片参照吻合 7.5e-9，`out_norm` 梯度 `[0.1200,0.0400]` / `[0.0197,-0.0077]` vs 完整 `[0.1397,0.0323]`；20 步 Adam 后两副本差 0.0039，加 TP sum 后每步 2.4e-7。暴露面：Bridge Qwen3.5 full-SFT recipes 用 TP=2/4 **不开 SP** 跑 MCore GDN。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 11，全 GDN 模块 CPU repro + 20 步 Adam 漂移对比）。https://github.com/NVIDIA/Megatron-LM/issues/7452 ；2026-09-22 补：vipulsarode 09-21 认领 finding 11（计划按 `11_gdn_out_norm_missing_tp_sum.py` repro 走），oncall tracking map 要求认领时链接 scoped PR——PR 尚未开出；2026-09-24 补：scoped 修复 PR #7613 已开（2026-09-23）——在 `6a36609` 上用原 repro 复现，修复后两 TP rank 的 `out_norm` 梯度与单进程参照吻合，覆盖 GDN/GDN2 × RMSNorm/LayerNorm，附参数 tagging 与 finalizer 恰好一次求和（SP on/off）单测。https://github.com/NVIDIA/Megatron-LM/pull/7613
+- **行为效应**：无 crash、无 NaN——TP 副本从第一步起**确定性分叉**（不是 SDC 式随机，是结构性的部分和），`out_norm` 权重跨 rank 漂移、且永远偏小（漏加其余 rank 贡献）；下游 loss 无立刻信号。与 PAR.13（DDP reducer hooks 早退）/PAR.09（分桶谓词跳过 allreduce）同族「梯度归约静默缺失」，差异在这边只打击**名字白名单外的共享向量参数**——选择性漏归约；与 SFT 侧 `q_layernorm` 特判（同函数）对照可见这是**白名单式 finalize 假设**的固有脆弱性（新架构新参数不在名单）。
+- **发现来源**：2026-09-18 每日扫描
 
 ---
 
@@ -910,6 +1100,24 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 - **来源**：DeepSpeed PR #8455（2026-09-08；`pytest -k partitioned` master 6 failed → 修复后 6 passed；端到端需真 Stream，作者如实标注未跑）。https://github.com/deepspeedai/DeepSpeed/pull/8455
 - **行为效应**：recompute 参数表错位——检查点函数带任何非张量参数（flag / 标量超参 / None）且开 partition_activations 时，重算前向在**错误的参数表**上执行：可能崩（形状错）、更可能静默产出与原前向不一致的激活 → 错梯度。与 ACT.01（MoE 数据依赖 recompute 分叉）同族：**重算图 ≠ 原前向**；差异在这边是参数表序列化/折叠 bug 而非 RNG/数据依赖；与 DATA 家族的错位面不同：只打击开 partitioned activation ckpt 的组合。
 - **发现来源**：2026-09-12 每日扫描
+
+### ACT.06 `sar_recompute_skips_inplace_writes`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：torchtitan GraphTrainer 的 `selective_activation_remat_pass`（SAR）沿 dataflow producer 边选重算点。对「functional 包装 + 内部 in-place kernel」的 `autograd.Function`（`y = x.clone(); op_(y); return y`，schema 正确、算子返回 void），写入没有任何 dataflow 输出——pass 只重放 `clone` 不重放写入，backward 拿到**变异前**的值。CPU 复现：`loss=(x+1)^2, x=2`，前向 loss=9 正确、梯度 6→**4**；`graph.lint()` 通过、执行无任何错误。已在 2026-09-15 main `f5c97dc0` 直接执行该 commit 的 pass 源码复核（pass 级，非完整训练运行）。起源是 functional partial-RoPE 包装 in-place kernel 的真实用例；报告者本地「重放缺失写」可把梯度恢复为 6，但通用修复还需处理 alias / 写序 / 其他写目标（支持范围待维护者定夺）。
+- **来源**：torchtitan #4688（pass 级 CPU 复现脚本 + main 复核；`torch==2.14.0+cpu` aarch64）。https://github.com/pytorch/torchtitan/issues/4688
+- **行为效应**：无 crash、无 NaN、lint 全过——前向数值正确、**梯度静默错值**；凡走 GraphTrainer + SAR 且重算激活涉及「clone 后就地写」型 functional 算子（fused/自定义 RoPE 等 in-place 包装）即中招。与 ACT.05（partitioned recompute 参数表错位）同族：**重算执行了但重算状态 ≠ 原前向**；差异在这边是 dataflow 分析不建模副作用写入、那边是序列化折叠 bug；与 ACT.03（replay 图与前向分叉）同症状面，这边给出了 pass 级最小因果链。
+- **发现来源**：2026-09-16 每日扫描
+
+### ACT.07 `offload_reload_missing_stream_ordering_edge`
+
+stage: `shared` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：Megatron 细粒度激活 offload 的 `ChunkOffloadHandler.reload()` 把 H2D 拷贝排进 caller 当前流，对 `d2h_stream` 上记录的 `_offload_event` **没有任何排序边**。`bulk_reload_group`（prefetch 路径）自己补这条边；`tensor_pop` 的 **inline reload 没有**——backward 先于 prefetch 到达某 offloaded group 时，H2D 可能在 D2H 仍在写 pinned staging buffer 时就读它，重载进 GPU 的 saved activation 是**陈旧 buffer 内容**（CPU tensor pool 回收复用使污染内容确定化）。与特性自身文档承诺直接矛盾（user-guide L180：「compute stream waits for the transfer to complete」——inline 路径不等）。B300 上 20 trial × 2 臂：无边树 19/20 损坏（wrong 3.2M–67M/67M 元素，uniq 值 [-7.0, 1.0] 混合 = 新旧内容掺杂）；加排序边 0/20。warmup 迭代**全部** reload 走无序 inline 路径（24/24），steady 态才由 prefetch 覆盖；现有测试 `test_gpt_fine_grained_activation_offloading_*` 恰好把 warmup 迭代结构性丢弃后才断言梯度——`tests/` 无一读 `_offload_event`。修复 PR #7399。
+- **来源**：Megatron-LM #7398（2026-09-16；mcore `79097b457`，torch 2.11.0+cu130，B300/A40 单卡单进程；确定性机制演示：stall d2h_stream + SENTINEL 预污染 → `tensor_pop` 返回污染值；缺陷自 #1913 引入即有）。https://github.com/NVIDIA/Megatron-LM/issues/7398 ；修复 PR #7399（2026-09-16 已提；Connor-XY 指派 lhb8125 评审，并要求复查 warmup vs steady、当轮未 offload 的 group、reset 行为——修复待 maintainer review）。https://github.com/NVIDIA/Megatron-LM/pull/7399
+- **行为效应**：无 raise、loss 曲线照降——warmup 迭代（及任何 backward 跑赢 prefetch 的时刻）的梯度**静默算在陈旧激活上**；「每块激活 = 新旧值混合」意味着错误幅度连续可变、无全有全无信号。与 ACT.05/ACT.06 同族「重算/重载状态 ≠ 原前向」：那边错在参数表/dataflow 建模，这边错在**流同步契约**（文档承诺 vs inline 路径实现）；与 KER.09（掩码越界静默写）同为 B300 新硬件面上被旧假设掩盖的流/坐标契约破裂。
+- **发现来源**：2026-09-17 每日扫描
 
 ---
 
@@ -1003,7 +1211,7 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 stage: `pretrain/sft` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：Megatron DSA（DeepSeek Sparse Attention）cuDNN real-kernel 路径在 **packed-THD + context-parallel（CP>1）** 组合下产出错误数值：top-k 索引测试 8/8 元素全错（应 bottom-right 对齐却整体错位）、full-fusion 输出与参考路径 cosine 相似度仅 **0.365**（两条路径对同一输入严重分歧）；张量全部有限——kernel 正常运行完、值是错的。两测试自 #5099 合入起就带 `@pytest.mark.flaky` / `flaky_in_dev`（注释引用 import error 与「CI 里的确定性 CUDA error」），GB200/SM100 实机上标记下藏的是**真数值失败**。cuDNN 版本对照已做（torch 编译于 9.23 vs 装的 9.21，换 9.23 后同样 2 failed）——非版本错配。该 packed+CP 组合正是 GB200 GLM-5.2 SFT recipe 的形状（`dsa_kernel_backend=cudnn`、CP4、packed、`cp_comm_type=allgather`）；32 节点训练形状对照显示 10 步内 lm loss 差 ≤0.7%、100 步 plateau 同型（0.646 vs 0.615）——**哪些形状中招未能定位**，影响面悬置。
-- **来源**：Megatron-LM #7105（`tests/unit_tests/transformer/experimental_attention_variant/test_dsa_native_parity.py` 78 passed / 2 failed 实测 + 复现环境全列；#5099 引入 CP-via-THD，#4878 仍 open）。https://github.com/NVIDIA/Megatron-LM/issues/7105
+- **来源**：Megatron-LM #7105（`tests/unit_tests/transformer/experimental_attention_variant/test_dsa_native_parity.py` 78 passed / 2 failed 实测 + 复现环境全列；#5099 引入 CP-via-THD，#4878 仍 open）。https://github.com/NVIDIA/Megatron-LM/issues/7105 ；同 kernel 家族 crash 面（2026-09-22 补）：Megatron-LM #7463——同 packed+CP 路径在 256K 序列（同配置 32K 成功）于 indexer top-k `cudaErrorIllegalAddress`（nemo2608 镜像 / Megatron-LM 0.19）；09-21 oncall Connor-XY 分配 hxbai triage、要求补 cuDNN Frontend/CUTLASS 版本与 cu_seqlens 元数据——illegal-address 本身尚不能区分 shape/packing 问题与上游 kernel 缺陷。https://github.com/NVIDIA/Megatron-LM/issues/7463
 - **行为效应**：训练不崩、loss 轨迹看不出——生产形状实测「碰巧」贴住参考路径，但单测证明部分 packed+CP 配置下 kernel 输出错值：使用形状与中招集合的交集未刻画前，任何 cuDNN-DSA packed+CP run 都不可信。`flaky` 标记让 CI 永远报绿，故障对测试基建**隐形**——KER 错值与 OBS 掩体的复合：标记本身成了掩体。与 KER.01/02/09 同为训练 kernel 静默错值，差异在根因分层未知（cuDNN kernel vs Megatron 调用序 vs THD+CP 布局契约）且**实机硬件相关**（GB200/SM100）；测试标记掩盖面与 KER.08 的「断言被 cast 洗白」同族——验证基建自己失效。
 - **发现来源**：2026-09-09 每日扫描
 
@@ -1024,6 +1232,42 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 - **来源**：trl #7181（DPO/KTO on Qwen2.5-0.5B bf16 SDPA：~60 步内 grad_norm 永久 NaN；维护者 qgallouedec 2026-09-11 定位为 cuDNN SDPA backward kernel bug、非 trl/transformers 问题，bisect 到 DPO micro-batch 的 layer 8 head 3 + 12 行 torch repro）。https://github.com/huggingface/trl/issues/7181
 - **行为效应**：可见面 = grad_norm NaN（DPO/KTO 任何带 padding mask 的 batch，all-True mask 同样触发）；**静默面 = lse 未过阈的错值梯度**——上限取决于模型激活分布（massive activation 头越多越易过阈）。与 KER.10（DSA cuDNN packed-THD+CP 错值被 flaky 标记掩盖）同族：cuDNN attention 路径在非规范形状下错值 + 现有测试形状恰好免疫（这边是 `L%128==64`，那边是 packed+CP 组合）；与 KER.09（Triton 掩码块内/全局坐标混淆）同病：**tile padding 半区的边界处理**决定对错。
 - **发现来源**：2026-09-13 每日扫描
+
+### KER.13 `chunked_ce_backward_inplace_overwrites_logits`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：ms-swift 序列并行 `ChunkedCrossEntropyLoss`（`swift.sequence_parallel.utils` 导出，`CELOSS_PARALLEL_SIZE > 0` 时被 `per_token_loss_func_sp` 使用）为省显存把每个梯度 chunk **就地写进前向保存的 `logits`**，再把该输入张量原样作为梯度返回——违反 autograd「backward 返回独立梯度、保留 saved input」的契约。后果按调用形状分三层：① 叶子张量（raw `requires_grad=True` logits）触发 in-place `RuntimeError`（fail-fast 面）；② 非叶子输入（如 `raw.tanh()`）报 version-counter 错；带辅助项（`logits.square().mean()`）同样炸；③ **简单 linear head、单一 logits 消费者时静默跑通**——backward 把调用方的 logits 原位替换成梯度值，前向图若被复用（aux loss / retain_graph / 第二次 backward）即消费被污染的值。`torch.nn.functional.cross_entropy` 接受同样的输入。
+- **来源**：ms-swift #10129（6 行最小复现 `ChunkedCrossEntropyLoss.apply(logits, labels, 3).mean().backward()`；提交者自带含梯度/参照测试的修复，代价是额外 logits-sized 梯度 buffer；macOS arm64 / PyTorch 2.14 / CPU+MPS，无需权重或分布式；closed 2026-09-15，无评论、无关联 commit）。https://github.com/modelscope/ms-swift/issues/10129
+- **行为效应**：可见面 = 复用前向图或带 aux loss 时 crash；**静默面 = 单一消费者的 SP 训练路径 backward 后调用方 logits 已被梯度覆写**——任何后续依赖前向 logits 的计算（distill 温度缩放、软标签缓存）拿到的是梯度值；标准单 backward 下返回的梯度数值本身正确，loss 曲线无异常信号。与 KER.12（cuDNN SDPA backward 写坏 dQ）同为 backward 路径错误，差异在这边是 Python 侧自定义 autograd Function 的 saved-tensor 契约破坏（写穿调用方张量）、那边是闭源 kernel 内部错值；与 DATA.09（SWA fallback 无条件覆写 caller attention mask）同病：**库代码就地复用调用方张量**。
+- **发现来源**：2026-09-15 每日扫描
+
+### KER.14 `vocab_parallel_ce_label_smoothing_local_shard`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `vocab_parallel_cross_entropy` 的 label-smoothing 尾部按 **TP 本地词表分片**计算：`vocab_size = exp_logits.size(-1)` 取 per-rank 分片宽度（cross_entropy.py:158）、`log_probs.mean(dim=-1)` 只在本地 shard 上平均（L175）、backward 复用 `ctx.vocab_size`（L191）。base CE 的 max/target-logit/exp-sum 都正确 all-reduce，**只有 smoothing 尾是局部的**——局部均值是 Partial 值，却与已完整的 CE 基项直接相加、无归约。TP=2、smoothing 0.2 repro：两 rank loss `[1.4401896, 1.0951819]`（互不相等）、全局公式 `[0.8401898, 0.8618487]`，max 梯度误差 0.1333。修复 = 对 TP 组 sum 本地 log-prob 和再除全局词表（PR #5522 提出过精确该修复、被关未合）；#737（2026-09-17 有第三方独立同分析评论）。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 1，126 行 CPU/Gloo repro 附 spmd_types `Found types: [I, P]` 拒绝见证）；上游线索 #737 / PR #5522。https://github.com/NVIDIA/Megatron-LM/issues/7452 ；修复 PR（2026-09-22 补）：#7466 by gss10282025（draft，uses the global vocabulary size and global mean log-prob）——Connor-XY 09-21 在 #7452 建立 oncall tracking map 列 finding 1 已挂该 PR。https://github.com/NVIDIA/Megatron-LM/pull/7466 ；独立社区复现（2026-09-24 补）：Megatron-LM #7464——与 finding 1 无依赖的第三方报告，RTX 5090 + FP32、TP1 vs TP2 全梯度相对 L2 `0.0515`、三台主机复现，修复后 discrepancy 降至原值 ~1.7e-6 并对齐 float64 参照；再引 #737 / #5522 相同上游线索。https://github.com/NVIDIA/Megatron-LM/issues/7464
+- **行为效应**：无 crash——**每个 TP rank 打出不同的 loss**、梯度带 0.1 量级误差；单卡 vs TP>1 的 run 从第一步起不可比，且 per-rank loss 差异常被当作「数值噪声/归约顺序」忽略。与 KER.13（fused CE 路径就地覆写）同文件域不同断点：那边破坏 autograd 契约、这边是**分布式归约域错误**（Partial 进非线性组合）；与 PAR.04（Ulysses 头数锁死）同型「TP 切分下 per-rank 常数被当全局常数」。
+- **发现来源**：2026-09-18 每日扫描
+
+### KER.15 `gathered_logits_fed_to_vocab_parallel_ce`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `GPTModel` 在 `parallel_output=False` 或 `runtime_gather_output=True` 时以 `gather_output` 建输出层（gpt_model.py:292/579/671）——logits 是**全词表、TP replicated**；但带 labels 的路径 `compute_language_model_loss` 无条件调 vocab-parallel CE（language_module.py:127），该 CE 把最后一维当作**本地词表分片**：TE fused 路径有 assert 挡住、**非 fused 路径没有**。TP=2、logits `[0,1,2,3]`、label 3 repro：observed loss 1.1333369 = 正确值 0.4401897 **+ log(2)**（replicated logits 被当 shard 求和/归一，系统性偏 log(TP)）；物理梯度 `[0.0160,0.0436,0.1184,0.3220]` vs 参照 `[0.0321,0.0871,0.2369,-0.3561]`——target 项丢失。两个触发项都是公开模型选项。修复 = assert sharded、gathered 时回退普通 CE 或拒绝组合。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 2，113 行 CPU/Gloo repro；未发现既有上游报告）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash——loss 恒偏 **+log(TP)**、梯度结构性错误（target 梯度项消失）；「能训、loss 略高」的形态使它极易被归因为超参/数据。与 KER.14 同函数族但断点相反：那边输入确是 shard、归约缺失；这边输入是 **replicated 却被当 shard**——分布式类型混淆的两个方向；与 DATA.06（tokenizer 本地 vocab 分片错位）症状面相邻（词表域错值）但机制在 CE kernel 入口契约。
+- **发现来源**：2026-09-18 每日扫描
+
+### KER.16 `triton_int32_offset_wraparound_oob_rw`
+
+stage: `shared` · Cov: `var:triton_block_local_mask_oob_rope_write` · 置信度 `documented`
+
+- **机制**：DeepSpeed Triton kernel 用 int32 算元素偏移：`swiglu_triton.py`（#8244 引入，fwd L38-40 / bwd L53-55）`offsets = pid * BLOCK_SIZE + arange`，`n_elements > 2^31` 时 `pid*2048` 在 `pid=1,048,576` 处溢出为**负数**，而掩码 `offsets < n_elements` **不拒绝负偏移**——mask 放行，kernel 对**张量起始之前**的内存 load+store（bf16 输入 1.25×2^31 元素时越界窗 4.0→3.0 GiB 在张量前方）。`autoep_fused_token_ops.py`（#8326，opt-in `combine_impl="fused_weighted_sum"` 路径）`token * out_stride`（stride=hidden）同型：tokens×hidden > 2^31 即溢出（expert-row 地址已 int64，只有 token 乘积中招）。触发阈值=元素数>2^31（bf16 即 >4 GiB 张量；MoE 大 hidden / 长序列可行）。
+- **来源**：DeepSpeed #8590（2026-09-18；swiglu 是 GroupedExperts 默认路径；`program_id` 转 int64 修复后 2^31 以下 bitwise 相同、kernel 耗时不变）。https://github.com/deepspeedai/DeepSpeed/issues/8590 ；2026-09-19 补：修复 PR DeepSpeed #8591（`Use int64 program ids in the SwiGLU and AutoEP fused restore Triton kernels`）已于 2026-09-19 04:02 UTC merge（merge commit `bb5c23e0255c`），#8590 同刻 closed completed。
+- **行为效应**：两侧可见面：CUDA illegal memory access（本报告 repro）或**负偏移落进合法映射区时静默读写错位内存**（KER.09 的 H100 观察同型：有分配 slack 则静默污染、无 slack 才 crash）——写入侧打坏**别的张量**、读取侧把垃圾当梯度。与 KER.09（Triton 掩码用块内坐标漏全局边界）同族「Triton 边界/寻址算术错」第 2 个实例，断点不同：那边 mask 域错（局部 vs 全局坐标）、这边**偏移量本身溢出回绕 + mask 不查负数**；与 NUM.07（autotune 非确定）无共享根因但同处「现有单测规模太小漏网」的测试盲区。
+- **发现来源**：2026-09-19 每日扫描
 
 ---
 
@@ -1130,6 +1374,33 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：无 crash、无 NaN——aux loss 数值正常、可下降，但**负载均衡压力随 microbatch 有效 token 分布的方差系统性漂移**：router 梯度带错值，专家均衡目标被过/欠施加；物理等长 padding 完全掩盖触发条件。与 MOE.07（计数经 BF16 buffer 舍入）同为「累积 expert 计数的数值语义错误」但断点不同：那边是**存储精度**（float buffer 转 BF16）、这边是**归一化分母的时序语义**（累积分子配瞬时分母）；「梯度对 microbatch 划分方式敏感」的表现面与 LOSS.09（G 缩放漂移）同型的隐式超参依赖。
 - **发现来源**：2026-09-14 每日扫描
 
+### MOE.12 `router_aux_loss_inplace_reduce_overwrites_token_count`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `get_tokens_per_expert_and_token_count`（moe_utils.py:269）把 `local_tokens_per_expert` 传给 `reduce_from_tensor_model_parallel_region`——`tensor_parallel/mappings.py` 的 `_reduce` 对 contiguous 输入**就地归约**（代码注释自认）。带 `padding_mask` 时下游（L283）又从这张**已被覆写为全局和**的张量推导 `local_num_tokens`：两个返回计数都成了全局值。`router.py:452/509/555` 把这个「local」计数当 `valid_token_count` 传进 aux loss——**aux loss 梯度被额外乘上 TP/CP 组大小**。TP=2、8 token 中 5 有效 repro：两 rank 都得 `local_num_tokens=5`，router 梯度范数 2.2258655 vs 正确 1.1129328（**恰好 TP× 过大**）。触发只需 MoE aux loss + padding_mask（数据调度器的 sequence packing 即产生）+ per-token loss + TP/CP>1——任何非空 mask 都选中该分支。2026-09 的 `/`→`//` 改动（#7081）不影响此缺陷。修复 = reduce 前 clone、或先算 local 计数再调集合通信。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 10；#6111 是同路径不同 crash 已关）。https://github.com/NVIDIA/Megatron-LM/issues/7452 ；#7452 finding 10 独立确认 + 修复 PR（2026-09-18 补）：0z5a 在当前 main `d564dd01d` 上真实 NCCL 2-rank/EP=2/topk∈{1,2,4} 复现——rank0 3 有效行 / rank1 1 行，修复前两 rank「local」计数都得 **4**（= 组全局值）、修复后 3/1；`all_reduce` 作用于返回 buffer 会原地改变它，即别名污染的直接证据；隔离实验（routing map/scores/aux 公式/进程组全同、只改报告计数）下 aux 梯度随报告值**精确线性**缩放：local/total=7/10 → 1.428571×、3/10 → 3.333333×（恰为 `global/local`）；`//topk` floor（#7183）是独立改动、别名污染早于它存在；修复 PR #7481 在集合通信前把 rank-local 标量算进独立存储，base 5 failed → PR 后 11 passed。https://github.com/NVIDIA/Megatron-LM/pull/7481 ；2026-09-22 补：Connor-XY 09-21 在 #7481 请 zhongbozhu 评审「reduce 前的 local token-count 捕获及其在 router aux loss 中的使用」（邻近其 #7183 dtype 修复）并检查新增分布式回归 fixtures——PR 仍 open 未 merge。
+- **行为效应**：无 crash、无 NaN——router/aux loss 梯度**恒放大于正确值 TP× 或 CP×**（取决于归约组），负载均衡压力随并行度漂移：同模型 TP=1 与 TP=2 的 run 行为不可比，专家均衡目标被过量施加。与 MOE.11（分母用当前 microbatch）同打击 aux loss 归一化语义、不同断点：那边分母时序错、这边**上游张量被集合通信就地污染后复用**；「in-place collective 污染调用方张量」与 KER.13（backward 就地覆写 logits）/DATA.09（覆写 caller mask）同一病根——**库代码就地复用调用方缓冲**；与 PAR.11（GTP 梯度 ×GTP 放大）症状面同为「梯度恒乘组大小」。
+- **发现来源**：2026-09-18 每日扫描
+
+### MOE.13 `overdispersed_routing_importance_signal_collapse`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：**激进负载均衡 → over-dispersed routing** 的静默退化证据：训练期 aux loss 把 token 分布推向近均匀时，router 概率作为专家重要性信号**塌缩**（近均匀分布下专家间区分度消失）；对 gpt-oss-20B 做专家剪枝：**最低 perplexity 的剪枝配置给出最差数学推理**、最高 perplexity 配置反而保住能力——**perplexity 与下游能力的关系在 over-dispersion 下反转**，标准路由（Mixtral-8x7B-Instruct）无此现象（ppl 与精度同降）。
+- **来源**："When Load-Balancing Goes Too Far: Expert Pruning in Over-Dispersed Mixture-of-Experts Models", arXiv:2609.04453（2026-09-03，本轮窗口检出）。https://arxiv.org/abs/2609.04453
+- **行为效应**：训练侧完全正常（这正是设计目标达成）——伤害在**训练目标与模型能力的错位**：负载均衡压力过大时学到的「均匀使用专家」使下游任何依赖 router 概率做重要性判断的路径（剪枝/合并/蒸馏专家选择）拿到无区分度信号，且 ppl 掩盖退化方向。与 MOE.01（均衡失守 → 熵塌缩 → 专家死）是同一「负载均衡压力 × 路由分布」轴的**反端**：那边均衡不足路由锐化、这边均衡过强路由过散，两端都毁能力而 loss 曲线都「正常」；与 LOSS 家族的差异：无任何步级数值症状，只有训后能力/可剪枝性可见——**长跑静默退化的 MoE 特异形态**；与 RL-KL.01「探针贴零不等于健康」同型观测陷阱（ppl 贴正常≠能力在）。
+- **发现来源**：2026-09-19 每日扫描
+
+### MOE.14 `aux_loss_coef_noop_without_router_logit_flag`
+
+stage: `sft` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `documented`
+
+- **机制**：trl `SFTTrainer` 用 `getattr(text_config, "output_router_logits", None) is not None` 推断是否 MoE 并启用 aux loss——但该字段是**可选声明**：transformers main 上 64 个 MoE config 有 30 个不声明（DeepSeek-V2/V3/V3.2、GLM4-MoE、GLM4V-MoE、Qwen3-VL-MoE、Mistral4、dots1、Kimi-Linear、Step3p7 全部在内），对这些架构 `router_aux_loss_coef` 是**静默 no-op**：无 aux loss 项、无警告。同库 `compute_flops_per_token` 已用 `num_experts_per_tok` 作权威 MoE 标记，检测路径间自身不一致。
+- **来源**：trl #7222（2026-09-16；双 tiny 模型 repro：Qwen3Moe 记 aux_loss=True、DeepseekV3 False；config 声明面清点 34 declare / 30 not）。https://github.com/huggingface/trl/issues/7222
+- **行为效应**：无 crash、无 warning——近半 MoE 架构的 SFT run 负载均衡项从未生效，专家利用分布不受约束地漂移，训练 loss 曲线完全正常；与 SFT.07（LoRA target_modules 静默欠匹配）同库同型「配置声明了、检测谓词漏一类目标」，差异在这边打击 aux loss（路由层）而非 PEFT 挂载面；「is_moe 推断依赖可选 config 字段」与 CKPT.07 死配置族共享病根但方向相反：CKPT.07 是 key 无人消费、这边是**消费了但布尔谓词对一半架构恒 False**；维护者 qgallouedec 已表态内部处理（不收外部 PR），拟用 `num_experts` 类权威标记 + 未应用时告警。
+- **发现来源**：2026-09-23 每日扫描
+
 ---
 
 # LOSS · 发散与长跑退化
@@ -1216,6 +1487,24 @@ stage: `rl` · Cov: `var:gkd_mean_of_means_token_reweighting` · 置信度 `docu
 - **来源**：ms-swift #10117（解析推导 + 最小验证 `(loss/4).backward()` 复现 Trainer 行为；`--loss_type dapo --gradient_accumulation_steps 4` 实测更新量为 G=1 的 1/4）+ 修复 PR #10116。https://github.com/modelscope/ms-swift/issues/10117
 - **行为效应**：无 crash、无 NaN——**有效学习率随 `gradient_accumulation_steps` 漂移**（G 越大更新越弱），日志 loss 也被除以 G；同配置改 G 的两次 run 收敛速度不可比，且无任何信号指示更新量错。与 OPT.10（ZeRO-3 Muon 每 micro-batch 跑一次 NS——momentum 变 βⁿ）同病：**梯度累积旋钮静默改变有效优化量**，那边放大、这边缩小；归一化域错配（全局 token 已归一再被 per-mb 逻辑二次缩放）与 LOSS.08（mean-of-means）互为镜像——那边漏归、这边重除。
 - **发现来源**：2026-09-13 每日扫描
+
+### LOSS.10 `cp_local_loss_means_averaged`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `forward_step_calc_loss`（schedules.py:295）在 `calculate_per_token_loss=False`（默认）时把每个 CP rank 的 masked loss 和**除以自己的有效 token 数**——CP-local mean；`pretrain_gpt.py` 返回 CP-local sums/counts，DDP 随后跨 DP×CP 平均梯度。有效 token 数在 CP 分片间不等（`--eod-mask-loss`、任意 loss masking、Wan 真实数据路径 pad 到 `2*CP` 再 mask padding、CP=4/8 recipe）时，实际算的是 `(L0/n0 + L1/n1)/2` 而非 `(L0+L1)/(n0+n1)`：**mean-of-means**。8 token、CP counts 4/1、4 参数线性预测器 repro：observed 梯度 `[0.8369,-0.0900,0.2948,-0.1063]` vs 参照 `[0.5110,-0.1440,0.0577,-0.1701]`——**梯度方向改变**（不只是尺度）。修复 = 像 per-token 路径那样先跨 CP sum 有效计数再除。per-token loss 开启时不受影响。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 9）。https://github.com/NVIDIA/Megatron-LM/issues/7452 ；修复 PR（2026-09-22 补）：#7513 by zupengwang（three-value loss callback 返回 CP-local sums/counts 时先跨 CP 汇总再归一）——挂 09-21 oncall tracking map。https://github.com/NVIDIA/Megatron-LM/pull/7513
+- **行为效应**：无 crash、无 NaN——**梯度方向随 CP 分片的有效 token 分布畸变**：序列边界/eod 位置决定了哪个 CP 分片贡献多少权重，长跑下优化目标系统性偏离全局均值目标；普通 GPT + `--context-parallel-size 2 --eod-mask-loss` 即触发。与 LOSS.08（GKD mean-of-means 跨 micro-batch）/RL-ADV 家族的组内统计错值同病根「局部均值的均值 ≠ 全局均值」，这边打击**CP 轴**且是默认 loss 路径（per-token 关闭时）；与 KER.14（smoothing 尾局部化）同为「归约域在并行轴上缺一跳」，那边 TP 轴、这边 CP 轴。
+- **发现来源**：2026-09-18 每日扫描
+
+### LOSS.11 `mtp_per_token_loss_local_token_ratio`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron MTP 路径（multi_token_prediction.py:1113 `original_num_tokens = loss_mask.sum()`、L1216 把每个 MTP loss 乘 `original_num_tokens / num_tokens_safe`）——**两个计数都是 DP/CP rank 本地的**。`finalize_model_grads` 后续的全局归一除以全局 main-token 计数，**解不开一个已形成的非线性本地比率**（比率先作用于 per-token loss、再进梯度）。MTP + `calculate_per_token_loss=True` + DP/CP 间有效 token 数不均（SFT 式 masking 即产生）时触发。repro：两 DP worker main/MTP 计数 4/3 与 2/1、未缩放 MTP 梯度和 6 与 10 → 实现梯度 4.6666665，单 worker 参照 4.0。修复 = 先在与梯度归一相同的 DP/CP 组上 all-reduce 两个计数、再构成比率。#4896 报过同型比率平均但只在 MTP loss **日志**（已关）；本条证明**梯度路径同病**；#3943/#1532 是更早的 MTP 缩放 bug（已修）。
+- **来源**：Megatron-LM #7452（2026-09-17；finding 3）。https://github.com/NVIDIA/Megatron-LM/issues/7452
+- **行为效应**：无 crash、无 NaN——MTP 梯度被本地 token 比率加权，**有效 MTP 损失权重随各 rank 的 main/深 token 分布漂移**；多卡 vs 单卡 run 不可比、MTP head 的训练强度系统性错位。与 LOSS.10（CP-local mean-of-means）同打击「局部比率/均值先于全局归一进入非线性组合」，这边是 **MTP 双计数比率**、那边是 CP 均值；与 MOE.11（累积分子配瞬时分母）同为「比率的两项取自不同归约域」；「日志路径已报过、梯度路径漏修」与 OBS 家族「可见指标正常、隐藏路径坏」互为镜像。
+- **发现来源**：2026-09-18 每日扫描
 
 ---
 
@@ -1427,6 +1716,15 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：无 crash、无 NaN；reward 与训练指标一切正常。低烈度但系统性的方向污染：符号翻转的 advantage 把策略往 verifier 错判的方向推，且组内相关使「多采样平均」的去噪效率比名义低约 4.7×。与 RL-RWD.03（RM 过优化）不同：错不在 reward 模型被钻、在**测量误差的组内结构**被组相对估计器假设掉；与 RL-ADV.08（guess 与 reasoning 同 advantage）互补：那边是 outcome 无法区分路径，这边是 outcome 本身带相关噪声。
 - **发现来源**：2026-09-10 每日扫描
 
+### RL-RWD.08 `unscored_rollout_defaults_to_zero_reward`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：trl OpenReward 环境 `environment.py:192` 把 `self.reward` 初始化为 `0.0`、只在 `_call_ors_tool`（L266-296）拿到非 null reward 时覆写；默认 reward 函数 `_outcome_only_reward_func`（`_spec.py:69-75`）无条件返回 `env.reward`。从未调过打分工具的 rollout（放弃 / 撞 `max_tool_calling_iterations` / 全部工具调用抛异常）与「真被打 0 分」的 rollout **bit 级同值**——sentinel 与合法测量坍缩成同一个数。修复形状已有先例：PR #6430 的 `has_reward` 标志（仅工具返回非 null 时置位、`reset()` 复位、未打分返回 `None` 使 `unscorable_mask` 正确剔除）曾被维护者正面评审为 "a clean, well-reasoned fix for a real reward-hacking vector"，后因无关测试覆盖问题被关未合；`environment.py`/`_spec.py` 此后无 commit，缺陷在当前 HEAD 仍活。
+- **来源**：trl #7364（2026-09-24；逐函数源替换 repro 三例对照：A 未打分 vs B 真错 vs C 真对——A/B 下游全同；附 PR #6430 兴衰史）。https://github.com/huggingface/trl/issues/7364 ；trl #6430（先行修复、正评后被关）。https://github.com/huggingface/trl/pull/6430
+- **行为效应**：无 crash——组内中心化后「未测」与「测了且零分」同为 0.0：genuinely-failed 样本无法与 never-scored 区分，`unscorable_mask` 剔除逻辑失效；放弃/超限 rollout 被当作真实负信号参与 advantage，按 0 分中心化的组统计把「评分覆盖缺口」转成方向性梯度偏置（放弃行为可能被错误奖励或惩罚，取决于组内其余得分）。与 RL-RWD.05（prefilled tag 使 reward 恒 0 的死区）行为效应同型「合法 0 分与未测坍缩」，差异在这边是**环境侧哨兵值**而非 tokenizer/模板错位；与 RL-RWD.07（verifier 误差组内相关）互补：那边是测量的噪声结构、这边是测量的**缺席**被编码为测量值。
+- **发现来源**：2026-09-24 每日扫描
+
 ---
 
 # RL-ADV · advantage
@@ -1505,6 +1803,15 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：reward 曲线上涨、benchmark 分数可能也涨，但策略的**能力构成**在漂移（guess 分量被强化）；与 RL-RWD.03（reward 过优化）同症状（指标涨、能力掉），机制在估计器而非 reward 本身；与 RL-ADV.02（std 放大已会题）互补：那边错在方差归一，这边错在 outcome 无法区分到达路径。
 - **发现来源**：2026-09-05 每日扫描
 
+### RL-ADV.09 `filter_metric_predicate_mismatch_phantom_advantage`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：GRPO 系动态采样靠 filter metric 丢弃「无对比」组，但实现把 metric 做成可配置项——**按 shaped 训练分过滤时谓词语义失配**：复合 shaped reward 下 all-fail 组（任务全失败）内部仍有非零组内离差（shaping 分量差异），谓词判「有对比」放行；std 归一化把失败组内部的 shaping 差异**提升为满幅 phantom advantage**，策略在「全是错解、只有格式/过程分不同」的组上拿到完整学习信号。verl native recipe/dapo trainer 实测（Qwen2.5-1.5B LoRA + GSM8K 自定 shaped hook，模型/数据/reward/trainer 全固定、只换 metric）：score 指标臂 40 步内 0 次 batch refill、终值 EM 0.160；accuracy 指标臂 29/40 步 refill、终值 EM 0.763；无过滤臂 EM 0.080±0.112。作者定位为 metric-谓词语义错配（区别于已知 shaping 放大与 all-fail 过滤），并直接instrument了 native deletion/refill telemetry。
+- **来源**：arXiv:2609.13866（2026-09-12；受控 GSM8K 对照 + verl native trainer 复现）。https://arxiv.org/abs/2609.13866
+- **行为效应**：无 crash、指标看似正常推进——**训练信号在系统性学习「失败组内的 shaping 差异」**，收敛终点被拉向格式/过程分黑客方向（EM 0.160 vs 0.763 同预算同配置）；filter 命中率 telemetry（refill 次数）是唯一可观测异常。与 RL-ADV.04（drop 谓词只认二值 std）同族：**过滤谓词与奖励语义错配**，那边漏掉软奖励近同分组、这边反向放行全失败组；与 RL-ADV.08（guess 路径伪优势）互补：那边是 outcome 不区分路径、这边是 filter 不区分 outcome 与 shaping；对 RL-RWD 家族（shaped reward 黑客）是 estimator 侧的放大器。
+- **发现来源**：2026-09-16 每日扫描
+
 ---
 
 # RL-KL
@@ -1543,7 +1850,7 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 stage: `rl` · Cov: `var:config_default_swallows_cli_override` · 置信度 `documented`
 
 - **机制**：变体 trainer（GSPO-token / GMPO 等复制粘贴 `_compute_loss` 的实验实现）与主实现**漂移**：新增的正则项/开关在副本里没有对应代码，配置项通过校验、resolved config 里正确，但在 loss 里**静默 no-op**——KL 偏置校正系数不乘、off-policy mask（OPSM）不应用、entropy bonus 整块缺失、MoE router aux loss 不加。
-- **来源**：trl #6807（gspo_token `_compute_loss` 是旧版 GRPO 的 stale copy：`use_bias_correction_kl`/`off_policy_mask_threshold`/`entropy_coef`/`router_aux_loss_coef` 全部静默无效，代码对照复现）。https://github.com/huggingface/trl/issues/6807 ；trl #6808（GMPO：`use_liger_kernel=True` 时基类 `compute_loss` 绕过 GMPO 覆写、静默训成普通 GRPO clipped-surrogate；MoE aux loss / entropy bonus 同样缺失）。https://github.com/huggingface/trl/issues/6808 ；trl #7009（2026-09-03 补，GRPOTrainer **本体**同一分叉：`compute_loss` 按 Liger flag 提前 return，唯一加 aux loss 的 `_compute_loss` 不再执行、Liger 路径从不引用 `router_aux_loss_coef`，而 `aux_loss_enabled` 仍为 True、`router_aux_loss_coef` 默认 0.001 使 MoE 模型**零配置即中招**；2×2 实测（tiny-Qwen3MoE，同 H100 同 seed）：coef 0.0→0.1 标准 path loss 移动 0.2239 且与 `coef×aux_loss` 对到 float32 分辨率，Liger path 两个 loss **bit 级相同**（2^-26）——系数对目标完全无效；DPO/KTO 对该组合已 raise，GRPO 副本没有守卫）。https://github.com/huggingface/trl/issues/7009 ；修复 #7037/#7038（2026-09-04 补：GRPO 对 MoE aux + Liger 组合补 fail-fast 守卫 + `GRPOConfig` 文档写明须 `router_aux_loss_coef=0.0`，静默 no-op → 显式拒绝）。https://github.com/huggingface/trl/pull/7038 ；trl #7062（2026-09-06 补：vendored Liger 路径同族缺陷——DPO label smoothing/DiscoPOP tau 不转发进 fused loss、KTO 非默认 class weight 被**静默忽略**、KTO 多 example chunk 指标错、PEFT 参考路径被误关：#7059 vendor 进 `trl.losses` 时把配置面凿穿，「fused 快路径丢弃配置」是本条机制的第 5 个实例）。https://github.com/huggingface/trl/pull/7062
+- **来源**：trl #6807（gspo_token `_compute_loss` 是旧版 GRPO 的 stale copy：`use_bias_correction_kl`/`off_policy_mask_threshold`/`entropy_coef`/`router_aux_loss_coef` 全部静默无效，代码对照复现）。https://github.com/huggingface/trl/issues/6807 ；trl #6808（GMPO：`use_liger_kernel=True` 时基类 `compute_loss` 绕过 GMPO 覆写、静默训成普通 GRPO clipped-surrogate；MoE aux loss / entropy bonus 同样缺失）。https://github.com/huggingface/trl/issues/6808 ；trl #7009（2026-09-03 补，GRPOTrainer **本体**同一分叉：`compute_loss` 按 Liger flag 提前 return，唯一加 aux loss 的 `_compute_loss` 不再执行、Liger 路径从不引用 `router_aux_loss_coef`，而 `aux_loss_enabled` 仍为 True、`router_aux_loss_coef` 默认 0.001 使 MoE 模型**零配置即中招**；2×2 实测（tiny-Qwen3MoE，同 H100 同 seed）：coef 0.0→0.1 标准 path loss 移动 0.2239 且与 `coef×aux_loss` 对到 float32 分辨率，Liger path 两个 loss **bit 级相同**（2^-26）——系数对目标完全无效；DPO/KTO 对该组合已 raise，GRPO 副本没有守卫）。https://github.com/huggingface/trl/issues/7009 ；修复 #7037/#7038（2026-09-04 补：GRPO 对 MoE aux + Liger 组合补 fail-fast 守卫 + `GRPOConfig` 文档写明须 `router_aux_loss_coef=0.0`，静默 no-op → 显式拒绝）。https://github.com/huggingface/trl/pull/7038 ；trl #7062（2026-09-06 补：vendored Liger 路径同族缺陷——DPO label smoothing/DiscoPOP tau 不转发进 fused loss、KTO 非默认 class weight 被**静默忽略**、KTO 多 example chunk 指标错、PEFT 参考路径被误关：#7059 vendor 进 `trl.losses` 时把配置面凿穿，「fused 快路径丢弃配置」是本条机制的第 5 个实例）。https://github.com/huggingface/trl/pull/7062 ；trl #7270（2026-09-19 补：GMPO + Liger 的**完整更新级**独立复现——固定 ckpt + 固定 rollout 下单步 SGD 对照，Liger 开启的 GMPO 与纯 GRPO 的 loss/全梯度/终态**完全一致**、与 GMPO 目标的梯度相对 L2 差 0.1996558210；覆盖 `compute_loss` 调 GMPO 自身 `_compute_loss` 后差降到 1.93e-7；维护者 qgallouedec 确认与 #6808 同病、关闭为 duplicate，修复走向 = #7163 init 期拒绝该 flag + #7063/#7077 整体移除 fused Liger 路径后 `compute_loss` 不再绕过 `_compute_loss`——「结构性移除分叉面」而非补丁）。https://github.com/huggingface/trl/issues/7270
 - **行为效应**：无报错；用户以为在跑 GSPO-token/GMPO + KL 校正 + 负载均衡，实际 loss 退化成缺项的旧目标。MoE 场景 router aux 缺失会沿 MOE.01（负载均衡失守 → 专家死）方向放大。与 CKPT.06/07 同族但发生在**损失计算路径**：错误每一步都进梯度。机制面与 OPT.01（矩/权重错配）互补：那边是恢复期错位，这边是副本代码漂移。
 - **发现来源**：2026-08-20 每日扫描
 
@@ -1574,6 +1881,24 @@ stage: `rl` · Cov: `NEW` · 置信度 `verified`
 - **行为效应**：无 crash——KL 指标一切正常（clamp 住了），grad_norm 突然 NaN、参数被污染；触发面是极端 log-prob 差（off-policy 漂移 / rollout-train mismatch 大时更可能），恰好是最需要 KL 惩罚兜底的场景。与 NUM.04（scaler 吞溢出）互补：那边前向溢出被吞、这边**反向** inf 被 forward-side clip 掩盖；与 RL-RO.04（GSPO 比值指数溢出）同根（无界指数），差异在那边直接 inf、这边被 clamp 转成静默 NaN 梯度。
 - **发现来源**：2026-09-12 每日扫描
 
+### RL-KL.08 `sequence_mean_is_weight_broadcast_to_token_kl`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：trl GRPOTrainer `use_bias_correction_kl=True`（PR #6503 起默认开）时，KL bias correction 用 `coef_1 = exp(log_importance_weights)` 乘 per-token KL。`importance_sampling_level="sequence"` 下 `log_importance_weights` 是**序列均值** log-ratio，shape `(B, 1)`——广播到 `(B, T)` per-token KL 后，总 KL 的 token 级梯度多出一项 `(Σ_t k3_t) · ∇(mean_t log π_t)`：既非 DeepSeek-V3.2 论文的 per-token 修正、也非无偏 reverse-KL 梯度，纯 spurious。`level="token"` 时权重本就 per-token、无此 bug。修复（PR #6594，closed 未合并）= 无论 level 一律用 per-token `exp(log_ratio)` 乘 KL。
+- **来源**：trl PR #6594（closed unmerged；Closes #6586；arXiv:2608.02786 将其引为「loss 正常下降、梯度被腐蚀」的训练期实例）。https://github.com/huggingface/trl/pull/6594 ；#6586。https://github.com/huggingface/trl/issues/6586
+- **行为效应**：无 crash、loss 曲线正常下降——每个 token 的 KL 惩罚梯度携带全序列聚合的伪梯度分量，KL 约束的施加方向系统性偏移（sequence-level IS 配置下默认即中招）；与 RL-KL.07（k3 clamp 前向有限反向 NaN）同打击 KL 修正路径，差异在这边是**离散的形状契约破坏**（(B,1) 权重 × (B,T) KL）、那边是无界指数的数值面；与 RL-ADV 家族 IS 权重类（trl #6945 幸存者偏差 ratio）同根：**IS 修正项的粒度/形状与损失定义不匹配**。
+- **发现来源**：2026-09-16 每日扫描
+
+### RL-KL.09 `fp8_noise_clips_negative_tokens_out_of_trust_region`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：全管线 FP8 RL 中，训练侧与 rollout 侧各自的 FP8 量化噪声都进入 importance ratio，**逐级复合**后 ratio 系统性偏移——负 advantage token 的 ratio 被不成比例地推出 trust region（clip 上界），梯度被错误归零：病态输出**得不到惩罚**且随训练累积。表现为训练中期 entropy 涌现式激增 + 输出乱码。BF16 rollout + FP8 trainer（FP8-RL 栈）无此不稳定性——复合噪声是全管线 FP8 特有。缓解 = Calibrated Clipping：按高精度 BF16 分布对齐 FP8 clip 下界分位数并再平衡上界（8B–32B、GRPO/DAPO、多 scaling 粒度验证恢复至 BF16 基线水平）。
+- **来源**："Towards Full Pipeline FP8 Reinforcement Learning for LLMs", arXiv:2609.22870（2026-09-19）。https://arxiv.org/abs/2609.22870
+- **行为效应**：无 crash、无 NaN——entropy surge + 乱码输出这类「看似探索性崩溃」的症状，根因在**量化噪声 × clip 机制的符号不对称交互**：惩罚通道被静默关闭、奖励通道完好，策略单向漂移。与 RL-KL.03（entropy 塌缩到重复）表象同族但机制不同：那边是策略收敛动力学、这边是 clip 掩蔽负梯度；与 RL-RO.01（TIM：量化 rollout 的 logprob 偏差，TIS/MIS 校正对象）互补：TIS 校正 logprob **数值**、本条指出 ratio 进入**非线性 clip** 后校正残差被符号不对称放大——低精度栈设计需同时管校正与 clip 边界；与 RL-KL.07（k3 前向有限反向 NaN）同打击「梯度经有界算子后语义翻转」，差异在这边是确定性的方向偏置而非数值爆炸。
+- **发现来源**：2026-09-23 每日扫描
+
 ---
 
 # RL-RO · 训推不一致（TIM）
@@ -1585,7 +1910,7 @@ stage: `rl` · Cov: `NEW` · 置信度 `verified`
 stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：rollout（vLLM/SGLang）与 trainer（FSDP/Megatron）对**同一权重同一序列**给出不同 token 概率。来源：核实现不同 + 非 batch-invariant 归约。δₜ = log π_train − log π_rollout，均值小，极值可到 ~1.0，甚至 argmax 翻转。
-- **来源**：Zhong et al., "Diagnosing Training Inference Mismatch", arXiv:2605.14220。https://arxiv.org/abs/2605.14220 ；量化 rollout 放大版：QaRL arXiv:2604.07853（低精度 rollout + 全精度 trainer，长回复退化为重复/乱码 error token）。https://arxiv.org/abs/2604.07853 ；目标错位视角：MIPI/MIPU arXiv:2606.29526（TIM 造成常驻 off-policyness，训练引擎的改进不保证部署侧推理策略改进，需推理侧 gap proxy 选择性接受候选更新）。https://arxiv.org/abs/2606.29526 ；动态演化视角（2026-08-20 补）：arXiv:2602.01826（TIM 不是静态数值差：梯度噪声与 mismatch 随训练**同步增长**，IS 在长跑中失效；缩小更新尺寸可压制——mismatch 是与优化动力学耦合的动态故障，LR 调度即缓解）。https://arxiv.org/abs/2602.01826 ；结构化极限（2026-08-21 补）：arXiv:2606.09821（长尾词表下 importance ratio 是 distributional shift 的劣质代理，PPO/GRPO 的 ratio-clipping 只近似 trust region；DPPO 用 divergence-based mask 替换 ratio 剪裁更稳）。https://arxiv.org/abs/2606.09821 ；谱系（2026-08-22 补）：FP8-RL arXiv:2601.18150（veRL 生态 FP8 rollout 生产栈：blockwise W8A8 + FP8 KV-cache + per-step QKV scale 重校准，mismatch 用 token 级 TIS/MIS 校正——TIM 已被当作低精度 rollout 的**设计约束**而非偶发缺陷）。https://arxiv.org/abs/2601.18150 ；DVP arXiv:2512.23087（证明 TIM 的 logprob 散度界 ∝ (1−p)：高频 token 界趋零、长尾 token 界显著，采样尾部 token 引入系统性偏差误差并沿序列累积——为 RL-RO.06 重尾 / RL-RO.07 截断偏置给出统一理论：动态剪掉词表极尾部即稳定）。https://arxiv.org/abs/2512.23087 ；TP 尺寸维度（2026-08-30 补）：arXiv:2511.17826（serving 框架跨 TP 尺寸非确定：浮点非结合性 + 跨 GPU 归约序不一致，RL 场景 trainer TP=1 / rollout 多卡 TP 是天然错配源，与 batch-invariant kernel 已解决的 batch 维非确定性正交）。https://arxiv.org/abs/2511.17826
+- **来源**：Zhong et al., "Diagnosing Training Inference Mismatch", arXiv:2605.14220。https://arxiv.org/abs/2605.14220 ；量化 rollout 放大版：QaRL arXiv:2604.07853（低精度 rollout + 全精度 trainer，长回复退化为重复/乱码 error token）。https://arxiv.org/abs/2604.07853 ；目标错位视角：MIPI/MIPU arXiv:2606.29526（TIM 造成常驻 off-policyness，训练引擎的改进不保证部署侧推理策略改进，需推理侧 gap proxy 选择性接受候选更新）。https://arxiv.org/abs/2606.29526 ；动态演化视角（2026-08-20 补）：arXiv:2602.01826（TIM 不是静态数值差：梯度噪声与 mismatch 随训练**同步增长**，IS 在长跑中失效；缩小更新尺寸可压制——mismatch 是与优化动力学耦合的动态故障，LR 调度即缓解）。https://arxiv.org/abs/2602.01826 ；结构化极限（2026-08-21 补）：arXiv:2606.09821（长尾词表下 importance ratio 是 distributional shift 的劣质代理，PPO/GRPO 的 ratio-clipping 只近似 trust region；DPPO 用 divergence-based mask 替换 ratio 剪裁更稳）。https://arxiv.org/abs/2606.09821 ；谱系（2026-08-22 补）：FP8-RL arXiv:2601.18150（veRL 生态 FP8 rollout 生产栈：blockwise W8A8 + FP8 KV-cache + per-step QKV scale 重校准，mismatch 用 token 级 TIS/MIS 校正——TIM 已被当作低精度 rollout 的**设计约束**而非偶发缺陷）。https://arxiv.org/abs/2601.18150 ；DVP arXiv:2512.23087（证明 TIM 的 logprob 散度界 ∝ (1−p)：高频 token 界趋零、长尾 token 界显著，采样尾部 token 引入系统性偏差误差并沿序列累积——为 RL-RO.06 重尾 / RL-RO.07 截断偏置给出统一理论：动态剪掉词表极尾部即稳定）。https://arxiv.org/abs/2512.23087 ；TP 尺寸维度（2026-08-30 补）：arXiv:2511.17826（serving 框架跨 TP 尺寸非确定：浮点非结合性 + 跨 GPU 归约序不一致，RL 场景 trainer TP=1 / rollout 多卡 TP 是天然错配源，与 batch-invariant kernel 已解决的 batch 维非确定性正交）。https://arxiv.org/abs/2511.17826 ；量化误差源分解（2026-09-17 补）：QUADS arXiv:2607.15810（NVFP4 rollout + BF16 trainer ~150 步崩塌且 rollout-trainer logprob gap 迅速增长；受控消融定位**激活误差而非权重误差**为主导——权重可经共享 quant-dequant 路径对齐、激活在线重算且误差被粗 E2M1 网格放大；缓解 = trainer 侧非对称 QAT 只伪量化权重 + rollout 侧残差补偿：低精度 mismatch 的**误差源分解 + 双侧对齐**设计范式）。https://arxiv.org/abs/2607.15810 ；clip 交互面（2026-09-23 补）：arXiv:2609.22870（全管线 FP8 的复合量化噪声使 ratio 系统性偏移，负 advantage token 被推出 trust region——TIM 残差经非线性 clip 放大成符号不对称的梯度掩蔽，见 RL-KL.09）。https://arxiv.org/abs/2609.22870
 - **行为效应**：REINFORCE 下仅 TIM 就能让 MoE 验证奖励从 0.29 掉到 0.07；VeXact（零错配）继续升到 0.53。
 - **发现来源**：2026-08-17 基础调研
 
@@ -1732,6 +2057,24 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **来源**：trl #7198（logprob 不变式 repro：扰动 encoder 权重 → logprobs 逐 token 不动、`reset_encoder_cache()` 后恢复；引用 vllm_generation.py L513-L517）。https://github.com/huggingface/trl/issues/7198
 - **行为效应**：无 crash、无 NaN；多模态 RL（如 GRPO 多模态变体）里图像复现样本的 rollout 分布落后训练策略——IS/比率校正、KL 估计在视觉条件上系统性失准，且误差随 weight sync 周期与图像复现率增长。与 RL-RO.12（Mooncake buffer 旧版本滚入下一同步）同族：**同步契约漏了一类缓存/在途状态**；差异在这边是**多模态派生激活缓存**（vLLM 内部、engine 层不可见），不是权重版本本身——`sync_weights` 语义完整性缺陷与 RL-RO.08（adapter 漏传）同型。
 - **发现来源**：2026-09-14 每日扫描
+
+### RL-RO.18 `vllm_sleep_resume_corrupts_rollout_weights`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl colocated 模式下 `free_cache_engine=true`（**默认值**）让每次 weight sync 前后对 vLLM engine 执行 `sleep(level=1)` / `resume`——sleep 释放 weights/KV 显存、resume 重建。verl 0.8.0 + vllm 0.28.0：从**第二次 `update_weights` 起**，rollout 输出退化为多语言 token 乱码（真实词表 token 的 CJK/西里尔/阿拉伯文混合）；逐 step 归因：gs=0（初始 val）0/60 损坏 → gs=1 0/32 → gs=2 **32/52 全损坏**、最终 greedy val 全 0 分。五重排除链：发送端 merged 权重 vs 手工 HF merge 396 张量 0 超 1e-3；接收端 `_update_weights` 收到的权重与发送端 dump **逐 key max diff 0.0**；vLLM 磁盘/内存加载路径单独重放 + 8 并发两段生成 96 utterances 零损坏；LoRA delta 本身 ~1e-6 无辜；唯一剩余变量 `free_cache_engine`——关掉后同训练 0 损坏、reward 健康（E/A 非零 78%）。损坏发生在 sleep/resume 周期内部（resume 重建的权重 ≠ 刚同步的权重），与 ms-swift PR #7017（GRPO sleep/wake 乱码修复）现象一致。verl 0.9.0 同路径字节级相同、默认仍 true。
+- **来源**：verl #7904（2026-09-17；Qwen3-8B bf16 + LoRA r=64 merge=true、GRPO n=4 多轮 agent loop、A100-80GB 单卡；逐步归因表 + 双 config 对照）。https://github.com/verl-project/verl/issues/7904
+- **行为效应**：无 error、无 warning——rollout 静默变成乱码、reward 全零，**外部表象 = 「GRPO reward collapse」**（报告者自述被该表象骗了数轮调试）；训练侧 advantage 全 0、策略无学习信号但 job 绿。与 RL-RO.17（encoder cache 漏清）同族「weight sync 后 rollout engine 状态陈旧/损坏」，差异在这边打击 **sleep/resume 生命周期本身**（权重级、非缓存级）、且是默认配置；与 RL-RO.16（verl Mooncake completion slot 不 drain）同为 verl 引擎生命周期管理的静默正确性缺口；「表象是 reward collapse」的伪装面与 RL-RWD 家族诊断陷阱同型。
+- **发现来源**：2026-09-18 每日扫描
+
+### RL-RO.19 `weight_sync_ack_precedes_tp_barrier_buffer_reuse`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：ms-swift Ray Megatron 原生 IPC 权重同步：接收侧每个 TP worker 从共享 bucket 拷出张量后 `cuda.synchronize()`（只等**本进程**拷贝）→ driver rank 即刻 socket ACK → **之后**才进 `tp_size>1` 的 TP barrier；发送端 `_flush()` 收到 ACK 就 reset offset 复用**同一块**共享 buffer 写下一桶。合法交错：driver rank 拷完桶 A 发 ACK → 发送端开始写桶 B → 慢的非 driver TP rank 还在读桶 A → barrier 事后完成、撤销不了覆写。发送端不是 TP barrier 参与方、本地 CUDA sync 跨不了进程——不变量「所有 TP rank 读完前不得复用 bucket」被 ACK 时序结构性破坏；张量名/形状合法、值损坏、无同步异常。环境症状：Ray + Megatron GRPO **首次 rollout 后输出损坏**（AMD MI308X/ROCm、Qwen3.6-27B、训练 TP=4/PP=2、rollout 4×vLLM TP=4）；报告者明确标注尚未证明该 race 即根因、修复未端到端验证。
+- **来源**：ms-swift #10204（2026-09-19；收发两侧源码交错分析，upstream main `654e24f17` 同序）。https://github.com/modelscope/ms-swift/issues/10204
+- **行为效应**：若坐实：无 error——rollout 引擎收到名形合法、值被部分覆写的权重，采样静默跑在混合新旧版本参数上；表象与 RL-RO.18（sleep/resume 损坏 rollout 权重）同型「首 rollout 后输出损坏」，打击面在**传输缓冲生命周期**（复用 vs 重建）。与 RL-RO.12（completion slot 不 drain、旧版本张量滚入下一版本）共享「生产者复用缓冲先于消费者读完」病根；「本地 sync 代替全局同步」的越界与 ACT.07（offload reload 缺排序边）同型。当前定位：机制成立 + 症状在案、因果与数值验证待修复落地。2026-09-20 补：修复 PR ms-swift #10207（`fix(rollout): acknowledge IPC buckets after all TP copies`——ACK 移到 TP barrier 之后）已于 2026-09-20 10:28 UTC merge（merge commit `d7e24a13df6b`），#10204 同刻 closed completed；条目维持 `documented`，等端到端验证报告后评估升 `verified`。
+- **发现来源**：2026-09-20 每日扫描
 
 ---
 

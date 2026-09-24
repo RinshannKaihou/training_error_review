@@ -41,7 +41,7 @@ ENTRY_RE = re.compile(
 
 
 def extract_field(body: str, field_name: str) -> str:
-    pattern = rf"- \*\*{re.escape(field_name)}\*\*[：:]?\s*(.*?)(?=\n- \*\*|\n### |\Z)"
+    pattern = rf"- \*\*{re.escape(field_name)}\*\*[：:]?\s*(.*?)(?=\n- \*\*|\n#{{1,6}} |\n---\n\n# |\Z)"
     m = re.search(pattern, body, re.DOTALL)
     return m.group(1).strip() if m else ""
 

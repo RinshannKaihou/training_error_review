@@ -6,6 +6,7 @@ HW.05	training_sdc_checkpoint_inherit
 HW.06	llm_prism_permanent_gpu_fault
 HW.07	scout_pretrain_consensus_outlier
 HW.08	sdc_forward_qk_backward_grad_exponent
+HW.09	fp_sketch_post_hoc_gemm_sdc_localization
 NUM.01	fp8_bias_invariant_martingale_divergence
 NUM.02	bf16_vs_fp16_rl_engine_mismatch
 NUM.03	fp_reduction_order_training_nondeterminism
@@ -18,6 +19,9 @@ NUM.09	mixed_precision_cast_sweeps_quantized_params
 NUM.10	bf16_static_scaler_silent_skip_all_steps
 NUM.11	fsdp_cpu_offload_rng_tracker_device_mismatch
 NUM.12	bf16_reward_rounds_away_group_baseline
+NUM.13	gkd_jsd_mixed_precision_sign_flip
+NUM.14	qdora_magnitude_vector_downcast_silent_noop
+NUM.15	training_args_env_leak_sticky_bf16_precision
 PAR.01	zero2_bf16_multi_subgraph_incomplete_reduce
 PAR.02	allreduce_silent_wrong_value
 PAR.03	dp_consensus_washes_out_bad_rank
@@ -29,6 +33,12 @@ PAR.08	autotp_compile_drops_tp_collectives
 PAR.09	cpu_typestring_bucket_skips_allreduce
 PAR.10	traced_all_to_all_zero_backward
 PAR.11	gtp_expert_grad_overscaled_by_gtp_egtp
+PAR.12	hybridep_intermittent_bad_gradients
+PAR.13	liger_gate_skips_ddp_reducer_hooks
+PAR.14	explicit_pg_collection_group_fallback
+PAR.15	bridge_wan_gather_default_grad_sums_tp_copies
+PAR.16	ddp_normalization_shrinks_aux_loss_grad_dp_factor
+PAR.17	gradient_reduce_preprocessing_ignores_scaling_factor
 CKPT.01	expert_reshard_id_permutation
 CKPT.02	zero_optimizer_state_partition_mismatch
 CKPT.03	from_pretrained_silent_random_init
@@ -53,6 +63,10 @@ CKPT.21	shard_filename_lexical_sort_loads_wrong_rank
 CKPT.22	cached_optimizer_state_stale_scalar_lr
 CKPT.23	onpolicy_resume_offset_counted_in_rollout_rows
 CKPT.24	zero3_tag_load_reads_latest_weights
+CKPT.25	mfsdp_ckpt_stage_local_layer_keys_pp_resize
+CKPT.26	async_resume_cursor_pinned_by_stale_dropped_group
+CKPT.27	async_save_skips_tracker_write_non_megatron_scratch_restart
+CKPT.28	swiglu_interleave_layout_unconverted_on_load
 DATA.01	rank_shuffle_seed_desync
 DATA.02	packing_cross_document_attention
 DATA.03	loss_mask_includes_prompt
@@ -65,6 +79,9 @@ DATA.09	swa_branch_overwrites_caller_attention_mask
 DATA.10	secondary_eos_mask_misclassifies_terminated
 DATA.11	minillm_advantage_mask_checks_wrong_tensor
 DATA.12	sp_shard_cuts_causal_lm_labels
+DATA.13	wrapper_signature_probe_drops_packed_boundaries
+DATA.14	metric_flush_key_set_rank_local_contamination
+DATA.15	sparse_attn_window_crosses_packed_document_boundary
 OPT.01	adam_moment_not_resumed
 OPT.02	grad_clip_absorbs_sdc_spike
 OPT.03	lr_zero_phase_hides_bad_gradients
@@ -80,11 +97,16 @@ OPT.12	scheduler_override_rewrites_group_lr_bounds
 OPT.13	clip_averages_norms_across_disjoint_expert_owners
 OPT.14	fused_adam_shared_step_counter_bias_correction
 OPT.15	muon_scale_counts_alignment_padding_rows
+OPT.16	mixed_dtype_grad_list_single_multi_tensor_launch
+OPT.17	tp_sharded_param_unmarked_skipped_by_grad_norm_filter
+OPT.18	gdn_shared_out_norm_missing_tp_grad_sum
 ACT.01	moe_data_dependent_recompute_diverge
 ACT.02	selective_recompute_stale_rng
 ACT.03	replay_graph_diverges_from_train_graph
 ACT.04	async_ckpt_worker_failure_strands_peers
 ACT.05	partitioned_activation_recompute_mangles_args
+ACT.06	sar_recompute_skips_inplace_writes
+ACT.07	offload_reload_missing_stream_ordering_edge
 KER.01	fa_backward_mantissa_truncation
 KER.02	fa_backward_dual_site_O_and_dO
 KER.03	training_kernel_sync_semantic_wrong_value
@@ -97,6 +119,10 @@ KER.09	triton_block_local_mask_oob_rope_write
 KER.10	dsa_cudnn_packed_cp_wrong_values_flaky_masked
 KER.11	precision_override_never_reaches_fused_grouped_mlp
 KER.12	cudnn_sdpa_backward_padded_tile_scores_zero
+KER.13	chunked_ce_backward_inplace_overwrites_logits
+KER.14	vocab_parallel_ce_label_smoothing_local_shard
+KER.15	gathered_logits_fed_to_vocab_parallel_ce
+KER.16	triton_int32_offset_wraparound_oob_rw
 MOE.01	router_entropy_collapse
 MOE.02	expert_weight_id_misbind
 MOE.03	train_infer_router_desync
@@ -108,6 +134,9 @@ MOE.08	hash_router_aux_loss_optimizes_undispatched_route
 MOE.09	load_balance_hook_scans_wrong_container
 MOE.10	colocate_reload_swallows_post_load_processing
 MOE.11	global_aux_loss_denominator_uses_current_microbatch
+MOE.12	router_aux_loss_inplace_reduce_overwrites_token_count
+MOE.13	overdispersed_routing_importance_signal_collapse
+MOE.14	aux_loss_coef_noop_without_router_logit_flag
 LOSS.01	unscaled_embedding_grad_spike
 LOSS.02	attention_logit_growth_without_qk_norm
 LOSS.03	post_ln_vanishing_then_explode
@@ -117,6 +146,8 @@ LOSS.06	router_backbone_update_coupling_spike
 LOSS.07	zero_init_final_norm_blanks_first_backward
 LOSS.08	gkd_mean_of_means_token_reweighting
 LOSS.09	dapo_family_gas_double_scaling
+LOSS.10	cp_local_loss_means_averaged
+LOSS.11	mtp_per_token_loss_local_token_ratio
 SFT.01	chat_template_train_serve_mismatch
 SFT.02	packed_next_sample_as_completion
 SFT.03	assistant_mask_drops_last_turn
@@ -139,6 +170,7 @@ RL-RWD.04	tool_schema_constraints_silently_weakened
 RL-RWD.05	prefilled_tag_reward_dead_zone
 RL-RWD.06	reward_tokenizer_vocab_mismatch_silent_scores
 RL-RWD.07	verifier_error_group_correlation_sign_flip
+RL-RWD.08	unscored_rollout_defaults_to_zero_reward
 RL-ADV.01	grpo_group_std_zero
 RL-ADV.02	grpo_std_difficulty_bias
 RL-ADV.03	seq_mean_token_length_bias
@@ -147,6 +179,7 @@ RL-ADV.05	flat_group_zero_learning_signal
 RL-ADV.06	replay_buffer_shape_contract_degenerates
 RL-ADV.07	singleton_group_vectorized_zero_path
 RL-ADV.08	guess_path_spurious_advantage
+RL-ADV.09	filter_metric_predicate_mismatch_phantom_advantage
 RL-KL.01	k1_cancels_tim_early_collapse
 RL-KL.02	reverse_kl_as_loss_wrong_is_weight
 RL-KL.03	entropy_collapse_to_repetition
@@ -154,6 +187,8 @@ RL-KL.04	stale_loss_copy_silently_drops_config
 RL-KL.05	entropy_bonus_unscaled_logits_temperature_split
 RL-KL.06	kl_estimator_choice_varies_by_trainer
 RL-KL.07	k3_clip_saturates_but_gradient_nans
+RL-KL.08	sequence_mean_is_weight_broadcast_to_token_kl
+RL-KL.09	fp8_noise_clips_negative_tokens_out_of_trust_region
 RL-RO.01	tim_rollout_trainer_logprob_delta
 RL-RO.02	recompute_vs_bypass_objective_skew
 RL-RO.03	seq_mask_tis_skips_token_clamp
@@ -171,6 +206,8 @@ RL-RO.14	rollout_context_compression_conditions_diverged_history
 RL-RO.15	fsdp2_to_empty_unties_tied_embeddings
 RL-RO.16	response_prefix_role_flips_prompt_to_completion
 RL-RO.17	vllm_encoder_cache_survives_weight_sync
+RL-RO.18	vllm_sleep_resume_corrupts_rollout_weights
+RL-RO.19	weight_sync_ack_precedes_tp_barrier_buffer_reuse
 OBS.01	stability_monitor_env_lost_in_torchrun
 OBS.02	empty_metrics_read_as_healthy
 OBS.03	job_green_zero_step_progress

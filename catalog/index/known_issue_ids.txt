@@ -49,6 +49,10 @@ NVIDIA/Megatron-LM#7513
 NVIDIA/Megatron-LM#7530
 NVIDIA/Megatron-LM#7576
 NVIDIA/Megatron-LM#7613
+NVIDIA/Megatron-LM#7645
+NVIDIA/Megatron-LM#7646
+NVIDIA/Megatron-LM#7648
+NVIDIA/Megatron-LM#7649
 OpenRLHF/OpenRLHF#1270
 OpenRLHF/OpenRLHF#1293
 OpenRLHF/OpenRLHF#1295
@@ -62,6 +66,7 @@ OpenRLHF/OpenRLHF#1322
 OpenRLHF/OpenRLHF#1323
 OpenRLHF/OpenRLHF#1334
 OpenRLHF/OpenRLHF#1335
+OpenRLHF/OpenRLHF#1364
 deepspeedai/DeepSpeed#5794
 deepspeedai/DeepSpeed#8224
 deepspeedai/DeepSpeed#8230
@@ -141,6 +146,7 @@ huggingface/trl#7310
 huggingface/trl#7320
 huggingface/trl#7321
 huggingface/trl#7364
+huggingface/trl#7382
 modelscope/ms-swift#10012
 modelscope/ms-swift#10045
 modelscope/ms-swift#10050

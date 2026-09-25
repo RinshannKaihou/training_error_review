@@ -68,6 +68,8 @@ CKPT.26	async_resume_cursor_pinned_by_stale_dropped_group
 CKPT.27	async_save_skips_tracker_write_non_megatron_scratch_restart
 CKPT.28	swiglu_interleave_layout_unconverted_on_load
 CKPT.29	hf_rotary_inv_freq_uninitialized_after_to_empty
+CKPT.30	cyclic_sharded_resume_dp_resize_reorder
+CKPT.31	cyclic_unsharded_resume_epoch_boundary_dp_remainder
 DATA.01	rank_shuffle_seed_desync
 DATA.02	packing_cross_document_attention
 DATA.03	loss_mask_includes_prompt
@@ -172,6 +174,7 @@ RL-RWD.05	prefilled_tag_reward_dead_zone
 RL-RWD.06	reward_tokenizer_vocab_mismatch_silent_scores
 RL-RWD.07	verifier_error_group_correlation_sign_flip
 RL-RWD.08	unscored_rollout_defaults_to_zero_reward
+RL-RWD.09	math_verifier_symmetric_unit_erasure
 RL-ADV.01	grpo_group_std_zero
 RL-ADV.02	grpo_std_difficulty_bias
 RL-ADV.03	seq_mean_token_length_bias

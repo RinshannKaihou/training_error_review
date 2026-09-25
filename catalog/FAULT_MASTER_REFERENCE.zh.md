@@ -59,6 +59,7 @@
 > 2026-09-24：每日扫描。新增 RL-RWD.08（trl OpenReward `env.reward` 哨兵 0.0 与合法 0 分坍缩——从未打分的 rollout 与真 0 分 bit 级同值、`unscorable_mask` 失效、放弃/超限被当真实负信号进 advantage；先行修复 PR #6430 曾获维护者正评后被关未合、缺陷在 HEAD 仍活），补 KER.14（Megatron #7464 第三方独立复现：TP1 vs TP2 全梯度相对 L2 0.0515、三机复现）/ OPT.18（vipulsarode scoped 修复 PR #7613 已开：GDN/GDN2 × RMSNorm/LayerNorm 全覆盖 + finalizer 恰好一次求和单测）/ CKPT.26（修复 PR trl #7294 cross-ref 落定，仍 open）来源。窗口内其余候选均判边界外（trl #7362 fail-fast + 纯成本、#7354 启动期 KeyError、#7353 文档；DeepSpeed #8639 初始化 fail-fast、#8572 启动期校验放宽边界；Megatron #7464 即 KER.14 独立复现；verl #7990 closed completed）。**222 条**。
 
 > 2026-09-24：跨分支回填复核：远程 15 条中 12 条为已收录的同机制，新增 CKPT.29 / RL-ADV.10；DeepSpeed #8586 仅属性能开销，拒绝入库。**224 条**。
+> 2026-09-25：每日扫描。新增 CKPT.30 / CKPT.31 / RL-RWD.09 共 **3 条**（Megatron cyclic dataloader 换 DP 尺寸 resume 静默重放/漏样本——sharded 路径 bucket 几何随 DP 变 58 dup/58 miss、no-sharding 路径 epoch 边界含 DP 尾数 19 dup/19 miss，两条独立修复 PR #7648/#7649 已开；OpenRLHF `math_utils.grade_answer` 对 gold/prediction 对称抹单位——数值对单位错判同分、单位维度零梯度进 advantage），补 DATA.14 来源（修复 PR trl #7382 已 merge：key 并集 gather_object + `[sum,count]` 加权均值）。**227 条**。
 
 | 轴 | 分布 |
 |---|---|
@@ -75,7 +76,7 @@
 | HW | 硬件 / 训练期 SDC | 9 |
 | NUM | 数值 / 混精 / 非确定性 | 15 |
 | PAR | 并行 / 梯度归约 | 17 |
-| CKPT | 检查点 / resume | 29 |
+| CKPT | 检查点 / resume | 31 |
 | DATA | 数据管线 | 15 |
 | OPT | 优化器 | 18 |
 | ACT | 重计算 / 卸载 | 7 |
@@ -83,7 +84,7 @@
 | MOE | MoE 路由 / EP | 14 |
 | LOSS | loss spike / 长跑退化 | 11 |
 | SFT | 模板 / packing / 标签 | 15 |
-| RL-RWD | reward | 8 |
+| RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 10 |
 | RL-KL | KL / entropy | 9 |
 | RL-RO | rollout ↔ train（TIM） | 19 |
@@ -752,6 +753,24 @@ stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：CPU 复现确认该路径的旋转频率保持错误且无异常；在使用该 backend 的训练中，错误频率会污染位置编码与前向。来源提及旧问题 #3775 的 loss 差异，**不是本条当前版本的端到端训练效果实测**；未评估检测器效果。与 CKPT.25 的 PP 层键错位不同，此处失效的是 `meta` 实例化后的非持久化缓冲区初始化契约。
 - **发现来源**：2026-09-16 远程扫描回填；2026-09-24 合并复核
 
+### CKPT.30 `cyclic_sharded_resume_dp_resize_reorder`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `--dataloader-type cyclic` + 默认 data sharding 下，ckpt 只持久化标量 `consumed_train_samples`；resume 时 `build_pretraining_data_loader` 用**新的** `data_parallel_size` 重建 `MegatronPretrainingRandomSampler`，而 sharding 路径每个 rank 走自己连续 bucket 的排列，`bucket_size`/`bucket_offset`/`start_idx` 全部依赖 DP 尺寸。换 DP resume 后各 rank 从**不同 bucket 的不同 offset** 续走——已消费样本被重放、未消费样本被跳过，此后每个 epoch 都从错误 offset 开始。官方 dist-checkpointing 文档承诺 ckpt 可在不同并行配置（含 DP）下加载：权重/优化器 reshard 正确，数据序契约破裂。
+- **来源**：Megatron-LM #7645（2026-09-24；CPU-only sampler 级 repro，`main`@`ec806b2`：DP4→2 @ epoch 内 step 5 恢复 → 58 duplicated / 58 never drawn、DP4→8 → 56/56；对 {1,2,4,8}×全部恢复点扫描几乎全失败，整除/非整除数据集都中招；`--dataloader-type single` 全部通过）。https://github.com/NVIDIA/Megatron-LM/issues/7645 ；修复 PR #7648（2026-09-24 开：不兼容 sharded cyclic resume 显式失败 + ckpt 元数据 + 回归测试，fail-loudly 方向）。https://github.com/NVIDIA/Megatron-LM/pull/7648
+- **行为效应**：无 error 无 warning，训练正常推进——换 DP 尺寸 resume 的 run 静默改变样本覆盖（部分样本两遍、部分零遍）。repro 为 sampler 级计数，端到端 loss/收敛影响未实测（来源未提供）。与 CKPT.18（ms-swift resume 重建 sampler 丢 epoch 种子→81% 重复）同族「**resume 进度标量 + sampler 重建参数 = 不完整的状态契约**」，差异在这边 DP 尺寸是隐藏几何参数、那边是 epoch 种子；与 CKPT.23（on-policy offset 按 rollout 行计数喂 query 行 sampler）同理是进度语义与游标几何的错位。
+- **发现来源**：2026-09-25 每日扫描
+
+### CKPT.31 `cyclic_unsharded_resume_epoch_boundary_dp_remainder`
+
+stage: `pretrain` · Cov: `var:cyclic_sharded_resume_dp_resize_reorder` · 置信度 `documented`
+
+- **机制**：与 CKPT.30 同一总病根（ckpt 只存 `consumed_train_samples`、sampler 重建参数依赖 DP 尺寸），断点不同：`--no-data-sharding` 时排列本身与 DP 无关，但 `MegatronPretrainingRandomSampler.__iter__` 以 `active_total_samples = total_samples − last_batch_size`（`last_batch_size = total % (mbs×dp)`）推导 epoch 边界——**epoch 长度含 DP 尾数**。数据集大小不整除 `mbs×dp` 时换 DP，恢复 rank 把 epoch 边界放到别处：重放/跳过当前 epoch 尾部且此后每个 epoch 从错误 offset 开始；整除组合（如 N=250 的 DP2↔4）不受影响。应用 #7299 的 diff 后同样计数（独立于该修复）。
+- **来源**：Megatron-LM #7646（2026-09-24；CPU repro `main`@`ec806b2`：DP1→8 @ step 15 → 19 duplicated / 19 dropped、DP1→2 @ step 7 → 3/3、DP 不变 → 0/0）。https://github.com/NVIDIA/Megatron-LM/issues/7646 ；修复 PR #7649（2026-09-24 开：cyclic sampler 改用 DP 无关 permutation epoch、允许 global batch 跨被丢尾部，恢复后保持同样本序列；#7648 的 no-sharding 对应物）。https://github.com/NVIDIA/Megatron-LM/pull/7649
+- **行为效应**：与 CKPT.30 相同的静默面（无 crash 无 warning、部分样本重放/零覆盖），触发面更窄（需非整除尾数）。同样无端到端训练影响实测。与 CKPT.30 共享「resume 进度标量不含 DP 几何」失效机制，不同触发点：那边 bucket 分片几何随 DP 变、这边 epoch 长度尾数随 DP 变。
+- **发现来源**：2026-09-25 每日扫描
+
 ---
 
 # DATA · 数据管线
@@ -880,8 +899,8 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：trl GRPO/RLOO trainer 的 metric flush 遍历**本进程本地**的 pending key 集合并对每个 key 调 collective（`gather_object(self._pending_extra_logs[column])`、`accelerator.gather(local_mean)`）——各 rank 的 key 集合来自**条件触发的用户 reward 函数**（如「只在触发解析器/证明验证时 `log_metric`」），天然因 rank 而异。三种交错：① 某 rank 有 key、另一 rank 无 → 单边进 collective → 分布式死锁（活性面）；② 两个 rank 各持有不同 key 集合但同 step 都进循环 → `gather` 在不匹配的 key 上配对——**两条无关指标互相混进对方的聚合历史**；③ 都有 key 但样本数不同 → `gather(mean)` 之后再 mean 是**未加权平均 of means**，全局指标被各 rank 触发频次加权，系统性偏离真值。
-- **来源**：trl #7310（2026-09-20；DDP/Accelerate 路径 flush 逻辑逐行分析 + 修复方案先行自证：跨 rank 同步 key 并集、`[sum, count]` 成对 gather 做精确加权归约、未触发列 `[None]` padding）。https://github.com/huggingface/trl/issues/7310
-- **行为效应**：①是 hang（有信号）；②③**无 crash 无 warning**——logged metric 值静默错（混列 + 错权），reward 曲线/KL/reward-hacking 诊断的可信度被破坏。修复侧备注：`local_sum/local_count` 成对 gather 的加权均值属正确形状、但 `tot_cnt==0` 时除零守卫返回 0.0（把「全 rank 都没触发」记成 0 而非 NaN/缺失——低频指标的分母语义仍需看护）。与 OBS.09（gather_for_metrics 对已聚合标量无法去重 padding → 尾批偏置）同族「**指标聚合的 rank 几何假设破裂**」不同断点：那边假设行对齐、这边假设 **key 集合对齐**；与 RL-KL.04/OBS.06（KL/entropy/reward 指标路径不掩 padding）同理是「诊断仪表先于训练目标坏掉」——训练损失本身不受影响，正是 RL-RO/TIM 类故障依赖的观测面失准。
+- **来源**：trl #7310（2026-09-20；DDP/Accelerate 路径 flush 逻辑逐行分析 + 修复方案先行自证：跨 rank 同步 key 并集、`[sum, count]` 成对 gather 做精确加权归约、未触发列 `[None]` padding）。https://github.com/huggingface/trl/issues/7310 ；修复 PR trl #7382（2026-09-24 merge 关闭本 issue）。https://github.com/huggingface/trl/pull/7382
+- **行为效应**：①是 hang（有信号）；②③**无 crash 无 warning**——logged metric 值静默错（混列 + 错权），reward 曲线/KL/reward-hacking 诊断的可信度被破坏。修复侧备注：`local_sum/local_count` 成对 gather 的加权均值属正确形状、但 `tot_cnt==0` 时除零守卫返回 0.0（把「全 rank 都没触发」记成 0 而非 NaN/缺失——低频指标的分母语义仍需看护）。与 OBS.09（gather_for_metrics 对已聚合标量无法去重 padding → 尾批偏置）同族「**指标聚合的 rank 几何假设破裂**」不同断点：那边假设行对齐、这边假设 **key 集合对齐**；与 RL-KL.04/OBS.06（KL/entropy/reward 指标路径不掩 padding）同理是「诊断仪表先于训练目标坏掉」——训练损失本身不受影响，正是 RL-RO/TIM 类故障依赖的观测面失准。2026-09-24 已修复关闭：PR #7382（各 rank flush 前用一次 `gather_object` 对 logged key 并集达成一致、未触发列以 `None` padding、每条指标贡献 `[sum, count]` 权衡均值——三种失效模式修复前在 2×H100 复现、merge 于 21:33 UTC）。
 - **发现来源**：2026-09-21 每日扫描
 
 ### DATA.15 `sparse_attn_window_crosses_packed_document_boundary`
@@ -1735,6 +1754,15 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **来源**：trl #7364（2026-09-24；逐函数源替换 repro 三例对照：A 未打分 vs B 真错 vs C 真对——A/B 下游全同；附 PR #6430 兴衰史）。https://github.com/huggingface/trl/issues/7364 ；trl #6430（先行修复、正评后被关）。https://github.com/huggingface/trl/pull/6430
 - **行为效应**：无 crash——组内中心化后「未测」与「测了且零分」同为 0.0：genuinely-failed 样本无法与 never-scored 区分，`unscorable_mask` 剔除逻辑失效；放弃/超限 rollout 被当作真实负信号参与 advantage，按 0 分中心化的组统计把「评分覆盖缺口」转成方向性梯度偏置（放弃行为可能被错误奖励或惩罚，取决于组内其余得分）。与 RL-RWD.05（prefilled tag 使 reward 恒 0 的死区）行为效应同型「合法 0 分与未测坍缩」，差异在这边是**环境侧哨兵值**而非 tokenizer/模板错位；与 RL-RWD.07（verifier 误差组内相关）互补：那边是测量的噪声结构、这边是测量的**缺席**被编码为测量值。
 - **发现来源**：2026-09-24 每日扫描
+
+### RL-RWD.09 `math_verifier_symmetric_unit_erasure`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：OpenRLHF `math_utils.grade_answer` 的 `_normalize`（`openrlhf/utils/math_utils.py:220-238`）对 gold 与 prediction **各自独立**跑同一单位擦除循环（`degree/cm/meter/mile/second/…` 的 `re.sub`），随后在 `grade_answer_sympy`（`:377`）比较擦除后的字符串——从不检查两侧单位是否匹配。裸词单位路径：`5 hours` vs `5 minutes` 双方都被抹成 `5`，sympy 字符串相等判 True（mathd 路径判 False，但 `grade_answer` 两条都走）；MATH-style `\text{ minutes}` 路径：mathd 侧 `_remove_right_units` 同样把单位抹掉，`grade_answer('5\text{ minutes}', '5\text{ hours}')` 判 True。单位列表与 `re.sub` 循环继承自 `openai/prm800k` grader（L126-144，等值检查先于空答案检查同样是继承的），OpenRLHF 无测试覆盖 `grade_answer`。可达面：`grade_answer` 从 `openrlhf/utils/__init__.py` 导出、`examples/python/math_reward_func.py` 是三个 shipped 示例脚本的 `REWARD_FUNC_PATH`。
+- **来源**：OpenRLHF #1364（2026-09-24；HEAD `dc2a7ad`、真实 pylatexenc 2.11 下逐例实测：`5 hours`/`5 minutes`→1.0、`10 meters`/`10 miles`→1.0、`60 miles per hour`/`60 feet per second`→1.0（归一化后同为 `60per`）、空 `\boxed{}` 对 `hours`→1.0 等 15 例全表）。https://github.com/OpenRLHF/OpenRLHF/issues/1364
+- **行为效应**：无 crash——数学 RL 的 reward 信号把「数值对、单位错」与「全对」判成同值：组内中心化后此类错误样本拿到与正样本同量级正 advantage，单位正确性维度**零梯度**（学不到也无惩罚）；速率/时间量纲错换（miles/hour vs feet/second）与纯数字错一同被洗成正确。与 RL-RWD.07（verifier 误差组内相关）同族「**verifier 缺陷直接进 advantage**」，差异在这边是确定性的标签语义缺陷（对称抹除）而非随机误差结构；与 RL-RWD.08（未打分坍缩为 0 分）互补：那边测量缺席被编码、这边测量**错误**被编码为正确。示例脚本级影响（多少比例 rollout 携带单位）未实测。
+- **发现来源**：2026-09-25 每日扫描
 
 ---
 

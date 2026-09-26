@@ -68,6 +68,7 @@ OpenRLHF/OpenRLHF#1334
 OpenRLHF/OpenRLHF#1335
 OpenRLHF/OpenRLHF#1364
 deepspeedai/DeepSpeed#5794
+deepspeedai/DeepSpeed#7255
 deepspeedai/DeepSpeed#8224
 deepspeedai/DeepSpeed#8230
 deepspeedai/DeepSpeed#8291
@@ -101,6 +102,7 @@ deepspeedai/DeepSpeed#8478
 deepspeedai/DeepSpeed#8491
 deepspeedai/DeepSpeed#8499
 deepspeedai/DeepSpeed#8590
+deepspeedai/DeepSpeed#8660
 huggingface/trl#6430
 huggingface/trl#6586
 huggingface/trl#6594
@@ -182,6 +184,7 @@ pytorch/torchtitan#4688
 pytorch/torchtitan#4692
 pytorch/torchtitan#4783
 pytorch/torchtitan#4801
+pytorch/torchtitan#4802
 verl-project/verl#7401
 verl-project/verl#7405
 verl-project/verl#7460
@@ -220,3 +223,4 @@ verl-project/verl#7904
 verl-project/verl#7931
 verl-project/verl#7952
 verl-project/verl#7956
+verl-project/verl#8020

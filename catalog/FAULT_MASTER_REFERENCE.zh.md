@@ -61,6 +61,8 @@
 > 2026-09-24：跨分支回填复核：远程 15 条中 12 条为已收录的同机制，新增 CKPT.29 / RL-ADV.10；DeepSpeed #8586 仅属性能开销，拒绝入库。**224 条**。
 > 2026-09-25：每日扫描。新增 CKPT.30 / CKPT.31 / RL-RWD.09 共 **3 条**（Megatron cyclic dataloader 换 DP 尺寸 resume 静默重放/漏样本——sharded 路径 bucket 几何随 DP 变 58 dup/58 miss、no-sharding 路径 epoch 边界含 DP 尾数 19 dup/19 miss，两条独立修复 PR #7648/#7649 已开；OpenRLHF `math_utils.grade_answer` 对 gold/prediction 对称抹单位——数值对单位错判同分、单位维度零梯度进 advantage），补 DATA.14 来源（修复 PR trl #7382 已 merge：key 并集 gather_object + `[sum,count]` 加权均值）。**227 条**。
 
+> 2026-09-26：每日扫描。新增 LOSS.12 / RL-RO.20 / OBS.13 共 **3 条**（torchtitan DSV4 indexer 辅助 loss 未接——`Indexer.select()` 只返回整数 top-k 索引、q/k/w 投影 grad=None，run 全程 token 选择器冻在初始化值；verl rollout-correction 预设在 top_p/top_k/min_p 截断下 kept-mass 偏置越过拒绝门限——Geo-RS/Seq-MIS 默认门限 100/100 步全拒、梯度恒 0、reward 停在起点，RL-RO.07 同机制在 verl 栈的训练侧放大实例；DeepSpeed fp32+ZeRO-0 `get_global_grad_norm()` 恒 None——范数已算出即被丢弃、HF Trainer 静默丢 grad_norm 日志，`gradient_clipping` 默认 1.0 后 plain 配置即中招），补 CKPT.30 来源（reviewer 09-25 验证 PR #7648 修复有效 + 发现 sharded→unsharded resume 切换仍静默接受的残留缺口 55 dup/55 miss）。DeepSpeed #8608（Muon ckpt 转换 KeyError fail-fast）拒收见 rejected.md。**230 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -82,13 +84,13 @@
 | ACT | 重计算 / 卸载 | 7 |
 | KER | 训练 kernel | 16 |
 | MOE | MoE 路由 / EP | 14 |
-| LOSS | loss spike / 长跑退化 | 11 |
+| LOSS | loss spike / 长跑退化 | 12 |
 | SFT | 模板 / packing / 标签 | 15 |
 | RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 10 |
 | RL-KL | KL / entropy | 9 |
-| RL-RO | rollout ↔ train（TIM） | 19 |
-| OBS | 观测性骗过 | 12 |
+| RL-RO | rollout ↔ train（TIM） | 20 |
+| OBS | 观测性骗过 | 13 |
 
 ---
 
@@ -758,7 +760,7 @@ stage: `pretrain/sft/rl` · Cov: `NEW` · 置信度 `documented`
 stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：Megatron `--dataloader-type cyclic` + 默认 data sharding 下，ckpt 只持久化标量 `consumed_train_samples`；resume 时 `build_pretraining_data_loader` 用**新的** `data_parallel_size` 重建 `MegatronPretrainingRandomSampler`，而 sharding 路径每个 rank 走自己连续 bucket 的排列，`bucket_size`/`bucket_offset`/`start_idx` 全部依赖 DP 尺寸。换 DP resume 后各 rank 从**不同 bucket 的不同 offset** 续走——已消费样本被重放、未消费样本被跳过，此后每个 epoch 都从错误 offset 开始。官方 dist-checkpointing 文档承诺 ckpt 可在不同并行配置（含 DP）下加载：权重/优化器 reshard 正确，数据序契约破裂。
-- **来源**：Megatron-LM #7645（2026-09-24；CPU-only sampler 级 repro，`main`@`ec806b2`：DP4→2 @ epoch 内 step 5 恢复 → 58 duplicated / 58 never drawn、DP4→8 → 56/56；对 {1,2,4,8}×全部恢复点扫描几乎全失败，整除/非整除数据集都中招；`--dataloader-type single` 全部通过）。https://github.com/NVIDIA/Megatron-LM/issues/7645 ；修复 PR #7648（2026-09-24 开：不兼容 sharded cyclic resume 显式失败 + ckpt 元数据 + 回归测试，fail-loudly 方向）。https://github.com/NVIDIA/Megatron-LM/pull/7648
+- **来源**：Megatron-LM #7645（2026-09-24；CPU-only sampler 级 repro，`main`@`ec806b2`：DP4→2 @ epoch 内 step 5 恢复 → 58 duplicated / 58 never drawn、DP4→8 → 56/56；对 {1,2,4,8}×全部恢复点扫描几乎全失败，整除/非整除数据集都中招；`--dataloader-type single` 全部通过）。https://github.com/NVIDIA/Megatron-LM/issues/7645 ；修复 PR #7648（2026-09-24 开：不兼容 sharded cyclic resume 显式失败 + ckpt 元数据 + 回归测试，fail-loudly 方向）。https://github.com/NVIDIA/Megatron-LM/pull/7648 （2026-09-26 复核：reviewer SeverinVisionary 于 09-25 验证 head `a9ecd39`——新旧 ckpt 元数据两条路径的 DP-size 不匹配 resume 均被正确拒绝、匹配 resume/single/finetune/release 不受影响；同时发现**残留缺口**：sharded→unsharded 切换（resume 时加 `--no-data-sharding`）因检查在 unsharded 分支提前返回仍被静默接受，同 repro 下 55 dup/55 miss，旧 ckpt 的 args 里存有 `data_sharding` 可用于同一检查——待 PR 更新）。
 - **行为效应**：无 error 无 warning，训练正常推进——换 DP 尺寸 resume 的 run 静默改变样本覆盖（部分样本两遍、部分零遍）。repro 为 sampler 级计数，端到端 loss/收敛影响未实测（来源未提供）。与 CKPT.18（ms-swift resume 重建 sampler 丢 epoch 种子→81% 重复）同族「**resume 进度标量 + sampler 重建参数 = 不完整的状态契约**」，差异在这边 DP 尺寸是隐藏几何参数、那边是 epoch 种子；与 CKPT.23（on-policy offset 按 rollout 行计数喂 query 行 sampler）同理是进度语义与游标几何的错位。
 - **发现来源**：2026-09-25 每日扫描
 
@@ -1536,6 +1538,15 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：无 crash、无 NaN——MTP 梯度被本地 token 比率加权，**有效 MTP 损失权重随各 rank 的 main/深 token 分布漂移**；多卡 vs 单卡 run 不可比、MTP head 的训练强度系统性错位。与 LOSS.10（CP-local mean-of-means）同打击「局部比率/均值先于全局归一进入非线性组合」，这边是 **MTP 双计数比率**、那边是 CP 均值；与 MOE.11（累积分子配瞬时分母）同为「比率的两项取自不同归约域」；「日志路径已报过、梯度路径漏修」与 OBS 家族「可见指标正常、隐藏路径坏」互为镜像。
 - **发现来源**：2026-09-18 每日扫描
 
+### LOSS.12 `dsv4_indexer_aux_loss_path_grad_none`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：torchtitan DeepSeek V4 的 indexer（DSA 稀疏注意力 token 选择器）辅助训练 loss 被临时移除（`attention.py` L55-57 TODO，等通用 aux-loss 机制 #3864 落地），但 indexer 前向仍在产出 scores：`Indexer.select()` 只返回整数 top-k 索引——**索引不携带梯度**，query/key/weight 三个投影（`idx_q`/`idx_k`/`idx_w`）从主 attention loss 拿不到任何梯度。报告者用 torchtitan 真实 `Indexer` 类做 CPU 函数级核对（PyTorch 2.12）：对 selected values 的 loss 反传后 `values.grad` 非 None、三个投影 `grad` 全 None。通用 aux-loss 机制现已可用（#3864），恢复路径存在但主线未接。
+- **来源**：torchtitan #4802（2026-09-20；CPU 梯度路径核对 + TODO 定位；Matrix-Z97 确认正从 NPU 适配迁移实现、将开 Draft PR）。https://github.com/pytorch/torchtitan/issues/4802
+- **行为效应**：无 crash、无 warning，训练曲线正常——DSV4 在 torchtitan main 上的 run 整个训练期 indexer 投影停留在初始化值（等价于随机 token 选择器被冻结），稀疏注意力选 token 的质量从不改进，质量损害不体现在 loss 上。与 RL-KL.04 / MOE.14（aux loss 静默 no-op）同族「**辅助目标缺位而主训练无感**」：那边配置在、执行路径丢，这边路径整个未接且代码内 TODO 自认；与 LOSS.07（零初始化首步全零）同属「合法运行掩盖未训练子模块」。
+- **发现来源**：2026-09-26 每日扫描
+
 ---
 
 # SFT
@@ -2124,6 +2135,15 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：若坐实：无 error——rollout 引擎收到名形合法、值被部分覆写的权重，采样静默跑在混合新旧版本参数上；表象与 RL-RO.18（sleep/resume 损坏 rollout 权重）同型「首 rollout 后输出损坏」，打击面在**传输缓冲生命周期**（复用 vs 重建）。与 RL-RO.12（completion slot 不 drain、旧版本张量滚入下一版本）共享「生产者复用缓冲先于消费者读完」病根；「本地 sync 代替全局同步」的越界与 ACT.07（offload reload 缺排序边）同型。当前定位：机制成立 + 症状在案、因果与数值验证待修复落地。2026-09-20 补：修复 PR ms-swift #10207（`fix(rollout): acknowledge IPC buckets after all TP copies`——ACK 移到 TP barrier 之后）已于 2026-09-20 10:28 UTC merge（merge commit `d7e24a13df6b`），#10204 同刻 closed completed；条目维持 `documented`，等端到端验证报告后评估升 `verified`。
 - **发现来源**：2026-09-20 每日扫描
 
+### RL-RO.20 `kept_mass_shift_rejects_all_rollout_correction`
+
+stage: `rl` · Cov: `var:nucleus_truncation_is_bias` · 置信度 `documented`
+
+- **机制**：verl 默认向 vLLM 请求 `processed_logprobs`（`rollout.logprobs_mode`）。top_p / top_k / min_p 截断下，该 logprob 在**保留集上归一化**，而 trainer 侧 `old_log_probs` 在全词表 log-softmax——`old_log_probs − rollout_log_probs` 逐 token 携带 `log(kept mass)` 偏置，与策略变化无关。该偏置被送进 rollout-correction 预设后越过拒绝门限：per-token 几何均值 ratio ≈0.964（Geo-RS 门限 `0.999_1.001`），257-279 token 求和后 `rollout_is_mean` 0.0012-0.0017（Seq-MIS 门限 `0.5_2.0`）——两个预设**拒绝每一条序列**、actor 梯度恒 0。k3 预设对此二阶不敏感（`r−1−log r ≈ 0.0007` @ r=0.964），偏置留在权重里不可见。报告者在 `main`@`6093e00`（GSM8K GRPO、Qwen2.5-1.5B-Instruct、2×RTX4090、100 步/臂）实测：Geo-RS 默认门限 + `top_p=0.8` → 100/100 步全拒、reward 从 0.13 停到 0.14，而未校正对照从 0.34 升到 0.83；补支持集尺寸重放（actor 侧 `logsumexp(top-|S| logits/T) − logsumexp(logits/T)` 加回 rollout 侧）后 `rollout_corr/kl` 降到 0.00029、reward 跟随对照。#8010（score centering）在 config 校验层只接受 `top_p=1, top_k=-1`，#8009 列 top_p<1 replay 为后续项——受影响的正是没被这两个守卫盖住的预设路径。
+- **来源**：verl #8020（2026-09-25；5 臂实测 + 100 步 stall 曲线 + 140 行 9 文件原型与全部 JSON 存档；`rollout_rs_seq_masked_fraction==1.0` 逐臂表格；评论含 100 步复跑与重放原型验证）。https://github.com/verl-project/verl/issues/8020
+- **行为效应**：无 crash、无 NaN 崩溃——唯一可见症状是一条通用 warning「Response mask is all False, returning default advantage metrics」每步一次 + `critic/advantages/*` NaN，不点名预设、截断或拒绝；run 看似在训（reward 曲线在动），实际 100/100 步零梯度、reward 停在起点。这是 RL-RO.07（`nucleus_truncation_is_bias`——同一 kept-mass 偏置首次在 trl 定位）在 verl rollout-correction 栈上的**训练侧放大实例**：同一机制，不同触发点——trl 那边偏置直接进 PPO 分母，verl 这边越过拒绝门限把整个 run 变成零学习信号。与 RL-ADV.08（猜中与推理同量级 advantage）同属「reward 在动、学习没发生」表象；与 OBS 家族互补：本条是 TIM 偏置经门限静默杀梯度，不是指标失准。
+- **发现来源**：2026-09-26 每日扫描
+
 ---
 
 # OBS · 观测性
@@ -2237,4 +2257,13 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 - **来源**：DeepSpeed #8456（2026-09-08；间隔解析表、`raise Warning` 语义坑、测试盲区三段式分析）。https://github.com/deepspeedai/DeepSpeed/issues/8456
 - **行为效应**：无 crash、无日志——自管 dataloader 的 ZenFlow run 用**第一步选出的列**训完整个 run：重要性列从不轮换，训练动态与配置语义（按 epoch 重选）背离；`auto`+整数 interval 组合还会在初始化期以一条「描述 fallback 的报错」崩掉，掩盖真正语义。与 OBS.02（空指标当健康）同族但更隐蔽：**指标全正常、行为整体退化**；「测试断言不 crash 而非断言语义」的掩体与 OBS.07/KER.10 的假绿同型；与 CKPT.07（配置被静默忽略）的差异：这边不是死配置，是**配置语义依赖一个未传入的运行时对象**，签名上完全合法。
 - **发现来源**：2026-09-12 每日扫描
+
+### OBS.13 `fp32_zero0_global_grad_norm_none`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：DeepSpeed fp32 + ZeRO stage 0 的梯度裁剪在 `_take_model_step` 里走 `clip_fp32_gradients()` → `clip_grad_norm_`，该函数**返回总范数但值被丢弃**（engine.py L3425-3442）；之后 engine 只从 `optimizer._global_grad_norm` 拷贝，而该属性只有 fp16/bf16/ZeRO 包装优化器会设置——fp32 stage 0 用基础优化器（`torch.optim` / FusedAdam / CPUAdam / FusedLamb），`get_global_grad_norm()` 恒返回 `None`。范数已算出、就在丢弃点之前，仅未存。报告者提供 CPU 单进程 repro（master `bc44b341`）：stage 0 打印 `None`、stage 1 打印 `2.7553305625915527`；同路径在 `torch_autocast` + stage 0 也命中。
+- **来源**：DeepSpeed #8660（2026-09-25；repro + 根因 + 修复提案：`clip_fp32_gradients()` 返回值存入 `_global_grad_norm`，回归测试对照纯 torch pre-step 范数——测试 master 上挂、修复后过）。https://github.com/deepspeedai/DeepSpeed/issues/8660 ；同症状先例 #7255（2025-04 开、无 repro）。https://github.com/deepspeedai/DeepSpeed/issues/7255
+- **行为效应**：无 crash——`max_grad_norm>0` 时 HF Trainer 经 Accelerate 读到 `None`，把 `grad_norm` 从日志**静默丢弃**；#8068 把 `gradient_clipping` 默认值改为 1.0 后，plain DeepSpeed 配置即中招。观测缺口：无梯度范数序列 → spike 事后诊断无从谈起（对比 OPT.03 lr_zero 骗过监控的「监控在、值骗人」，这边是**监控读取点直接缺失**，与 OBS.02 空指标当健康同族但方向相反）；训练本身（裁剪、权重更新）不受影响。fp32 stage 0 是最小配置面（无混精、无 ZeRO 分片），恰是排查数值问题时的对照基线——基线 run 丢 grad_norm 使对照失效。
+- **发现来源**：2026-09-26 每日扫描
 

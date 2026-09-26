@@ -151,6 +151,7 @@ LOSS.08	gkd_mean_of_means_token_reweighting
 LOSS.09	dapo_family_gas_double_scaling
 LOSS.10	cp_local_loss_means_averaged
 LOSS.11	mtp_per_token_loss_local_token_ratio
+LOSS.12	dsv4_indexer_aux_loss_path_grad_none
 SFT.01	chat_template_train_serve_mismatch
 SFT.02	packed_next_sample_as_completion
 SFT.03	assistant_mask_drops_last_turn
@@ -213,6 +214,7 @@ RL-RO.16	response_prefix_role_flips_prompt_to_completion
 RL-RO.17	vllm_encoder_cache_survives_weight_sync
 RL-RO.18	vllm_sleep_resume_corrupts_rollout_weights
 RL-RO.19	weight_sync_ack_precedes_tp_barrier_buffer_reuse
+RL-RO.20	kept_mass_shift_rejects_all_rollout_correction
 OBS.01	stability_monitor_env_lost_in_torchrun
 OBS.02	empty_metrics_read_as_healthy
 OBS.03	job_green_zero_step_progress
@@ -225,3 +227,4 @@ OBS.09	gathered_mean_metrics_double_count_padding
 OBS.10	tp_replicated_tokens_summed_in_metrics
 OBS.11	synthetic_padding_dilutes_rollout_correction_metrics
 OBS.12	missing_dataloader_silently_disables_resampling
+OBS.13	fp32_zero0_global_grad_norm_none

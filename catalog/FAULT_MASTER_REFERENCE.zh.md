@@ -63,6 +63,8 @@
 
 > 2026-09-26：每日扫描。新增 LOSS.12 / RL-RO.20 / OBS.13 共 **3 条**（torchtitan DSV4 indexer 辅助 loss 未接——`Indexer.select()` 只返回整数 top-k 索引、q/k/w 投影 grad=None，run 全程 token 选择器冻在初始化值；verl rollout-correction 预设在 top_p/top_k/min_p 截断下 kept-mass 偏置越过拒绝门限——Geo-RS/Seq-MIS 默认门限 100/100 步全拒、梯度恒 0、reward 停在起点，RL-RO.07 同机制在 verl 栈的训练侧放大实例；DeepSpeed fp32+ZeRO-0 `get_global_grad_norm()` 恒 None——范数已算出即被丢弃、HF Trainer 静默丢 grad_norm 日志，`gradient_clipping` 默认 1.0 后 plain 配置即中招），补 CKPT.30 来源（reviewer 09-25 验证 PR #7648 修复有效 + 发现 sharded→unsharded resume 切换仍静默接受的残留缺口 55 dup/55 miss）。DeepSpeed #8608（Muon ckpt 转换 KeyError fail-fast）拒收见 rejected.md。**230 条**。
 
+> 2026-09-27：每日扫描。新增 RL-RO.21（trl GRPO server 模式 `all_prompts[::num_generations]` 组内去重假设 N 份相同前缀——工具调用第二轮起组内历史互不相同，全组 continuation 从第一成员历史采样再回填，B 的轨迹接在 A 的工具结果上；报告者 CPU mock repro + 本扫描对 trl main@HEAD 逐行核对因果闭合）。arXiv export API 全端点对出口 IP 406/502（昨日同命令成功）、Semantic Scholar 429、Crossref 域不匹配——4 查询未覆盖，明日补查。轮巡 8 个旧来源无实质变化。**231 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -89,7 +91,7 @@
 | RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 10 |
 | RL-KL | KL / entropy | 9 |
-| RL-RO | rollout ↔ train（TIM） | 20 |
+| RL-RO | rollout ↔ train（TIM） | 21 |
 | OBS | 观测性骗过 | 13 |
 
 ---
@@ -2143,6 +2145,15 @@ stage: `rl` · Cov: `var:nucleus_truncation_is_bias` · 置信度 `documented`
 - **来源**：verl #8020（2026-09-25；5 臂实测 + 100 步 stall 曲线 + 140 行 9 文件原型与全部 JSON 存档；`rollout_rs_seq_masked_fraction==1.0` 逐臂表格；评论含 100 步复跑与重放原型验证）。https://github.com/verl-project/verl/issues/8020
 - **行为效应**：无 crash、无 NaN 崩溃——唯一可见症状是一条通用 warning「Response mask is all False, returning default advantage metrics」每步一次 + `critic/advantages/*` NaN，不点名预设、截断或拒绝；run 看似在训（reward 曲线在动），实际 100/100 步零梯度、reward 停在起点。这是 RL-RO.07（`nucleus_truncation_is_bias`——同一 kept-mass 偏置首次在 trl 定位）在 verl rollout-correction 栈上的**训练侧放大实例**：同一机制，不同触发点——trl 那边偏置直接进 PPO 分母，verl 这边越过拒绝门限把整个 run 变成零学习信号。与 RL-ADV.08（猜中与推理同量级 advantage）同属「reward 在动、学习没发生」表象；与 OBS 家族互补：本条是 TIM 偏置经门限静默杀梯度，不是指标失准。
 - **发现来源**：2026-09-26 每日扫描
+
+### RL-RO.21 `group_prefix_dedup_discards_tool_continuations`
+
+stage: `rl` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：trl GRPO **server** 模式下 `VLLMGeneration.generate()` 以 `all_prompts[::num_generations]` 做组内去重——该切片只对「组内 N 条 prompt 是同一前缀的 N 份复制」合法。首轮生成成立（trainer 上游确以 `num_generations` 重复 prompt）；但工具调用第二轮起，`_tool_call_loop` 传入的 `prompt_completion_tool_ids` 组内各成员 = 各自的首轮 completion + 工具返回，**前缀互不相同**。步进切片只保留第一成员的历史 A，`n=num_generations` 让全组 continuation 全部从 A 的历史采样，再按切片回填给 B/C/D——B 的后续轨迹接在 A 的事实上生成。报告者附 CPU 级最小 repro（histories `[1,10,30]` / `[1,20,35]` → `completions == [[30],[30]]`，修后 `[[30],[35]]`）；本扫描对 trl `main`@HEAD 逐行核对：`grpo_trainer.py` `_generate_single_turn` 对工具轮次仍传 `num_generations=self.num_generations`，`vllm_generation.py:605` 的去重假设无组内前缀一致性 guard。colocate 路径 `n:1` 逐条采样不受影响。修复方向（报告者提议）= 组内前缀一致性检查，不一致时强制 `num_generations=1`。
+- **来源**：trl #7416（2026-09-26 19:02 UTC；含 CPU mock-server repro 与修复前后输出；报告者基于 fork `88e12d5`）。https://github.com/huggingface/trl/issues/7416
+- **行为效应**：无 crash、无 warning——被采样的 continuation 与被训练/打分的成员历史错位：B 的 token 在「A 的工具结果」条件下采样，却按 B 的真实历史计 reward 与 logprob，组内对比的「同条件 N 采样」语义崩塌（组内方差被 A 的确定性上下文压扁 → advantage 失真）、TIM/ratio 带系统性偏置。触发条件：`vllm_mode="server"` + `num_generations>1` + 工具/环境多轮（`tools=` 或 `environment_factory=`）+ 组内首轮轨迹分叉（含工具失败分支）。与 RL-RO.16（response_prefix 角色翻转）同属「rollout 侧构造的序列与训练侧记账对象错位」；差异在这边不是 token 归属翻转，而是**组去重把成员历史整条替换**；与 RL-RO.14（上下文压缩条件分叉）同向：训练条件 ≠ 生成条件，这边是前缀替换而非 eviction。
+- **发现来源**：2026-09-27 每日扫描
 
 ---
 

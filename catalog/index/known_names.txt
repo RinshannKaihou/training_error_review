@@ -215,6 +215,7 @@ RL-RO.17	vllm_encoder_cache_survives_weight_sync
 RL-RO.18	vllm_sleep_resume_corrupts_rollout_weights
 RL-RO.19	weight_sync_ack_precedes_tp_barrier_buffer_reuse
 RL-RO.20	kept_mass_shift_rejects_all_rollout_correction
+RL-RO.21	group_prefix_dedup_discards_tool_continuations
 OBS.01	stability_monitor_env_lost_in_torchrun
 OBS.02	empty_metrics_read_as_healthy
 OBS.03	job_green_zero_step_progress

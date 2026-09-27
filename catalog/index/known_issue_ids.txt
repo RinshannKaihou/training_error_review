@@ -149,6 +149,7 @@ huggingface/trl#7320
 huggingface/trl#7321
 huggingface/trl#7364
 huggingface/trl#7382
+huggingface/trl#7416
 modelscope/ms-swift#10012
 modelscope/ms-swift#10045
 modelscope/ms-swift#10050

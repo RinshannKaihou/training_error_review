@@ -1,3 +1,4 @@
+NVIDIA/Megatron-LM#5317
 NVIDIA/Megatron-LM#6509
 NVIDIA/Megatron-LM#6519
 NVIDIA/Megatron-LM#6521
@@ -47,8 +48,11 @@ NVIDIA/Megatron-LM#7466
 NVIDIA/Megatron-LM#7481
 NVIDIA/Megatron-LM#7513
 NVIDIA/Megatron-LM#7530
+NVIDIA/Megatron-LM#7538
+NVIDIA/Megatron-LM#7543
 NVIDIA/Megatron-LM#7576
 NVIDIA/Megatron-LM#7613
+NVIDIA/Megatron-LM#7643
 NVIDIA/Megatron-LM#7645
 NVIDIA/Megatron-LM#7646
 NVIDIA/Megatron-LM#7648
@@ -102,7 +106,11 @@ deepspeedai/DeepSpeed#8478
 deepspeedai/DeepSpeed#8491
 deepspeedai/DeepSpeed#8499
 deepspeedai/DeepSpeed#8590
+deepspeedai/DeepSpeed#8638
+deepspeedai/DeepSpeed#8647
+deepspeedai/DeepSpeed#8655
 deepspeedai/DeepSpeed#8660
+deepspeedai/DeepSpeed#8686
 huggingface/trl#6430
 huggingface/trl#6586
 huggingface/trl#6594
@@ -148,8 +156,11 @@ huggingface/trl#7310
 huggingface/trl#7320
 huggingface/trl#7321
 huggingface/trl#7364
+huggingface/trl#7371
 huggingface/trl#7382
+huggingface/trl#7391
 huggingface/trl#7416
+huggingface/trl#7418
 modelscope/ms-swift#10012
 modelscope/ms-swift#10045
 modelscope/ms-swift#10050
@@ -186,6 +197,7 @@ pytorch/torchtitan#4692
 pytorch/torchtitan#4783
 pytorch/torchtitan#4801
 pytorch/torchtitan#4802
+pytorch/torchtitan#4835
 verl-project/verl#7401
 verl-project/verl#7405
 verl-project/verl#7460
@@ -224,4 +236,5 @@ verl-project/verl#7904
 verl-project/verl#7931
 verl-project/verl#7952
 verl-project/verl#7956
+verl-project/verl#7986
 verl-project/verl#8020

@@ -67,6 +67,8 @@
 
 > 2026-09-28：每日扫描。新增 NUM.16 / PAR.18 / CKPT.32 / DATA.16 / OPT.19 / OPT.20 / ACT.08 / KER.17 / RL-RO.22 共 **9 条**（DeepSpeed invalid 组范数哨兵 −1 被平方成 1.0——溢出组按健康范数放行 unclipped step；`named_children()` 身份去重使别名子模块参数从 ZeRO ckpt 重建 state_dict 整组消失；trl 七个 CLI 入口 `resume_from_checkpoint` 解析进 config 但 `train()` 不转发——显式 resume 静默从 step 0 重训；Megatron TikToken `token_to_id`/逆词表对已偏移 rank 二次 +1000——两条查询路径 id 空间分叉；DeepSpeed fp16 Muon 无 offload 路径把 NS 更新当已放大梯度除以 loss scale——有效更新 ×1/1024 级停滞；DeepSpeed ZeRO stage 0 fp16 丢弃 hysteresis 配置——scale 每次溢出直接减半；Megatron `tensor_parallel.checkpoint` recompute 不重入 fp8_autocast——BF16 参数+FP8 激活下重算≠前向、梯度自 iter 2 静默分叉；DSv4 fused RoPE 就地写 + KV 别名绕过 autograd version counter——iter 1 错梯度、iter 2 才 NaN；verl FP8 MoE restage 检测对同形状同 dtype repack 失明——canonical 权重直写 repacked buffer、rollout 按错布局解释、修复 PR #7986 已 merge），补 RL-RO.21（维护者 qgallouedec 确认 + 影响面裁定：自 #4300/v0.26.0 起每个 release、仅 server 模式、GRPO 唯一受打击 trainer；修复归 #7418，#7416 closed completed）/ LOSS.12（修复 PR torchtitan #4835 在途：`Indexer.select()` 改返可微 topk_scores + `SparseIndexerLoss` 经 AuxLoss 框架接入、4-GPU smoke 探针确认梯度通路）/ RL-RWD.08（修复三连 PR #7369/#7370/#7371 迭代中）/ RL-RO.10（交叉注记 → RL-RO.22 布局检测盲区）来源。arXiv export API 连续第二日全端点 406（出口 IP 级阻断）、Semantic Scholar 429、Crossref 域不匹配——4 查询未覆盖。轮巡 7 个旧来源无实质变化（Megatron #7201 连续第三周 0 评论）。**240 条**。
 
+> 2026-09-29：每日扫描。新增 PAR.19 / RL-RO.23 共 **2 条**（DeepSpeed `sequence_parallel_size>1` 下 ZeRO 梯度平均除数随归约路径分叉——ZeRO-1/2 与 ZeRO-3 连续桶用 `world/sp`、ZeRO-3 `reduce_scatter` 路径除整组，同一模型梯度差 sp 倍、超大参数下同一步内参数间分裂，源码三文件逐行核验闭合；trl `cast_lm_head_to_fp32` 只护训练侧打分——autocast 下两个生成后端仍从 BF16 head 采样、rollout 与被打分策略分叉，trl main@HEAD 逐行核对），补 RL-RO.01 来源（Score Centering arXiv:2609.20807：TIM 不稳定首因是漂移项 `E_q[R]·E_q[∇log p]` 构成向采样器的蒸馏反馈环，加性修正抵消、verl RFC #8009 引入中）。arXiv export API 恢复（5/5 成功）。轮巡 9 个旧来源：trl PR #7371 closed unmerged（RL-RWD.08 修复仍在社区迭代）、Megatron #7530 expert review 在途、#7466/#4835/#7294/#6635/#7201 无实质变化。**242 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -81,7 +83,7 @@
 |---|---|---|
 | HW | 硬件 / 训练期 SDC | 9 |
 | NUM | 数值 / 混精 / 非确定性 | 16 |
-| PAR | 并行 / 梯度归约 | 18 |
+| PAR | 并行 / 梯度归约 | 19 |
 | CKPT | 检查点 / resume | 32 |
 | DATA | 数据管线 | 16 |
 | OPT | 优化器 | 20 |
@@ -93,7 +95,7 @@
 | RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 10 |
 | RL-KL | KL / entropy | 9 |
-| RL-RO | rollout ↔ train（TIM） | 22 |
+| RL-RO | rollout ↔ train（TIM） | 23 |
 | OBS | 观测性骗过 | 13 |
 
 ---
@@ -509,6 +511,15 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 - **来源**：DeepSpeed PR #8686（2026-09-27；`m.a = inner; m.b = inner` 时 `named_children()` 只出 `['a']`、`_modules.items()` 出 `['a','b']` 的隔离复现 + 负对照（revert 修复后新单测 `assert None == 'layer1.weight'` 失败）；fixes #1789）。https://github.com/deepspeedai/DeepSpeed/pull/8686
 - **行为效应**：无 crash——ckpt 无错写出，别名子模块的参数缺失只在**之后**浮出：`load_state_dict` 失败算好下场，更糟的是被静默加载成**不完整模型**（missing keys 被容忍时直接缺肢体训练/推理）。与 CKPT.19（类名白名单漏 norm 权重留 meta）同族「重建路径的遍历器与保存路径不一致」：那边按类名白名单、这边按对象身份去重；与 CKPT.15（reader 吞 shard 异常自报成功）同为「ZeRO ckpt 重建面」的自欺家族；参数别名面与 RL-RO.15（`to_empty()` 断 tied embedding 别名）同病根（别名语义在库遍历中被抹掉）、断点一在加载侧一在导出侧。
 - **发现来源**：2026-09-28 每日扫描
+
+### PAR.19 `sp_gradient_avg_divisor_splits_across_zero_paths`
+
+stage: `shared` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：DeepSpeed `sequence_parallel_size>1` 下，ZeRO 对梯度平均用的**除数随归约路径分叉**：ZeRO-1/2（`stage_1_and_2.py::gradient_reduction_w_predivide` / `average_tensor` / `allreduce_bucket`）与 ZeRO-3 连续桶路径（`stage3.py::__avg_scatter_contiguous_grads`，显式 `buffer.div_(world_sz / sp)`）用 `world_size / sp`；ZeRO-3 非连续路径（`__avg_scatter_grads` → `coalesced_collectives.reduce_scatter_coalesced` 内部 `tensor_partition_flat_buffer.div_(world_sz)`）除以**整个 sequence-data-parallel 组**。#4530 给前一类补 SP 因子时漏了后一类。本扫描对 master 源码逐行核验闭合：分派点 `if self.contiguous_gradients and bucket.elements <= self.reduce_bucket_size and not self.reduce_scatter:` 走连续路径、否则走 `__avg_scatter_grads`——即 ZeRO-3 默认（`reduce_scatter: true`）全走整组除数路径。两个后果：(a) 同一模型同一 loss 下梯度随 stage/配置差 `sp` 倍（报告者 H20 + 单层 Linear + SGD lr=0 + `safe_get_full_grad` 实测：sp=2 时 ZeRO-1/2 与连续路径得 1.0×、`reduce_scatter` 路径 0.5×；sp=4 时 0.25×）；(b) **同一步内参数间分裂**——`contiguous_gradients: true` + `reduce_scatter: false` 时超过 `reduce_bucket_size`（默认 5e8）的单参数走 `__avg_scatter_grads`、其余走连续路径，152k 词表 × 4096 hidden（6.2e8）的 embedding 即中招：weight 拿 0.5×、bias 拿 1.0×，无任何 loss 约定能让两者一致。ALST recipe（HF Trainer `deepspeed_sp_compute_loss` / 教程 / `tests/unit/ulysses_alst`）的可微 all-gather loss 反向在 SP 组上求和、本地梯度已 ×sp——只在整组除数路径（ZeRO-3 默认）正确、在其余路径 sp× 过量。
+- **来源**：DeepSpeed #8692（2026-09-28；torchrun 2/4 rank 完整 repro 脚本 + 5 配置 × 2 loss 约定 × sp∈{2,4} 的梯度/真值比例表 + `Linear(4,4)` + `reduce_bucket_size=10` 的参数间分裂微复现 + 单测容差盲区分析（`TestUlyssesSPHF` ZeRO-2 案例在 atol=1e-3 下以 `grad_b ≈ 2.0005×grad_a` 通过）+ SGD lr=1 步长实测（无 clip 时 ZeRO-2 步 2.0× 真梯度、clip 阈值 1.5× 真范数时 ZeRO-2 仍 clip 而 ZeRO-3 不剪））。https://github.com/deepspeedai/DeepSpeed/issues/8692 ；源码核验（2026-09-29）：master `stage3.py` / `stage_1_and_2.py` / `coalesced_collectives.py` 三文件上述函数逐行核对，分派条件与两处除数与 issue 描述一致。
+- **行为效应**：无 crash——SP>1 的 ZeRO run 有效学习率随 stage 与 `reduce_scatter`/`contiguous_gradients`/桶大小配置静默漂移：ZeRO-1/2 + ALST loss 恒 sp× 过量步长、clip 行为随路径分叉（该 clip 的不 clip）；参数间分裂时 embedding 与其余参数以不同速率训练、梯度方向畸变。与 PAR.16/17（DDP/MFSDP 缩放算术的 DP 因子错）同族「归约除数与并行度失配」第 3 个实例：那边是 collective 折叠缩放漏配、这边是**同一引擎内两条代码路径除数不一致**；与 OPT.15（FusedAdam 计数器在参数间漂移）同享「参数间异质静默分裂」表象；上游唯一评论为用户附和（2026-09-28）、尚无维护者裁决或修复 PR。
+- **发现来源**：2026-09-29 每日扫描
 
 ---
 
@@ -2045,7 +2056,7 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：rollout（vLLM/SGLang）与 trainer（FSDP/Megatron）对**同一权重同一序列**给出不同 token 概率。来源：核实现不同 + 非 batch-invariant 归约。δₜ = log π_train − log π_rollout，均值小，极值可到 ~1.0，甚至 argmax 翻转。
-- **来源**：Zhong et al., "Diagnosing Training Inference Mismatch", arXiv:2605.14220。https://arxiv.org/abs/2605.14220 ；量化 rollout 放大版：QaRL arXiv:2604.07853（低精度 rollout + 全精度 trainer，长回复退化为重复/乱码 error token）。https://arxiv.org/abs/2604.07853 ；目标错位视角：MIPI/MIPU arXiv:2606.29526（TIM 造成常驻 off-policyness，训练引擎的改进不保证部署侧推理策略改进，需推理侧 gap proxy 选择性接受候选更新）。https://arxiv.org/abs/2606.29526 ；动态演化视角（2026-08-20 补）：arXiv:2602.01826（TIM 不是静态数值差：梯度噪声与 mismatch 随训练**同步增长**，IS 在长跑中失效；缩小更新尺寸可压制——mismatch 是与优化动力学耦合的动态故障，LR 调度即缓解）。https://arxiv.org/abs/2602.01826 ；结构化极限（2026-08-21 补）：arXiv:2606.09821（长尾词表下 importance ratio 是 distributional shift 的劣质代理，PPO/GRPO 的 ratio-clipping 只近似 trust region；DPPO 用 divergence-based mask 替换 ratio 剪裁更稳）。https://arxiv.org/abs/2606.09821 ；谱系（2026-08-22 补）：FP8-RL arXiv:2601.18150（veRL 生态 FP8 rollout 生产栈：blockwise W8A8 + FP8 KV-cache + per-step QKV scale 重校准，mismatch 用 token 级 TIS/MIS 校正——TIM 已被当作低精度 rollout 的**设计约束**而非偶发缺陷）。https://arxiv.org/abs/2601.18150 ；DVP arXiv:2512.23087（证明 TIM 的 logprob 散度界 ∝ (1−p)：高频 token 界趋零、长尾 token 界显著，采样尾部 token 引入系统性偏差误差并沿序列累积——为 RL-RO.06 重尾 / RL-RO.07 截断偏置给出统一理论：动态剪掉词表极尾部即稳定）。https://arxiv.org/abs/2512.23087 ；TP 尺寸维度（2026-08-30 补）：arXiv:2511.17826（serving 框架跨 TP 尺寸非确定：浮点非结合性 + 跨 GPU 归约序不一致，RL 场景 trainer TP=1 / rollout 多卡 TP 是天然错配源，与 batch-invariant kernel 已解决的 batch 维非确定性正交）。https://arxiv.org/abs/2511.17826 ；量化误差源分解（2026-09-17 补）：QUADS arXiv:2607.15810（NVFP4 rollout + BF16 trainer ~150 步崩塌且 rollout-trainer logprob gap 迅速增长；受控消融定位**激活误差而非权重误差**为主导——权重可经共享 quant-dequant 路径对齐、激活在线重算且误差被粗 E2M1 网格放大；缓解 = trainer 侧非对称 QAT 只伪量化权重 + rollout 侧残差补偿：低精度 mismatch 的**误差源分解 + 双侧对齐**设计范式）。https://arxiv.org/abs/2607.15810 ；clip 交互面（2026-09-23 补）：arXiv:2609.22870（全管线 FP8 的复合量化噪声使 ratio 系统性偏移，负 advantage token 被推出 trust region——TIM 残差经非线性 clip 放大成符号不对称的梯度掩蔽，见 RL-KL.09）。https://arxiv.org/abs/2609.22870
+- **来源**：Zhong et al., "Diagnosing Training Inference Mismatch", arXiv:2605.14220。https://arxiv.org/abs/2605.14220 ；量化 rollout 放大版：QaRL arXiv:2604.07853（低精度 rollout + 全精度 trainer，长回复退化为重复/乱码 error token）。https://arxiv.org/abs/2604.07853 ；目标错位视角：MIPI/MIPU arXiv:2606.29526（TIM 造成常驻 off-policyness，训练引擎的改进不保证部署侧推理策略改进，需推理侧 gap proxy 选择性接受候选更新）。https://arxiv.org/abs/2606.29526 ；动态演化视角（2026-08-20 补）：arXiv:2602.01826（TIM 不是静态数值差：梯度噪声与 mismatch 随训练**同步增长**，IS 在长跑中失效；缩小更新尺寸可压制——mismatch 是与优化动力学耦合的动态故障，LR 调度即缓解）。https://arxiv.org/abs/2602.01826 ；结构化极限（2026-08-21 补）：arXiv:2606.09821（长尾词表下 importance ratio 是 distributional shift 的劣质代理，PPO/GRPO 的 ratio-clipping 只近似 trust region；DPPO 用 divergence-based mask 替换 ratio 剪裁更稳）。https://arxiv.org/abs/2606.09821 ；谱系（2026-08-22 补）：FP8-RL arXiv:2601.18150（veRL 生态 FP8 rollout 生产栈：blockwise W8A8 + FP8 KV-cache + per-step QKV scale 重校准，mismatch 用 token 级 TIS/MIS 校正——TIM 已被当作低精度 rollout 的**设计约束**而非偶发缺陷）。https://arxiv.org/abs/2601.18150 ；DVP arXiv:2512.23087（证明 TIM 的 logprob 散度界 ∝ (1−p)：高频 token 界趋零、长尾 token 界显著，采样尾部 token 引入系统性偏差误差并沿序列累积——为 RL-RO.06 重尾 / RL-RO.07 截断偏置给出统一理论：动态剪掉词表极尾部即稳定）。https://arxiv.org/abs/2512.23087 ；TP 尺寸维度（2026-08-30 补）：arXiv:2511.17826（serving 框架跨 TP 尺寸非确定：浮点非结合性 + 跨 GPU 归约序不一致，RL 场景 trainer TP=1 / rollout 多卡 TP 是天然错配源，与 batch-invariant kernel 已解决的 batch 维非确定性正交）。https://arxiv.org/abs/2511.17826 ；量化误差源分解（2026-09-17 补）：QUADS arXiv:2607.15810（NVFP4 rollout + BF16 trainer ~150 步崩塌且 rollout-trainer logprob gap 迅速增长；受控消融定位**激活误差而非权重误差**为主导——权重可经共享 quant-dequant 路径对齐、激活在线重算且误差被粗 E2M1 网格放大；缓解 = trainer 侧非对称 QAT 只伪量化权重 + rollout 侧残差补偿：低精度 mismatch 的**误差源分解 + 双侧对齐**设计范式）。https://arxiv.org/abs/2607.15810 ；clip 交互面（2026-09-23 补）：arXiv:2609.22870（全管线 FP8 的复合量化噪声使 ratio 系统性偏移，负 advantage token 被推出 trust region——TIM 残差经非线性 clip 放大成符号不对称的梯度掩蔽，见 RL-KL.09）。https://arxiv.org/abs/2609.22870 ；漂移项分解（2026-09-29 补）：Score Centering arXiv:2609.20807（证明 TIM 不稳定的首要来源是**漂移**——采样器 q ≠ trainer p 时存在持续偏置项 `E_q[R]·E_q[∇log p]`，随每步训练累积并构成向（量化/陈旧）采样器的蒸馏反馈环；加性 score centering 修正抵消漂移，0.6B-30B 上单独使用即匹配或超过 IS 类方法、严重量化失配下差距扩大，且与 TIS/MIS 可复合——把 TIM 从「逐 token 修 ratio」推进到「消期望方向偏置」；verl RFC #8009 正在引入）。https://arxiv.org/abs/2609.20807
 - **行为效应**：REINFORCE 下仅 TIM 就能让 MoE 验证奖励从 0.29 掉到 0.07；VeXact（零错配）继续升到 0.53。
 - **发现来源**：2026-08-17 基础调研
 
@@ -2237,6 +2248,15 @@ stage: `rl` · Cov: `var:zero3_layout_mutation_not_persisted` · 置信度 `docu
 - **来源**：verl PR #7986（2026-09-22 open→当日 14:35 UTC merge 进 main；`_get_priority_backends` 在 vLLM 0.24/0.29 双 tag 源码核对；与 #7470（AITER `is_shuffled` restage——同类盲区、靠信任后端标记修了一个后端）同族）。https://github.com/verl-project/verl/pull/7986
 - **行为效应**：merge 前的 main 上无 crash——每次 refit 后 rollout 侧 FP8 MoE 专家权重被按**错误布局解释**：名形合法、数值是 canonical 布局写进 repacked 存储，rollout 分布静默偏离训练侧（TIM 的权重侧来源，非数值核差）。与 RL-RO.10（ZeRO-3 布局互转不持久化——rollout 用布局损坏权重）**同族「布局变换不在同步协议里」**：那边缺 `modifier_rank` 写回、这边检测信号对 same-shape rewrite 失明；与 RL-RO.17（vLLM encoder cache 漏清——旧权重 embedding 继续命中）互补：那边是 cache 生命周期、这边是权重布局契约；与 #7470 共享「后端自述标记 vs 通用检测」的修复哲学分歧。端到端 reward/logprob 影响未在 PR 中量化。
 - **发现来源**：2026-09-28 每日扫描
+
+### RL-RO.23 `fp32_lm_head_not_applied_to_generation_backends`
+
+stage: `rl` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：trl `GRPOTrainer(cast_lm_head_to_fp32=True)` 只把 FP32 投影接到**训练侧打分路径**，两个生成后端都仍从 BF16 head 采样：`GRPOTrainer.__init__` 用 FP32 `linear` 替换 head forward 但**不禁用 autocast**——`Trainer.train()` 经 Accelerate prepare 后整个 forward 跑在 BF16 autocast 下，`model.generate()` / `generate_batch()` 采样的 logits 是 BF16 权重 × BF16 hidden 的 autocast 结果（chunked head 训练路径倒是显式 `torch.autocast(enabled=False)`，讽刺地造成「训练 logprob FP32、rollout 分布 BF16」的双轨）；vLLM 路径上 `GRPOTrainer.__init__` 构建 `VLLMGeneration` 时不传任何 head dtype 覆盖，colocated `vllm.LLM` 按模型 dtype 投影 head（v0.26.0 起有 `head_dtype` 覆盖可用但未被使用；v0.20.0-0.25.x 根本无此能力）。净效果：rollout 来自的策略与被训练/打分的策略**不是一个**——正是 ScaleRL 论文用 FP32 head 消除的 mismatch 源。本扫描对 trl `main`@HEAD 逐行核对：`grpo_trainer.py` 的 `_cast_lm_head_to_fp32` 无 autocast 处理、`vllm_generation.py` 全文无 `head_dtype`/`cast_lm_head` 引用；报告者 CPU repro（LlamaConfig 1 层 + `bf16=True` + `cast_lm_head_to_fp32=True`）实测 autocast 路径 logits 对 FP32 投影的 max abs error 3.7e-4、chunked 路径 0.0。触发条件：`cast_lm_head_to_fp32=True`（ScaleRL recipe）+ BF16 训练，transformers 生成与 vLLM（server/colocate）双后道中招；chunked head 下仅 vLLM 侧缺口。
+- **来源**：trl #7430（2026-09-28；autocast/vLLM 双路径代码流定位 + CPU repro 实测数字 + vLLM `head_dtype` 覆盖的历史与版本边界 + server 模式 `--hf-overrides` 手动缓解）。https://github.com/huggingface/trl/issues/7430 ；对照论文：ScaleRL arXiv:2510.13786（FP32 LM head 消除的 rollout-trainer mismatch 即该 flag 的设计动机）。https://arxiv.org/abs/2510.13786
+- **行为效应**：无 crash、无 warning——flag 被静默半执行：训练侧 logprob/梯度按 FP32 head 计算、rollout 侧采样分布仍是 BF16 head 的，RL-RO.01（TIM logprob delta）的一个人为放大源被 flag 自己制造：IS 权重与 KL 都在「真策略」与「采样策略」的 dtype 差上系统性偏置，与 flag 想消除的 mismatch 同号。与 NUM.15（进程级 mixed precision 环境变量泄漏使 fp32 阶段静默继承 bf16）同族「精度意图被 autocast 上下文吞掉」：那边是环境变量钉死、这边是 autocast 上下文环绕；与 RL-RO.22（FP8 MoE repack 检测失明）互补：那边是权重布局契约断、这边是**同一权重的两种数值化身**分别喂训练与采样；与 RL-RO.20 同属「校正/增强机制自身成为 mismatch 源」。截至收录无评论、无修复 PR。
+- **发现来源**：2026-09-29 每日扫描
 
 ---
 

@@ -111,6 +111,7 @@ deepspeedai/DeepSpeed#8647
 deepspeedai/DeepSpeed#8655
 deepspeedai/DeepSpeed#8660
 deepspeedai/DeepSpeed#8686
+deepspeedai/DeepSpeed#8692
 huggingface/trl#6430
 huggingface/trl#6586
 huggingface/trl#6594
@@ -161,6 +162,7 @@ huggingface/trl#7382
 huggingface/trl#7391
 huggingface/trl#7416
 huggingface/trl#7418
+huggingface/trl#7430
 modelscope/ms-swift#10012
 modelscope/ms-swift#10045
 modelscope/ms-swift#10050

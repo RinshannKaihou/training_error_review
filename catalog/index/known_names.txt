@@ -41,6 +41,7 @@ PAR.15	bridge_wan_gather_default_grad_sums_tp_copies
 PAR.16	ddp_normalization_shrinks_aux_loss_grad_dp_factor
 PAR.17	gradient_reduce_preprocessing_ignores_scaling_factor
 PAR.18	named_children_dedup_drops_shared_submodule_params
+PAR.19	sp_gradient_avg_divisor_splits_across_zero_paths
 CKPT.01	expert_reshard_id_permutation
 CKPT.02	zero_optimizer_state_partition_mismatch
 CKPT.03	from_pretrained_silent_random_init
@@ -225,6 +226,7 @@ RL-RO.19	weight_sync_ack_precedes_tp_barrier_buffer_reuse
 RL-RO.20	kept_mass_shift_rejects_all_rollout_correction
 RL-RO.21	group_prefix_dedup_discards_tool_continuations
 RL-RO.22	fp8_moe_repack_blind_to_same_shape_rewrite
+RL-RO.23	fp32_lm_head_not_applied_to_generation_backends
 OBS.01	stability_monitor_env_lost_in_torchrun
 OBS.02	empty_metrics_read_as_healthy
 OBS.03	job_green_zero_step_progress

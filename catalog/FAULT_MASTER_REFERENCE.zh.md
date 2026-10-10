@@ -71,6 +71,8 @@
 
 > 2026-09-30：每日扫描。**无新签名**（242 条不变），补 RL-RO.01 来源（CIS arXiv:2609.32444：TIM 的 logit-displacement 刻画——mismatch 为 softmax 前 per-logit 扰动决定的 log-odds 加性位移 εₜ、分布近似不随 token confidence 变化；confidence-aware 截断把 IS 无界二阶矩换成常数界，为 RL-RO.07 截断族给出按 confidence 自适应收紧的新门控变量）。arXiv 查询修复一处方法缺陷：整串 `%20` 编码被当空查询返回无关全量流，改 `+` 连接 AND 查询后 5/5 有效；补查 OpenRLHF（窗口 0 命中）/ ms-swift（#10265 fail-fast 边界外）兑现 09-29 承诺。轮巡 9 个旧来源无实质变化（#7201 连续第三周 0 评论）。**242 条**。
 
+> 2026-10-09：每日扫描（**停机补扫**：服务器 10-01 至 10-09 宕机漏扫，滚动窗口固定 cutoff=2026-09-30；复用宕机恢复后被中断补跑的部分原始 JSON、重抓缺失 detail，GitHub 7 仓库搜索 7/7 成功，arXiv 4 查询重发后有效——首次 4 组编码损坏返无关全量流已作废重抓）。新增 PAR.20 / DATA.17 / RL-RO.24 / RL-RO.25 / OBS.14 / OBS.15 共 **6 条**（PyTorch `_lazy_clone` CoW 物化拷贝不在当前 stream 排序、graph capture 不录制——torchtitan Dist-MoE 确定性 NaN；ms-swift 预处理 map cache 身份不含代码版本——跨版本静默复用旧 schema 训练、修复 PR #10301 已 merge；verl FSDP 引擎不读 `fsdp_config.dtype`——FP16 rollout 配 BF16 trainer、实测 k3_kl 差 63×；trl IWOPDTrainer resume 步数取模门控跳过 vLLM 权重同步——rollout 锚在 resume 前权重上；DeepSpeed autocast fp16 ZeRO-0 溢出跳过步被记为已应用且 LR scheduler 照走；Megatron GPT-OSS builder 双通道 position_embedding_type 分叉——官方 recipe 默认组合下每 token 叠加随机初始化位置表、修复 PR #7850 当日 merge），补 RL-RO.23（verl #8076 同构实例→RL-RO.24）/ OBS.13（#8723 同函数族追踪 + 修复 PR #8708 已 merge）来源。轮巡：trl PR #7371 closed unmerged（duplicate of #7370）、#7504/#7548（多 EOS 族 DATA.10 补充已修）、#7520 score centering 提案维护者暂缓；Megatron #7201 有新进展（PR #7725 验证中同族复现）、#7530 expert review 在途；verl #8086/#8091 修复多 PR 并行。窗口内其余候选均判边界外（见当日日报）。**248 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -85,9 +87,9 @@
 |---|---|---|
 | HW | 硬件 / 训练期 SDC | 9 |
 | NUM | 数值 / 混精 / 非确定性 | 16 |
-| PAR | 并行 / 梯度归约 | 19 |
+| PAR | 并行 / 梯度归约 | 20 |
 | CKPT | 检查点 / resume | 32 |
-| DATA | 数据管线 | 16 |
+| DATA | 数据管线 | 17 |
 | OPT | 优化器 | 20 |
 | ACT | 重计算 / 卸载 | 8 |
 | KER | 训练 kernel | 17 |
@@ -97,8 +99,8 @@
 | RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 10 |
 | RL-KL | KL / entropy | 9 |
-| RL-RO | rollout ↔ train（TIM） | 23 |
-| OBS | 观测性骗过 | 13 |
+| RL-RO | rollout ↔ train（TIM） | 25 |
+| OBS | 观测性骗过 | 15 |
 
 ---
 
@@ -522,6 +524,15 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 - **来源**：DeepSpeed #8692（2026-09-28；torchrun 2/4 rank 完整 repro 脚本 + 5 配置 × 2 loss 约定 × sp∈{2,4} 的梯度/真值比例表 + `Linear(4,4)` + `reduce_bucket_size=10` 的参数间分裂微复现 + 单测容差盲区分析（`TestUlyssesSPHF` ZeRO-2 案例在 atol=1e-3 下以 `grad_b ≈ 2.0005×grad_a` 通过）+ SGD lr=1 步长实测（无 clip 时 ZeRO-2 步 2.0× 真梯度、clip 阈值 1.5× 真范数时 ZeRO-2 仍 clip 而 ZeRO-3 不剪））。https://github.com/deepspeedai/DeepSpeed/issues/8692 ；源码核验（2026-09-29）：master `stage3.py` / `stage_1_and_2.py` / `coalesced_collectives.py` 三文件上述函数逐行核对，分派条件与两处除数与 issue 描述一致。
 - **行为效应**：无 crash——SP>1 的 ZeRO run 有效学习率随 stage 与 `reduce_scatter`/`contiguous_gradients`/桶大小配置静默漂移：ZeRO-1/2 + ALST loss 恒 sp× 过量步长、clip 行为随路径分叉（该 clip 的不 clip）；参数间分裂时 embedding 与其余参数以不同速率训练、梯度方向畸变。与 PAR.16/17（DDP/MFSDP 缩放算术的 DP 因子错）同族「归约除数与并行度失配」第 3 个实例：那边是 collective 折叠缩放漏配、这边是**同一引擎内两条代码路径除数不一致**；与 OPT.15（FusedAdam 计数器在参数间漂移）同享「参数间异质静默分裂」表象；上游唯一评论为用户附和（2026-09-28）、尚无维护者裁决或修复 PR。
 - **发现来源**：2026-09-29 每日扫描
+
+### PAR.20 `lazy_clone_materialization_unordered_on_stream`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：PyTorch copy-on-write 张量（`Tensor._lazy_clone()`）在**首次请求可变指针**（如 `data_ptr()`——恰是 Triton/CuTe DSL 等 raw-pointer launcher 的调用点）时才物化拷贝，而该物化拷贝**不在当前 CUDA stream 上排序**：默认 stream 正确；非默认 stream 上拷贝可能排在该 stream 已排队、仍在产出数据的生产 kernel 之前（物化出陈旧内存）；CUDA graph capture 下拷贝**不被录进图**，每次 replay 都读 capture 时刻的 buffer。`clone()` 无此问题（正常 stream-ordered kernel）。实际命中路径：torchtitan vLLM generator + Dist-MoE（Qwen3.5-35B-A3B、TP=2）——torchtitan 用 spmd_types `redistribute(x, src=I, dst=S(0))` 分片 MoE 输入，`_replicate_to_varying` 做 `chunks[rank].contiguous()`（行 chunk 仍别名输入）后返回 `result._lazy_clone()`；Dist-MoE 经 `data_ptr()` 把该张量喂 Triton/CuTe kernel；vLLM 在专用非默认 stream 跑模型，物化拷贝与产出 MoE 输入的 RMSNorm kernel 竞态。
+- **来源**：torchtitan #5125（2026-10-07；上游定位为 PyTorch CoW `_lazy_clone` 物化排序缺失，含 stream 语义三段分析 + torchtitan Dist-MoE 命中链路逐层定位）。https://github.com/pytorch/torchtitan/issues/5125
+- **行为效应**：两种表象——eager：随机 CUDA error（illegal address / misaligned address / illegal instruction / cuBLAS 失败）与错文本；full CUDA graphs：**确定性 NaN 与错文本**（每次 replay 读 capture 时刻 buffer）。长期被误判为 Dist-MoE 自身 bug。训练侧凡对 `_lazy_clone` 张量在非默认 stream/graph 下走 raw-pointer kernel 即中招（EMA 权重副本、offload 暂存是常见来源）。与 KER.17（fused RoPE 就地写绕过 version counter）同族「autograd/stream 排序契约之外的隐藏拷贝/写」：那边是别名绕过 version counter、这边是**物化拷贝绕过 stream 排序与 graph 录制**；OBS.14 同为「CUDA graph replay 读到 capture 时刻数据」表象家族但根因在更底层的 PyTorch CoW 原语。截至收录 open、0 评论。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
 
 ---
 
@@ -966,6 +977,15 @@ stage: `shared` · Cov: `var:tokenizer_train_infer_id_mismatch` · 置信度 `do
 - **来源**：Megatron-LM PR #7543（2026-09-21；修复 + 双向映射测试）。https://github.com/NVIDIA/Megatron-LM/pull/7543
 - **行为效应**：无 crash——凡消费 `token_to_id`/`tokens_to_ids`/`inv_vocab` 的路径（特殊 token 查询、token 级掩码/过滤、词表统计、与外部 id 空间对接的转换器）拿到的 id 整体偏移 `num_special_tokens`：id 指向**别的 token**，错误语义化而非显式炸（越界 id 若被下游 embedding 查询才可能 crash）。与 DATA.04（tokenizer 训推 id 不一致）同族「id 空间映射错位」：那边是两栈约定不同、这边是**同一 tokenizer 内两条查询路径的 id 空间不一致**；与 DATA.05（MMIDIDX magic 错读垃圾）的区别：这边数据格式完好、纯查询 API 算术错。哪个训练路径实际消费这些 API 决定打击面（PR 未列端到端症状，留观下游消费者清单）。
 - **发现来源**：2026-09-28 每日扫描
+
+### DATA.17 `preprocessed_map_cache_cross_version_reuse`
+
+stage: `sft` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `verified`
+
+- **机制**：ms-swift 预处理数据集 map cache 以 `{input_fingerprint}.arrow` 命名，而 datasets 对显式传入的 `cache_file_name` **只检查文件存在、不校验身份**——cache 身份只有输入指纹，**产出它的预处理代码版本不在身份里**。预处理 schema/语义跨版本变化时同一输入算出同一指纹：#9214 把 `messages[].loss` 从 float64 改 bool 并新增 `loss_scale`（v4.4.0），固定 datasets 版本下 v4.4.0 对同一输入算出与 v4.0.0 相同的指纹、**静默加载 v4.0.0 的旧 cache**（日志仅 `Loading cached processed dataset at ...`）、以旧 schema 训练。修复（PR #10301，2026-10-07 merge）= cache 命名追加 `cache_format_version`（`RowPreprocessor.cache_format_version='v2'`，语义变更时 bump），旧格式文件留存但永不再读。报告者 CPU repro：仅 ms-swift 版本变化、其余固定，修复前复用旧 schema（float64、无 loss_scale）、修复后重算进新名字。
+- **来源**：ms-swift PR #10301（2026-09-28 开、2026-10-07 merge；refs #10286；CPU-only 复现 + 回归测试）。https://github.com/modelscope/ms-swift/pull/10301
+- **行为效应**：无 crash、无 warning——升级 ms-swift 后训练读的是**上一个版本预处理语义**产出的数据（旧 loss 列型别、缺 loss_scale 等），新版本的修复/语义对已缓存数据集全部失效；fingerprint 机制给出的「安全复用」表象使问题对用户与开发者双向隐形。与 SFT.11（processor 不跟 model revision）同族「版本身份不闭包」：那边模板/processor revision 随 main 漂移、这边**预处理代码版本根本不在 cache key 里**；与 DATA.08（loss_mask 缓存引用污染破坏 bitwise resume）同域「缓存与真源失联」但方向相反：那边缓存内容被就地污染、这边缓存内容合法但来自过期语义。类似 `Template._version` 的 cache-busting 前例在仓库内已存在，说明该失败模式曾在别处发生过。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
 
 ---
 
@@ -2257,8 +2277,26 @@ stage: `rl` · Cov: `NEW` · 置信度 `verified`
 
 - **机制**：trl `GRPOTrainer(cast_lm_head_to_fp32=True)` 只把 FP32 投影接到**训练侧打分路径**，两个生成后端都仍从 BF16 head 采样：`GRPOTrainer.__init__` 用 FP32 `linear` 替换 head forward 但**不禁用 autocast**——`Trainer.train()` 经 Accelerate prepare 后整个 forward 跑在 BF16 autocast 下，`model.generate()` / `generate_batch()` 采样的 logits 是 BF16 权重 × BF16 hidden 的 autocast 结果（chunked head 训练路径倒是显式 `torch.autocast(enabled=False)`，讽刺地造成「训练 logprob FP32、rollout 分布 BF16」的双轨）；vLLM 路径上 `GRPOTrainer.__init__` 构建 `VLLMGeneration` 时不传任何 head dtype 覆盖，colocated `vllm.LLM` 按模型 dtype 投影 head（v0.26.0 起有 `head_dtype` 覆盖可用但未被使用；v0.20.0-0.25.x 根本无此能力）。净效果：rollout 来自的策略与被训练/打分的策略**不是一个**——正是 ScaleRL 论文用 FP32 head 消除的 mismatch 源。本扫描对 trl `main`@HEAD 逐行核对：`grpo_trainer.py` 的 `_cast_lm_head_to_fp32` 无 autocast 处理、`vllm_generation.py` 全文无 `head_dtype`/`cast_lm_head` 引用；报告者 CPU repro（LlamaConfig 1 层 + `bf16=True` + `cast_lm_head_to_fp32=True`）实测 autocast 路径 logits 对 FP32 投影的 max abs error 3.7e-4、chunked 路径 0.0。触发条件：`cast_lm_head_to_fp32=True`（ScaleRL recipe）+ BF16 训练，transformers 生成与 vLLM（server/colocate）双后道中招；chunked head 下仅 vLLM 侧缺口。
 - **来源**：trl #7430（2026-09-28；autocast/vLLM 双路径代码流定位 + CPU repro 实测数字 + vLLM `head_dtype` 覆盖的历史与版本边界 + server 模式 `--hf-overrides` 手动缓解）。https://github.com/huggingface/trl/issues/7430 ；对照论文：ScaleRL arXiv:2510.13786（FP32 LM head 消除的 rollout-trainer mismatch 即该 flag 的设计动机）。https://arxiv.org/abs/2510.13786
-- **行为效应**：无 crash、无 warning——flag 被静默半执行：训练侧 logprob/梯度按 FP32 head 计算、rollout 侧采样分布仍是 BF16 head 的，RL-RO.01（TIM logprob delta）的一个人为放大源被 flag 自己制造：IS 权重与 KL 都在「真策略」与「采样策略」的 dtype 差上系统性偏置，与 flag 想消除的 mismatch 同号。与 NUM.15（进程级 mixed precision 环境变量泄漏使 fp32 阶段静默继承 bf16）同族「精度意图被 autocast 上下文吞掉」：那边是环境变量钉死、这边是 autocast 上下文环绕；与 RL-RO.22（FP8 MoE repack 检测失明）互补：那边是权重布局契约断、这边是**同一权重的两种数值化身**分别喂训练与采样；与 RL-RO.20 同属「校正/增强机制自身成为 mismatch 源」。截至收录无评论、无修复 PR。
+- **行为效应**：无 crash、无 warning——flag 被静默半执行：训练侧 logprob/梯度按 FP32 head 计算、rollout 侧采样分布仍是 BF16 head 的，RL-RO.01（TIM logprob delta）的一个人为放大源被 flag 自己制造：IS 权重与 KL 都在「真策略」与「采样策略」的 dtype 差上系统性偏置，与 flag 想消除的 mismatch 同号。与 NUM.15（进程级 mixed precision 环境变量泄漏使 fp32 阶段静默继承 bf16）同族「精度意图被 autocast 上下文吞掉」：那边是环境变量钉死、这边是 autocast 上下文环绕；与 RL-RO.22（FP8 MoE repack 检测失明）互补：那边是权重布局契约断、这边是**同一权重的两种数值化身**分别喂训练与采样；与 RL-RO.20 同属「校正/增强机制自身成为 mismatch 源」。截至收录无评论、无修复 PR。2026-10-06 更新：verl 侧同构实例见 RL-RO.24（`fsdp_config.dtype` 被忽略、rollout FP16 / trainer BF16）。
 - **发现来源**：2026-09-29 每日扫描
+
+### RL-RO.24 `fsdp_engine_dtype_config_ignored_rollout_trainer_split`
+
+stage: `rl` · Cov: `var:fp32_lm_head_not_applied_to_generation_backends` · 置信度 `verified`
+
+- **机制**：verl FSDP 引擎**从不读 `fsdp_config.dtype`**：该字段定义在基类 `EngineConfig`（`verl/workers/config/engine.py` L98）并被 `FSDPEngineConfig` 继承、docstring 明示「Mixed precision training param dtype」，但 `main` 上代码检索仅 Megatron 引擎消费它；FSDP compute dtype 只来自 `fsdp_config.mixed_precision.param_dtype`，`mixed_precision=None`（默认）时在 `transformer_impl.py` ~L391-400 硬编码 `param_dtype = torch.bfloat16`。用户按直觉设 `rollout.dtype=float16 + fsdp_config.dtype=float16` 期望 FP16 训练：vLLM rollout 确实 FP16（引擎日志可见），**trainer 静默保持 BF16**；副作用：`param_dtype == torch.float16` 才创建的 `ShardedGradScaler` 路径也被跳过。正确写法 `fsdp_config.mixed_precision.param_dtype=fp16` 才生效。报告者 verl `6093e007` 实测（1-step GRPO 门、4 prompts × 2 样本、`rollout_corr/k3_kl`）：BF16/BF16 默认 7.6e-4；错配组合 4.5e-4（mismatch 停留在 BF16 量级、约为真 FP16/FP16 的 63 倍）；FP16/FP16 7.2e-6。
+- **来源**：verl #8076（2026-09-30；`dtype` 字段定义/继承/唯一消费者三段代码定位 + 三配置实测 KL 表；`main@3084c261` 行为不变）。https://github.com/verl-project/verl/issues/8076
+- **行为效应**：无 error、无 warning——为压 TIM 专门选的 FP16 配置只改了 rollout 半边，trainer/rollout mismatch 纹丝不动，还叠加「FP16 rollout 无 GradScaler」的新精度面。与 RL-RO.23（trl `cast_lm_head_to_fp32` 只护训练侧打分）共享失效机制：**精度意图只落到训练侧、生成侧不跟**——触发点不同（那边是 autocast 上下文环绕 + vLLM 无 `head_dtype` 覆盖，这边是配置字段在引擎族中被静默不消费）。legacy `fsdp_workers.py` 路径报告者未核。截至 2026-10-09 open、0 评论、无修复。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
+
+### RL-RO.25 `resume_step_modulo_gating_skips_rollout_weight_sync`
+
+stage: `rl` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：trl `VLLMGeneration` 只在构造时从 `model.name_or_path` 加载一次权重，此后唯一更新通道是 `sync_weights()`。`IWOPDTrainer` 把同步门控写成 `self.state.global_step % self.vllm_sync_frequency == 0` 且 `_last_vllm_sync_step = -1`（`iw_opd_trainer.py:666` / `:872-873`）：resume 到的步数不是 `vllm_sync_frequency` 整数倍时，**同步被无限跳过**直到下一个倍数步，期间 rollout 全部用 resume 前的陈旧权重生成。同仓库 `GOLDTrainer` 的同型机制是对的（`_last_vllm_sync_step = -freq` + `step >= last_sync + freq`，构造/resume 后必同步一次）。触发面：`distillation_objective="jsd"` + `use_vllm=True` + `vllm_sync_frequency>1`（`iw_opd` 强制 freq=1 时两种公式恒等、不可达）。报告者由两条 trainer 的复制漂移审计发现（非生产 run），算术 repro 闭合：`resumed_step=37, freq=5` 时 GOLD 判 True、IWOPD 判 False。
+- **来源**：trl #7544（2026-10-06；双 trainer 门控公式对照 + 算术 repro + 代码行号）。https://github.com/huggingface/trl/issues/7544
+- **行为效应**：无 crash——resume 后到下一个倍数步之前，策略梯度对着**上一个 ckpt 的策略**采样出的 rollout 计算，off-policy 程度随 resume 点漂移且完全不可见（loss 正常、指标正常）。与 RL-RO.19（ms-swift IPC ACK 时序使 rollout 用半新半旧权重）同族「权重同步时序契约破坏」但机制正交：那边是**同一轮同步内的读撕裂**、这边是**同步事件本身被步数取模错门控**；与 CKPT.27（resume 判无 ckpt 从 step 0 重训）方向相反：那边 resume 效果全丢、这边 resume 的训练续上但 rollout 锚错版本。截至收录 open；sahil-mangla 2026-10-06 评论已有对齐 GOLD 模式的修复 + 回归测试待 PR。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
 
 ---
 
@@ -2378,8 +2416,26 @@ stage: `shared` · Cov: `NEW` · 置信度 `verified`
 
 stage: `shared` · Cov: `NEW` · 置信度 `documented`
 
-- **机制**：DeepSpeed fp32 + ZeRO stage 0 的梯度裁剪在 `_take_model_step` 里走 `clip_fp32_gradients()` → `clip_grad_norm_`，该函数**返回总范数但值被丢弃**（engine.py L3425-3442）；之后 engine 只从 `optimizer._global_grad_norm` 拷贝，而该属性只有 fp16/bf16/ZeRO 包装优化器会设置——fp32 stage 0 用基础优化器（`torch.optim` / FusedAdam / CPUAdam / FusedLamb），`get_global_grad_norm()` 恒返回 `None`。范数已算出、就在丢弃点之前，仅未存。报告者提供 CPU 单进程 repro（master `bc44b341`）：stage 0 打印 `None`、stage 1 打印 `2.7553305625915527`；同路径在 `torch_autocast` + stage 0 也命中。
+- **机制**：DeepSpeed fp32 + ZeRO stage 0 的梯度裁剪在 `_take_model_step` 里走 `clip_fp32_gradients()` → `clip_grad_norm_`，该函数**返回总范数但值被丢弃**（engine.py L3425-3442）；之后 engine 只从 `optimizer._global_grad_norm` 拷贝，而该属性只有 fp16/bf16/ZeRO 包装优化器会设置——fp32 stage 0 用基础优化器（`torch.optim` / FusedAdam / CPUAdam / FusedLamb），`get_global_grad_norm()` 恒返回 `None`。范数已算出、就在丢弃点之前，仅未存。报告者提供 CPU 单进程 repro（master `bc44b341`）：stage 0 打印 `None`、stage 1 打印 `2.7553305625915527`；同路径在 `torch_autocast` + stage 0 也命中。2026-10-01 追踪更新：同函数族的 `torch_autocast` fp16 路径把**跳过步当已应用**记账（`was_step_applied()=True`、`skipped_steps=0`、LR scheduler 照走），根因同为 `_take_model_step` 只探测 `self.optimizer.overflow` 属性而该路径 optimizer 是客户端裸 `torch.optim`、恒无此属性——见 OBS.14。
 - **来源**：DeepSpeed #8660（2026-09-25；repro + 根因 + 修复提案：`clip_fp32_gradients()` 返回值存入 `_global_grad_norm`，回归测试对照纯 torch pre-step 范数——测试 master 上挂、修复后过）。https://github.com/deepspeedai/DeepSpeed/issues/8660 ；同症状先例 #7255（2025-04 开、无 repro）。https://github.com/deepspeedai/DeepSpeed/issues/7255
-- **行为效应**：无 crash——`max_grad_norm>0` 时 HF Trainer 经 Accelerate 读到 `None`，把 `grad_norm` 从日志**静默丢弃**；#8068 把 `gradient_clipping` 默认值改为 1.0 后，plain DeepSpeed 配置即中招。观测缺口：无梯度范数序列 → spike 事后诊断无从谈起（对比 OPT.03 lr_zero 骗过监控的「监控在、值骗人」，这边是**监控读取点直接缺失**，与 OBS.02 空指标当健康同族但方向相反）；训练本身（裁剪、权重更新）不受影响。fp32 stage 0 是最小配置面（无混精、无 ZeRO 分片），恰是排查数值问题时的对照基线——基线 run 丢 grad_norm 使对照失效。
+- **行为效应**：无 crash——`max_grad_norm>0` 时 HF Trainer 经 Accelerate 读到 `None`，把 `grad_norm` 从日志**静默丢弃**；#8068 把 `gradient_clipping` 默认值改为 1.0 后，plain DeepSpeed 配置即中招。观测缺口：无梯度范数序列 → spike 事后诊断无从谈起（对比 OPT.03 lr_zero 骗过监控的「监控在、值骗人」，这边是**监控读取点直接缺失**，与 OBS.02 空指标当健康同族但方向相反）；训练本身（裁剪、权重更新）不受影响。fp32 stage 0 是最小配置面（无混精、无 ZeRO 分片），恰是排查数值问题时的对照基线——基线 run 丢 grad_norm 使对照失效。修复 PR #8708 已于 2026-09-28 merge。
 - **发现来源**：2026-09-26 每日扫描
+
+### OBS.14 `autocast_z0_overflow_skip_miscounted_as_applied`
+
+stage: `shared` · Cov: `var:fp32_zero0_global_grad_norm_none` · 置信度 `verified`
+
+- **机制**：DeepSpeed `torch_autocast` fp16 + ZeRO stage 0（engine 驱动 `torch.amp.GradScaler`，`torch_autocast_z0_gradscaler`）下，梯度溢出时 `GradScaler.step()` 正确跳过 `optimizer.step()`，但 **engine 完全看不见这次跳过**：`_take_model_step`（engine.py L3476-3520）只用 `hasattr(self.optimizer, "overflow")` 探测溢出，而该路径的 optimizer 是客户端裸 `torch.optim`、恒无该属性 → `overflow` 恒 `False`。三个直接后果：`was_step_applied()` 返回 `True`（参数实际未变）、`skipped_steps` 恒 0、`lr_scheduler.step()` 照常推进——**调度器跑到优化器前面**。对照组：`fp16` 配置块（`FP16_Optimizer`/ZeRO 包装）同注入下 `was_step_applied()=False`、`skipped_steps=1`、scheduler 保持。无需任何注入故障即命中：`GradScaler` 默认 `init_scale=65536`，run 前几步 scale 校准期常溢出——**warmup 步被静默烧掉且记为已应用**。报告者单进程 repro（CUDA 原生 / CPU patch `is_fp16_supported` 双模式，第 3 次 backward 注入 inf）闭合。
+- **来源**：DeepSpeed #8723（2026-10-01；`_take_model_step` 探测逻辑代码定位 + 双模式 repro + 与 `fp16` 配置块路径的对照）。https://github.com/deepspeedai/DeepSpeed/issues/8723 ；修复 PR #8727（跳过计数 + 非有限梯度行为）同日跟进。
+- **行为效应**：无 crash、无日志——autocast fp16 stage 0 run 的 LR 调度与实际参数更新**静默脱钩**：warmup 期每个溢出步都推进 scheduler 却不更新权重（有效 warmup 缩水），之后整个 schedule 相位前移；`skipped_steps` 指标恒 0 使溢出频率完全不可观测。与 OBS.13（同 `_take_model_step` 函数族的 fp32 路径丢 grad_norm）为**同函数两种静默记账错**：那边丢观测值、这边错记状态转移；与 OPT.20（stage 0 fp16 丢 hysteresis）继续坐实「stage 0 混精路径是二等公民」族——fp16 config 块的等价路径全部行为正确。RL 场景后果被放大：rollout-reward 的有效 LR 相位漂移无任何日志痕迹。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
+
+### OBS.15 `gpt_oss_builder_dual_channel_position_embedding`
+
+stage: `pretrain/shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `--enable-gpt-oss` post-training 同时启用 YaRN 与 learned absolute position table：`model_builder.py` 把 `config.position_embedding_type` 写成 `"yarn"`（GPTModel 据此构建 `YarnRotaryEmbedding`），但同一 builder 仍把 CLI 默认值 `--position-embedding-type learned_absolute` 传进构造器；`LanguageModelEmbedding` 读的是**构造器实参**，为 `learned_absolute` 时分配 `nn.Embedding(max_seq, hidden)` 并在 forward 把这张表**加到每个 token 的 embedding 上**。GPT-OSS ckpt 无 `position_embeddings.weight` → 该表**停在随机初始化**、每个 token 叠加同一随机偏置；`reduce_scatter_embeddings` 同时因该路径要求无 learned table 而被禁用。官方 recipe `examples/post_training/modelopt/conf/openai/gpt-oss-20b.sh` 即默认组合（额外表 40960×2880 ≈ 236 MB bf16）。反方向：`--export-model-type HybridModel` 只存构造器实参、不读 config 属性，`--enable-gpt-oss` 单独设置时 hybrid 导出仍留在 `learned_absolute`。修复 PR #7850 已于 2026-10-09 merge（配置/构造器单源 + 单测双断言）。
+- **来源**：Megatron-LM #7900（2026-10-06；builder 双通道配置分叉逐行定位 + 单元测试 `test_gpt_oss_gpt_model_has_no_learned_position_table` / `test_gpt_oss_hybrid_model_uses_yarn` + 236 MB 量化）。https://github.com/NVIDIA/Megatron-LM/issues/7900 ；修复：PR #7850（2026-10-09 merge）。https://github.com/NVIDIA/Megatron-LM/pull/7850
+- **行为效应**：无 crash、无 warning——官方 recipe 默认组合下 post-training 的每个 embedding 都叠加一张**从未被 ckpt 提供也未被监督信号单独校正**的随机初始化位置表：序列位置信息被 YaRN 正确编码的同时又注入与位置无关的固定随机向量，训练静默降质（干扰幅度未量化）；SP 路径的 `reduce_scatter_embeddings` 优化同时被静默关闭。与 DATA.09（SWA fallback 无条件覆写 caller mask）同族「Megatron 配置双通道（config 属性 vs 构造器实参）分叉」：那边 mask 被 fallback 覆盖、这边**同一 position_embedding_type 写进两条通道各取一个值**；与 KER.06（compile 冻结 clamp kwargs）的共性是「配置冻结在错误的初始值上」。0 评论、修复当日 merge（oncall 直接消化）。
+- **发现来源**：2026-10-09 每日扫描（停机补扫）
 

@@ -42,6 +42,7 @@ PAR.16	ddp_normalization_shrinks_aux_loss_grad_dp_factor
 PAR.17	gradient_reduce_preprocessing_ignores_scaling_factor
 PAR.18	named_children_dedup_drops_shared_submodule_params
 PAR.19	sp_gradient_avg_divisor_splits_across_zero_paths
+PAR.20	lazy_clone_materialization_unordered_on_stream
 CKPT.01	expert_reshard_id_permutation
 CKPT.02	zero_optimizer_state_partition_mismatch
 CKPT.03	from_pretrained_silent_random_init
@@ -90,6 +91,7 @@ DATA.13	wrapper_signature_probe_drops_packed_boundaries
 DATA.14	metric_flush_key_set_rank_local_contamination
 DATA.15	sparse_attn_window_crosses_packed_document_boundary
 DATA.16	tiktoken_double_special_token_offset
+DATA.17	preprocessed_map_cache_cross_version_reuse
 OPT.01	adam_moment_not_resumed
 OPT.02	grad_clip_absorbs_sdc_spike
 OPT.03	lr_zero_phase_hides_bad_gradients
@@ -227,6 +229,8 @@ RL-RO.20	kept_mass_shift_rejects_all_rollout_correction
 RL-RO.21	group_prefix_dedup_discards_tool_continuations
 RL-RO.22	fp8_moe_repack_blind_to_same_shape_rewrite
 RL-RO.23	fp32_lm_head_not_applied_to_generation_backends
+RL-RO.24	fsdp_engine_dtype_config_ignored_rollout_trainer_split
+RL-RO.25	resume_step_modulo_gating_skips_rollout_weight_sync
 OBS.01	stability_monitor_env_lost_in_torchrun
 OBS.02	empty_metrics_read_as_healthy
 OBS.03	job_green_zero_step_progress
@@ -240,3 +244,5 @@ OBS.10	tp_replicated_tokens_summed_in_metrics
 OBS.11	synthetic_padding_dilutes_rollout_correction_metrics
 OBS.12	missing_dataloader_silently_disables_resampling
 OBS.13	fp32_zero0_global_grad_norm_none
+OBS.14	autocast_z0_overflow_skip_miscounted_as_applied
+OBS.15	gpt_oss_builder_dual_channel_position_embedding

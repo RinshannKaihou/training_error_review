@@ -73,6 +73,8 @@
 
 > 2026-10-09：每日扫描（**停机补扫**：服务器 10-01 至 10-09 宕机漏扫，滚动窗口固定 cutoff=2026-09-30；复用宕机恢复后被中断补跑的部分原始 JSON、重抓缺失 detail，GitHub 7 仓库搜索 7/7 成功，arXiv 4 查询重发后有效——首次 4 组编码损坏返无关全量流已作废重抓）。新增 PAR.20 / DATA.17 / RL-RO.24 / RL-RO.25 / OBS.14 / OBS.15 共 **6 条**（PyTorch `_lazy_clone` CoW 物化拷贝不在当前 stream 排序、graph capture 不录制——torchtitan Dist-MoE 确定性 NaN；ms-swift 预处理 map cache 身份不含代码版本——跨版本静默复用旧 schema 训练、修复 PR #10301 已 merge；verl FSDP 引擎不读 `fsdp_config.dtype`——FP16 rollout 配 BF16 trainer、实测 k3_kl 差 63×；trl IWOPDTrainer resume 步数取模门控跳过 vLLM 权重同步——rollout 锚在 resume 前权重上；DeepSpeed autocast fp16 ZeRO-0 溢出跳过步被记为已应用且 LR scheduler 照走；Megatron GPT-OSS builder 双通道 position_embedding_type 分叉——官方 recipe 默认组合下每 token 叠加随机初始化位置表、修复 PR #7850 当日 merge），补 RL-RO.23（verl #8076 同构实例→RL-RO.24）/ OBS.13（#8723 同函数族追踪 + 修复 PR #8708 已 merge）来源。轮巡：trl PR #7371 closed unmerged（duplicate of #7370）、#7504/#7548（多 EOS 族 DATA.10 补充已修）、#7520 score centering 提案维护者暂缓；Megatron #7201 有新进展（PR #7725 验证中同族复现）、#7530 expert review 在途；verl #8086/#8091 修复多 PR 并行。窗口内其余候选均判边界外（见当日日报）。**248 条**。
 
+> 2026-10-10：每日扫描（窗口放宽 `created:>=2026-10-01` 补齐 10-09 补扫未及评审的窗口中段候选；GitHub 7 仓库 7/7 成功、arXiv 4 组重试后全部有效；核心 API 限额触顶后改用 search API 补抓状态）。新增 NUM.17 / NUM.18 / PAR.21 / DATA.18 / OPT.21 / ACT.09 / ACT.10 / KER.18 / MOE.15 / LOSS.13 / SFT.16 / RL-ADV.11 / RL-RO.26 / RL-RO.27 / OBS.16 共 **15 条**（DeepSpeed OneCycle 每次重建 betas 硬编码 beta2=0.99 覆写用户配置；torchtitan SimpleFSDP fp32 梯度归约和值 round 回 bf16——GraphTrainer 与 eager step 2 起静默分叉；DeepSpeed ZeRO++ qgZ 两级归约只除节点数——权重梯度 ×L 放大；ms-swift GKD 离线蒸馏沿用 rollout 默认 add_eos=False 丢 EOS 监督；DeepSpeed ZeRO-2 低精度 master offload scratch 残留 NaN 误杀后续有限 step；Megatron checkpointing 全局标志异常/嵌套下不恢复；torchtitan DeepEP FullAC 重放 dispatch 原子序换行——专家梯度相对 L2 偏 1.41、cosine 0.02 而 loss 只差 0.0005；torchtitan module cast 把刻意构建的 fp32/complex64 buffer 一并转 bf16——RoPE cache/inv_freq/MoE token 计数全毁；trl SFT MoE aux loss 被 world size × gas 双重放大 4×；verl bypass 模式 token-mean 分母用拒采前计数——有效 LR 随拒绝率缩水；trl SDFT/SDPO teacher 从实例重建时回落 fp32+默认 attn——蒸馏目标从 step 0 错位；verl grpo_vectorized 中间输出 reward 重复计数进组统计——advantage 符号翻转；verl VeOmni chunked logprob backward 丢 decoder 梯度；trl AsyncGRPO 无 seed 请求发给 DP vLLM——组内 completion verbatim 重复 6–70%；torchtitan WandBLogger commit=True 吞同 step 验证指标），补 CKPT.13（#8787 独立重报 + 修复 #8788 在途、#8460 closed unmerged 缺陷仍在）/ RL-RWD.08（修复 PR #7467 已 merge、清尾 #7541 open）来源。10-09 留观的 Megatron #7911（MFSDP 静默跳过 LoRA）连续无 upstream 回应、DeepSpeed #8749/#8780 维持边界外判定。**263 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -86,21 +88,21 @@
 | 前缀 | 主题 | 条数 |
 |---|---|---|
 | HW | 硬件 / 训练期 SDC | 9 |
-| NUM | 数值 / 混精 / 非确定性 | 16 |
-| PAR | 并行 / 梯度归约 | 20 |
+| NUM | 数值 / 混精 / 非确定性 | 18 |
+| PAR | 并行 / 梯度归约 | 21 |
 | CKPT | 检查点 / resume | 32 |
-| DATA | 数据管线 | 17 |
-| OPT | 优化器 | 20 |
-| ACT | 重计算 / 卸载 | 8 |
-| KER | 训练 kernel | 17 |
-| MOE | MoE 路由 / EP | 14 |
-| LOSS | loss spike / 长跑退化 | 12 |
-| SFT | 模板 / packing / 标签 | 15 |
+| DATA | 数据管线 | 18 |
+| OPT | 优化器 | 21 |
+| ACT | 重计算 / 卸载 | 10 |
+| KER | 训练 kernel | 18 |
+| MOE | MoE 路由 / EP | 15 |
+| LOSS | loss spike / 长跑退化 | 13 |
+| SFT | 模板 / packing / 标签 | 16 |
 | RL-RWD | reward | 9 |
-| RL-ADV | advantage / GRPO 统计 | 10 |
+| RL-ADV | advantage / GRPO 统计 | 11 |
 | RL-KL | KL / entropy | 9 |
-| RL-RO | rollout ↔ train（TIM） | 25 |
-| OBS | 观测性骗过 | 15 |
+| RL-RO | rollout ↔ train（TIM） | 27 |
+| OBS | 观测性骗过 | 16 |
 
 ---
 
@@ -348,6 +350,24 @@ stage: `shared` · Cov: `var:loss_scaler_swallows_overflow` · 置信度 `docume
 - **行为效应**：无 crash——含 inf/NaN 梯度的组本应触发 skip step + 降 scale，哨兵平方后反而拿到合法有限范数、照常执行 unclipped 优化步：**坏梯度以「健康」姿态进权重**。与 NUM.04（scaler 吞溢出）同族「溢出处理路径把故障洗成正常」，断点在**哨兵编码进入非线性组合**：那边是跳步逻辑吞、这边是数值编码本身被算术毁掉；与 OBS.13（fp32 ZeRO-0 范数算出即被丢弃）互补：那边监控读不到、这边监控读到假健康值；与 OPT.04（clip 重缩放吃尖峰）同打击 clip 决策，那边范数是真的、这边是平方出来的假值。
 - **发现来源**：2026-09-28 每日扫描
 
+### NUM.17 `onecycle_rebuilds_betas_hardcodes_beta2`
+
+stage: `shared` · Cov: `var:scheduler_override_rewrites_group_lr_bounds` · 置信度 `documented`
+
+- **机制**：DeepSpeed `OneCycle`（`runtime/lr_schedules.py`）在 `cycle_momentum=True`（默认）下 `_initialize_momentum` 把每个 param group 的 `betas` **整对重建**为 `(mom, 0.99)`：构造时和**每次** `step()` 都执行——用户配置的 `betas[1]`（Adam/AdamW 默认 0.999）被无条件替换为硬编码 0.99，per-group beta2 同时丢失。对照 `torch.optim.lr_scheduler.OneCycleLR` 只替换 `betas` 首元素——语义本应只 cycle `betas[0]`。修复 PR #8751 = 保留各组原 beta2。
+- **来源**：DeepSpeed #8750（2026-10-05；纯 Python CPU repro：before `(0.9, 0.999)` → after init `(0.8, 0.99)`、after step `(0.89, 0.99)`；master `a77aeb6`）。https://github.com/deepspeedai/DeepSpeed/issues/8750 ；修复 PR #8751（截至 2026-10-10 open）。https://github.com/deepspeedai/DeepSpeed/pull/8751
+- **行为效应**：无 crash、无 warning——凡以默认 `cycle_momentum=True` 使用 1Cycle 的 run 从 scheduler 构造起就**用与配置不同的二阶矩系数**训练：momentum 加权窗口与方差衰减速率双双偏移，训练曲线无异常。与 OPT.12（`--override-opt-param-scheduler` 用全局实参覆写 per-group LR bounds）同族「**scheduler 越权重写 optimizer 超参**」：那边打 LR 分组、这边打 momentum/beta2 整对；两处都无任何日志提示超参已被换。二阶矩行为差异的端到端任务影响未实测（10-09 曾以「无实测」留观，本轮凭「配置被静默替换且每次 step 重写」的机制确凿性收录为 documented）。
+- **发现来源**：2026-10-10 每日扫描
+
+### NUM.18 `simplefsdp_grad_reduce_rounds_fp32_sum_to_bf16`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：pytorch `#194434`（2026-10-02 nightly）改变 FSDP2 `grad_dtype` 未指定时非分片参数梯度的默认 dtype：`param_dtype` → `reduce_dtype`（torchtitan 混精策略下 = fp32）。eager FSDP2 据此把 TP-replicated（R-on-TP：SP norm 权重、MoE router gate）梯度的 backward all-reduce 在 fp32 中 sum + reduce-scatter；**SimpleFSDP（GraphTrainer）** 同样 fp32 sum、但和值被 round 回 bf16 以匹配非分片权重的 dtype（bf16 autograd 中间量）、router gate 的 fp32 `grad_weight` 同被 round。修复（PR #5171）= 自定义 autograd Function 让 SimpleFSDP 梯度归约按 FSDP2 方式执行，全部 xfail 移除、bitwise 匹配 eager。
+- **来源**：torchtitan PR #5171（2026-10-08；dense Llama3/Qwen3 与 Qwen3 MoE numerics 测试在 step 2 与 eager 分叉（#5110/#5133 xfail）、修复后 bitwise 一致；根因上游 pytorch/pytorch#194434）。https://github.com/pytorch/torchtitan/pull/5171
+- **行为效应**：无 crash——GraphTrainer 与 eager FSDP2 的 TP-replicated 参数梯度出现**系统性精度分叉**（fp32 归约结果被 bf16 截断）：同一 ckpt/seed 下两种 trainer 从 step 2 起静默不同，A/B 对照实验结论被污染。与 NUM.08/KER.18（混精 cast 截断族）共享「fp32 中间量被 round 到 bf16」数值面，但断点在**梯度归约输出 dtype 契约**而非 buffer/参数 cast；与 PAR.21（qgZ 除数分叉）同打击「归约路径决定数值」。本质是 trainer 间等价性契约失守，端到端任务影响未实测（bitwise 分叉已闭合证明）。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # PAR · 并行 / 梯度归约
@@ -534,6 +554,15 @@ stage: `shared` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：两种表象——eager：随机 CUDA error（illegal address / misaligned address / illegal instruction / cuBLAS 失败）与错文本；full CUDA graphs：**确定性 NaN 与错文本**（每次 replay 读 capture 时刻 buffer）。长期被误判为 Dist-MoE 自身 bug。训练侧凡对 `_lazy_clone` 张量在非默认 stream/graph 下走 raw-pointer kernel 即中招（EMA 权重副本、offload 暂存是常见来源）。与 KER.17（fused RoPE 就地写绕过 version counter）同族「autograd/stream 排序契约之外的隐藏拷贝/写」：那边是别名绕过 version counter、这边是**物化拷贝绕过 stream 排序与 graph 录制**；OBS.14 同为「CUDA graph replay 读到 capture 时刻数据」表象家族但根因在更底层的 PyTorch CoW 原语。截至收录 open、0 评论。
 - **发现来源**：2026-10-09 每日扫描（停机补扫）
 
+### PAR.21 `qgz_two_stage_weight_grad_scaled_by_local_ranks`
+
+stage: `shared` · Cov: `var:sp_gradient_avg_divisor_splits_across_zero_paths` · 置信度 `verified`
+
+- **机制**：DeepSpeed ZeRO++ `qgZ` 跨节点路径中，`all_to_all_quant_reduce` 返回的 2-D **权重梯度**按「每节点设备数 L」放大，而 1-D 梯度（bias、norm）走 `reduce_scatter_coalesced` fallback 返回真平均。`quantized_reduction` 先对 L 个本地 rank 求和、末行再对 N 个节点求和、却**只除以 N**：`sum_n sum_l g / N = L · mean(g)`。修复 = 除以 `global_world_size = L·N`，与 fallback 的预除对齐。
+- **来源**：DeepSpeed PR #8729（2026-10-02；4-rank 两级路径 gloo repro：2 节点 × 2 设备、rank r 持 `−(r+1)`，修复前权重返回 −5.0、bias −2.5，修复后均 −2.5）。https://github.com/deepspeedai/DeepSpeed/pull/8729
+- **行为效应**：无 crash——多节点 qgZ 配置下**每个权重参数的有效学习率被放大 L 倍**（bias/norm 不放大）：同一 step 内参数间更新尺度分裂，权重量级随节点数漂移，训练曲线无专属信号。与 PAR.19（SP>1 下 ZeRO 梯度平均除数随归约路径分叉）同族「**除数取决于走了哪条归约路径**」：那边同一参数随 ZeRO stage 分裂、这边同一 step 内 2-D/1-D 参数分裂；与 PAR.16/PAR.17（aux 梯度 ×DP）同打击「梯度尺度因子错误」。修复截至 2026-10-10 仍 open。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # CKPT · 检查点
@@ -655,7 +684,7 @@ stage: `sft/pretrain` · Cov: `var:rank_shuffle_seed_desync` · 置信度 `verif
 - **机制**：组件持有自己的 RNG（`np.random.default_rng(seed)`）供采样，`state_dict()`/`load_state_dict()` 却存取**另一个 RNG 对象**的状态——DeepSpeed curriculum `DeepSpeedDataSampler` 存的是全局 legacy `np.random.get_state()`。三个静默面：(1) 存下的值与该组件的消耗进度**无关**（采样 0 批与 1000 批存出同一状态）；(2) resume 时组件 RNG 被 `__init__` 重新播种、load 从不触碰它 → **采样流从头部重放**（同 cluster mix、同 shuffle 序列）；(3) 恢复全局 RNG 还会移动进程内**其他**消费 `np.random` 的组件。修复 = 存 `self.np_rng` 自身状态。
 - **来源**：DeepSpeed #8405（最小复现：3 次采样前后 `np_rng_state` 不变；resume 后 draw 1 == 原始 draw 1 `[0, 3, 3, 2]`；代码审计发现，非训练 run 报告；修复 PR #8406）。https://github.com/deepspeedai/DeepSpeed/issues/8405 ；修复 PR #8460（2026-09-12 补：`state_dict` 改存 `self.np_rng.bit_generator.state`（sampler 实际抽取流）+ 兼容旧全局元组 ckpt 的 `_load_np_rng_state`——旧档无 sampler 流记录，明示降级为 fresh seed 而非加载失败）。https://github.com/deepspeedai/DeepSpeed/pull/8460
 - **行为效应**：resume 后 curriculum 难度调度/cluster shuffle 从头再来——后半程重复前半程见过的样本序，训练看似正常推进，数据课程语义已静默重置；全局 RNG 被牵连则任何依赖 numpy 全局流的组件同时漂移。与 DATA.01（rank 间 shuffle seed 失同步）对偶：那边是**同一时刻各 rank 看到不同序**，这边是**同一 rank 跨 resume 看到重复序**；与 CKPT.08（resume 静默跳 epoch）同为「恢复的状态不是运行时真正用的状态」。
-- **发现来源**：2026-09-04 每日扫描
+- **发现来源**：2026-09-04 每日扫描；2026-10-10 补源：DeepSpeed #8787（2026-10-09）从用户视角独立重报同一失效（resume 后 batches 改变、无错误无警告），修复 PR #8788（`state_dict` 存 `self.np_rng` 自身状态）截至 2026-10-10 open——确认 CKPT.13 修复 PR #8460 之后缺陷主干仍在（#8460 closed unmerged）。https://github.com/deepspeedai/DeepSpeed/issues/8787
 
 ### CKPT.14 `quantized_extra_state_silently_dropped_on_load`
 
@@ -987,6 +1016,15 @@ stage: `sft` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `verifi
 - **行为效应**：无 crash、无 warning——升级 ms-swift 后训练读的是**上一个版本预处理语义**产出的数据（旧 loss 列型别、缺 loss_scale 等），新版本的修复/语义对已缓存数据集全部失效；fingerprint 机制给出的「安全复用」表象使问题对用户与开发者双向隐形。与 SFT.11（processor 不跟 model revision）同族「版本身份不闭包」：那边模板/processor revision 随 main 漂移、这边**预处理代码版本根本不在 cache key 里**；与 DATA.08（loss_mask 缓存引用污染破坏 bitwise resume）同域「缓存与真源失联」但方向相反：那边缓存内容被就地污染、这边缓存内容合法但来自过期语义。类似 `Template._version` 的 cache-busting 前例在仓库内已存在，说明该失败模式曾在别处发生过。
 - **发现来源**：2026-10-09 每日扫描（停机补扫）
 
+### DATA.18 `gkd_off_policy_eos_supervision_dropped`
+
+stage: `sft` · Cov: `var:secondary_eos_mask_misclassifies_terminated` · 置信度 `documented`
+
+- **机制**：ms-swift GKD 离线蒸馏（`--lmbda 0`，数据集样本非生成 rollout）给 `GKDSample` 沿用了 **rollout 默认 `add_eos=False`**：数据集 response 不带字面 EOS 时，蒸馏 KL loss 与辅助 SFT loss 的**终止监督双双缺席**——学生学不到何时停止；只修学生 labels 还会让远端 teacher prompt logprobs 缺 EOS 位、被 KL 过滤掉。修复（PR #10285，2026-10-02 merge）= 数据集 `GKDSample` 用常规训练 EOS 策略（`None`）、`RolloutInferRequest.add_eos` 新增 `'auto'` 值由模板在编码时按 stop-word/分隔符/重叠规则决定（生成 rollout 仍为 `False`，含截断）。
+- **来源**：ms-swift #10282（2026-10-01；用户报告离线蒸馏学不到 EOS logits）+ 修复 PR #10285（真实 Qwen3 tokenizer验证：原样本 15 监督 token 无 EOS、常规训练 17 含 EOS、修复后对齐；414 项本地检查）。https://github.com/modelscope/ms-swift/issues/10282 ；https://github.com/modelscope/ms-swift/pull/10285
+- **行为效应**：无 crash——离线蒸馏训出的模型 EOS 行为不受监督：终止概率漂移、生成不停止或过早停止，蒸馏 loss 曲线完全正常。与 DATA.10（多 EOS 模型 completion 边界只认单 id）同族「**EOS 语义在训练/生成两侧或路径间错位**」：那边是次级 EOS 不被 mask 认、这边是 EOS 位整体从监督中消失；与 SFT.13（逐消息 tokenization 丢 `<think>` 块）同为「监督信号在数据管线中静默蒸发」。10-09 曾以「需核修复是否引入新静默面」留观，本轮核 PR 描述（`'auto'` 仅数据集样本路径、生成 rollout 行为不变）后收录。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # OPT · 优化器
@@ -1173,6 +1211,15 @@ stage: `shared` · Cov: `var:loss_scaler_swallows_overflow` · 置信度 `docume
 - **行为效应**：无 crash——stage 0 fp16 的 loss scale **衰减比配置承诺快 hysteresis 倍**：频繁溢出的 run scale 提前触底、被跳过的 step 比配置语义多，有效训练步数静默缩水；跨 stage 对比实验（stage 0 基线 vs ZeRO 1/2/3）的 scaler 动力学不可比。与 NUM.04（scaler 吞溢出）/OPT.06（stage 0 fp16 更新缩小）同族「stage 0 的 fp16 路径是二等公民」：那些条目打击 step 的执行/缩放，这边打击 **scaler 衰减策略本身的配置面**；与 #8393（stage 0 fp16 backward 不乘 scale）同路径不同 bug（PR 自述分列）。stage 0 恰是排查数值问题时的对照基线，基线的 scaler 语义失真污染对照。
 - **发现来源**：2026-09-28 每日扫描
 
+### OPT.21 `zero2_lowp_master_offload_scratch_stale_poisons_next_step`
+
+stage: `shared` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：DeepSpeed ZeRO-2 CPU offload + BF16/FP16 master 权重 + 非托管梯度累积下，`_restore_cpu_offload_grad_to_gpu` 只把**本 rank 拥有的梯度分片**部分拷进共享 scratch 张量，但 overflow 检查读的是**整个恢复出的梯度**：上一个参数组溢出时留在**非拥有区域**的 NaN 驻留 scratch，下一个完全有限的 step 也被判溢出跳过。修复（PR #8728）= 部分拷贝前清空目的视图（FP32 master 全拷贝路径不受影响）。
+- **来源**：DeepSpeed PR #8728（2026-10-02；2×B300 真实 Engine 训练环 repro：两参数组（12/8 元素）+ DP=2，先造真 NaN step、再要求两个有限 step 更新两参数；master 上 BF16/FP16 low-precision 4 case 在 `finite step did not update large` 挂、FP32 对照过；修复后 4/4 过）。https://github.com/deepspeedai/DeepSpeed/pull/8728
+- **行为效应**：无 crash——一次真实溢出**污染之后若干有限 step**：`local_overflow` 被陈旧 NaN 置位、有限 step 被跳过，训练在「溢出已过去」之后仍静默丢更新步。与 NUM.04/OBS.14（stage 0 混精溢出处理族）同打击「溢出状态记账」：那些是**本 step 的溢出被吞/错记**、这边是**溢出残留物把后续健康 step 误判为溢出**；与 NUM.16（哨兵平方洗白溢出）方向相反：那边坏 step 被放行、这边好 step 被误杀。截至 2026-10-10 open。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # ACT · 重计算
@@ -1250,6 +1297,24 @@ stage: `pretrain` · Cov: `var:sar_recompute_skips_inplace_writes` · 置信度 
 - **来源**：Megatron-LM PR #7538（2026-09-21；1×GB200 mxfp8 TE 2.20 验证表：dev `7b2991228` 上 DeepSeek-V3.2-style GPT（dsa）FP8 参数 + selective `core_attn` recompute 在 iteration 1 crash；Qwen3.5 形 GDN 模型 `gdn` recompute vs 无 recompute **从 iteration 2 起分叉**、修复后 6 iteration 逐位一致；新增单测两条在 dev 全挂）。https://github.com/NVIDIA/Megatron-LM/pull/7538
 - **行为效应**：两个可见面——FP8 参数路径 crash（易发现）；**BF16 参数 + FP8 激活路径无任何报错**：重算用高精度重放低精度前向，saved activations 语义错位、梯度从 step 2 起静默分叉，recompute on/off 的两次 run 不可比且无信号指向 recompute。与 ACT.05（partitioned recompute 参数表错位）/ACT.06（SAR 不重放 in-place 写）/ACT.02（selective recompute 漏存 RNG）同族「重算状态 ≠ 原前向」第 4 断点：那边丢参数表/副作用/随机数、这边丢 **autocast 精度上下文**；与 KER.11（op-fuser 只读全局 autocast）互补：那边 override 到不了 kernel、这边 region 语义到不了重算；与 ACT.07（offload reload 无排序边）同为「文档承诺的重算等价性未被代码兑现」。行为效应里的「iteration 2 分叉」与 HW 家族 SDC 表象相似但因果在代码。
 - **发现来源**：2026-09-28 每日扫描
+
+### ACT.09 `checkpointing_state_flag_not_restored_on_exception_nesting`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：Megatron `tensor_parallel.checkpoint`（`CheckpointFunction`）用**进程级全局标志** `IS_CHECKPOINTING` 控制重算行为，但该标志的清除不防两条路径：(1) `run_function` 或 autograd 抛异常时无条件 unset 被跳过、标志残留 `True`；(2) 嵌套 checkpoint 的内层 unset 在外层仍在跑时就执行。修复（PR #7975）= 小 context manager 在 forward/backward 两条路径的 `finally` 中保存/恢复外层状态（不改计算/RNG 协议、不加线程安全）。
+- **来源**：Megatron-LM PR #7975（2026-10-08；RTX 5090 + PyTorch 2.11.0+cu130 验证：同一组 5 个 CUDA 测试 base `76ab5004` 1 过 4 挂、修复后 5 过——覆盖前向/重算/backward 异常后的健康使用、嵌套 checkpoint 输出与梯度、RNG 保持）。https://github.com/NVIDIA/Megatron-LM/pull/7975
+- **行为效应**：异常路径下标志残留使**后续本不该按 checkpointing 语义执行的 forward 走重算分支**（或反之），RNG/保存策略错位产生错梯度而不 crash；嵌套场景外层语义被内层提前剥夺。触发面以「训练中捕获异常后继续」的工作流为主（如 fault-tolerant 框架 catch-and-retry）。与 ACT.06（SAR 不重放 in-place 写）/ACT.08（recompute 不重入 fp8_autocast）同族「**重算状态机与环境上下文不同步**」第 3 断点：那边漏副作用/精度上下文、这边全局标志本身的生命周期失守。报告含完整验证；截至 2026-10-10 open（Draft）。
+- **发现来源**：2026-10-10 每日扫描
+
+### ACT.10 `deepep_dispatch_replay_reorders_rows_wrong_grads`
+
+stage: `pretrain` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：DeepEP 的 dispatch op 返回 received rows + 记录行来源的 handle；dispatch 的 backward（combine）与 combine 的 backward（dispatch）都用 handle 路由梯度。FullAC（及 RegionAC 未把 `ep_communication` 存入 save_regions 时）在 backward **重放** block 前向 → dispatch 跑第二次，而 DeepEP 用**原子操作分配接收槽**（`dispatch.cuh:345`）——第二次 dispatch 收到的行序可以不同：grouped GEMM 的激活来自第二次 dispatch、梯度却按第一次的 handle 路由，**每个 token 的梯度遇到另一个 token 的激活与 score**。修复（PR #5123，2026-10-07 merge）= 保存 dispatch/combine 而非重放（SelectiveAC 本就如此）；FullAC 顺带提速 4.8%、代价 +1.1 GiB/MoE 层@16k。
+- **来源**：torchtitan PR #5123（2026-10-07；DSv3 671B 形状 4k token/rank、1 MoE 层实测：routed-expert 权重梯度相对 L2 偏 **1.41**、router 1.20、input 0.93，expert/router 梯度与正确值 cosine 仅 0.01–0.03（不相关）；loss 几乎不显——step-2 loss 6.1263 vs 无 AC 6.1208；新增 2-GPU 测试 main 挂修复过）。https://github.com/pytorch/torchtitan/pull/5123
+- **行为效应**：**近乎全错的专家/router 梯度、loss 只差 0.0005 量级**——FullAC MoE 训练的梯度与正确值不相关（cosine~0.02）却无明显 loss 信号，是「曲线还能跑、梯度已毁」的极端实例。与 ACT.08（recompute 不重入 fp8_autocast）/ACT.06（SAR 不重放 in-place 写）同族「**重放的前向 ≠ 原前向**」新断点：那边丢精度上下文/副作用、这边**通信原语的原子序非确定性**使重放天然不可重现；与 MOE.03/CKPT 类的专家错位表象同族但发生在梯度路由而非权重加载。loss-隐匿特性使它同时是 LOSS 域候选，按机制归 ACT。
+- **发现来源**：2026-10-10 每日扫描
 
 ---
 
@@ -1410,6 +1475,15 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 - **行为效应**：本例可见面是 NaN crash（delayed 一步：iter 1 无告警完成、iter 2 前向才炸——「iter 1 的静默错梯度已经进权重」，crash 时坏权重已写出）；**机制上更广的静默面**是别名 + 绕过 version counter 的组合在未过溢出阈的模型上可不 NaN 而持续产出错梯度。与 KER.13（chunked CE backward 就地覆写 saved logits）/KER.09（Triton 就地越界写）同病根「**kernel 就地写破坏 autograd 记账**」第 3 断点：KER.13 在 backward、KER.09 在掩码算术、这边在 **forward 别名 + version counter 绕过**；与 ACT.06（SAR 不重放 in-place 写）互为镜像：那边重算漏掉副作用、这边前向副作用对 autograd 不可见。同文件域 fused RoPE 家族（KER.09 yarn rope）再添一员。
 - **发现来源**：2026-09-28 每日扫描
 
+### KER.18 `module_cast_silently_converts_purpose_built_buffers`
+
+stage: `pretrain/shared` · Cov: `var:bf16_token_count_rounding_flips_bias_sign` · 置信度 `documented`
+
+- **机制**：`nn.Module.to(dtype)` / `.half()` / `.bfloat16()` 会把**浮点 buffer 连同参数一起转型**，而 torchtitan 模型中每个浮点 buffer 都是**刻意以固定 dtype 构建**的 cache/累加器（`_init_self_buffers` 每次按该 dtype 重建）：`ComplexRoPE`（complex64 cache）被 cast 到 bf16 只留实部（唯一信号是一条去重的 `UserWarning`）；`CosSinRoPE`/`MRoPE` 与视觉编码器 `inv_freq`（fp32 cache）被 round、**无任何警告**；MoE `tokens_per_expert_E`/`expert_bias_E`/`AuxLoss.instance_acc`（fp32 累加器）转 bf16 后 `tokens_per_expert_E` 超 256/专家即停止精确计数、load-balance bias 更新直接读它。修复（PR #5153）= `Module._apply` 保留各模块自有 buffer 的原 dtype（参数照常转型）。实测 `q·k` spread（8192-token cache、offset 1 逐位置）：ComplexRoPE fp32 2.3e-3 → cast 后 24.6、CosSinRoPE 2.9e-3 → 0.17。
+- **来源**：torchtitan PR #5153（2026-10-08；A100 上 19 例对 FP64 参照验证 + spread 量化表；覆盖 torchtitan 全部 debug model）。https://github.com/pytorch/torchtitan/pull/5153
+- **行为效应**：静默错值三类——RoPE 位置编码依赖绝对位置（attention score 随位置漂移）、inv_freq 精度损失、**MoE 专家计数冻结在 bf16 粒度**（>256 停止区分）使负载均衡 bias 更新读错数据。与 NUM.08（Megatron expert token 计数 float buffer 被 Float16Module 转 BF16）为**跨栈同机制正面对应**：那边是框架精度包装器在 cast、这边是用户/框架层 `module.to()` 调用，打击同一个「累加器 buffer 被混精 cast」失效面——故 `var:`。截至 2026-10-10 open。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # MOE
@@ -1542,6 +1616,15 @@ stage: `sft` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `docume
 - **行为效应**：无 crash、无 warning——近半 MoE 架构的 SFT run 负载均衡项从未生效，专家利用分布不受约束地漂移，训练 loss 曲线完全正常；与 SFT.07（LoRA target_modules 静默欠匹配）同库同型「配置声明了、检测谓词漏一类目标」，差异在这边打击 aux loss（路由层）而非 PEFT 挂载面；「is_moe 推断依赖可选 config 字段」与 CKPT.07 死配置族共享病根但方向相反：CKPT.07 是 key 无人消费、这边是**消费了但布尔谓词对一半架构恒 False**；维护者 qgallouedec 已表态内部处理（不收外部 PR），拟用 `num_experts` 类权威标记 + 未应用时告警。
 - **发现来源**：2026-09-23 每日扫描
 
+### MOE.15 `sft_aux_loss_scaled_by_worldsize_and_gas`
+
+stage: `sft` · Cov: `var:ddp_normalization_shrinks_aux_loss_grad_dp_factor` · 置信度 `verified`
+
+- **机制**：trl `SFTTrainer.compute_loss` 把 MoE aux loss 折进按 `num_items_in_batch`（token 归一）的 CE loss 后**再乘 `num_processes`**：aux 项是 per-micro-batch 均值——(1) DDP 把 CE 平均回去但 aux 项从未除以 world size → 放大 `num_processes` 倍；(2) 用 `num_items_in_batch` 时 `Trainer` 不再除以梯度累积步 → aux 项又被跨 micro-batch **求和**。合计放大 `num_processes × gas` 倍（2 GPU + gas 2 = 4×）。修复（PR #7570，2026-10-08 merge）= aux 项在世界尺寸缩放**之后**加入并除以累积步（GRPO/RLOO/AsyncGRPO 本就如此；DPO/KTO 无 `num_items_in_batch` 不受影响）。
+- **来源**：trl PR #7570 / issue #7569（2026-10-05；4× 单例 router-update 实测表：1 GPU batch4 = 4.94 (1×)、2 GPU batch2 = 9.88 (2×)、2 GPU batch1+gas2 = 19.76 (4×)，修复后均 4.94；回归测试 `test_aux_loss_does_not_scale_with_gradient_accumulation` 主线挂修复过；2×B300）。https://github.com/huggingface/trl/pull/7570
+- **行为效应**：无 crash——多卡 SFT 的 MoE 负载均衡项按 world size 与累积步**双重放大**：router 收到的 aux 梯度强度随并行配置漂移（8 卡 gas 4 = 32×），`router_aux_loss_coef` 的语义跨配置不可比，路由被过度推向均衡、可能伤专家特化。与 PAR.16（Megatron global_aux_loss 梯度经 DDP AVG 缩小 DP×）为**同失效面的两个方向**：那边缩小、这边放大，同根「aux loss 与 DDP/world-size 归一约定脱钩」；与 MOE.14（aux coef 静默 no-op）同为 trl SFT MoE aux 链路的配置-执行断裂。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # LOSS · 发散与长跑退化
@@ -1655,6 +1738,15 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `documented`
 - **来源**：torchtitan #4802（2026-09-20；CPU 梯度路径核对 + TODO 定位；Matrix-Z97 确认正从 NPU 适配迁移实现、将开 Draft PR）。https://github.com/pytorch/torchtitan/issues/4802 ；修复在途（2026-09-28 补）：PR #4835（2026-09-22）把社区 `AuxLoss` 框架接进 DSV4 CSA——`Indexer.select()` 改返回 topk_indices + **可微 topk_scores**、新增 `SparseIndexerLoss(AuxLoss)` 经 FlexAttention `out_transform` 注入（attention LSE 作 teacher 归一化、teacher detach 保梯度）、`register_aux_loss_zero_hook` 挂进 optimizer post-build；仅 `compress_ratio==4` CSA 层配置；4-GPU（tp2/ep2/spmd_types 路径）smoke 训完，探针确认 `topk_scores.requires_grad=True`、aux loss 累计非零；尚 open 待 review。https://github.com/pytorch/torchtitan/pull/4835
 - **行为效应**：无 crash、无 warning，训练曲线正常——DSV4 在 torchtitan main 上的 run 整个训练期 indexer 投影停留在初始化值（等价于随机 token 选择器被冻结），稀疏注意力选 token 的质量从不改进，质量损害不体现在 loss 上。与 RL-KL.04 / MOE.14（aux loss 静默 no-op）同族「**辅助目标缺位而主训练无感**」：那边配置在、执行路径丢，这边路径整个未接且代码内 TODO 自认；与 LOSS.07（零初始化首步全零）同属「合法运行掩盖未训练子模块」。
 - **发现来源**：2026-09-26 每日扫描
+
+### LOSS.13 `bypass_mode_token_mean_divides_by_prerejection_count`
+
+stage: `rl` · Cov: `var:dapo_family_gas_double_scaling` · 置信度 `verified`
+
+- **机制**：verl rejection sampling bypass 模式（`rollout_rs`）在 policy loss 内按当前 log probs 逐 micro-batch mask 掉被拒 token，但引擎**早在拒采前**就把全局 batch token 数（`batch_num_tokens = loss_mask.sum()`，DP all-reduce）算好交给 `ppo_loss`；`loss_agg_mode="token-mean"` 下 policy loss = **kept token 的 loss 和 ÷ 拒采前 token 数**——被拒比例直接成为 loss 的隐形缩放因子。Decoupled 模式先改 `response_mask` 再计数、无此问题。修复（PR #8176）= bypass 模式按（拒采前/拒采后 kept）token 比例重缩放，计数跨 DP all-reduce。
+- **来源**：verl PR #8176（2026-10-09；CPU 回归测试：两个 micro-batch 各 keep 7/8 token，accumulated bypass loss 0.3199 vs 正确 token-mean 0.3656 = 恰 7/8；修复算术闭合）。https://github.com/verl-project/verl/pull/8176
+- **行为效应**：无 crash——bypass 模式 + token-mean 下**有效学习率随拒采比例缩水**：拒绝率高（rollout-correction 门限紧、质量差的 batch）时梯度步子被同比缩小，拒绝率本身随训练动态变化 → 隐形的非平稳 LR 调制、无任何指标可见。与 LOSS.09（DAPO/CISPO 全局归一后再除 G）同族「**token 计数分母与 mask 后真值不一致**」：那边 Trainer 层再除 G、这边引擎层过早计数；与 RL-RO.20（rollout-correction 拒绝门限使梯度恒 0）同路径互补：那边全拒断流、这边部分拒缩流。截至 2026-10-10 open。
+- **发现来源**：2026-10-10 每日扫描
 
 ---
 
@@ -1797,6 +1889,15 @@ stage: `sft` · Cov: `var:loss_scale_reweights_rounds` · 置信度 `verified`
 - **行为效应**：静默——显式 `loss_type` 用户配置的 token 权重（如多轮 `last_round`、工具位降权）不生效，模型按均匀权重训练，预期强调的 token 被稀释、该 mask 的位泄漏进梯度。与 SFT.12（多轮拆分默认 `loss_scale` 重复计权）同族同库：**`loss_scale` 权重链路在 trainer 分支间断裂**——那边默认路径重复计权、这边显式路径全丢；「配置面存在、执行面缺席」的死配置面与 CKPT.07/CKPT.20 同型，但打击的是 objective 本身。
 - **发现来源**：2026-09-13 每日扫描
 
+### SFT.16 `teacher_model_rebuilt_fp32_default_attn_mismatch`
+
+stage: `sft` · Cov: `var:distillation_teacher_dtype_mismatch_jsd_sign_flip` · 置信度 `verified`
+
+- **机制**：trl SDFT/SDPO 在 policy 以**实例**传入时，`model_init_kwargs` 为空——`create_model_from_path` 从路径重建 teacher 时回落默认 `dtype="float32"` 与默认 attention 实现：teacher 与 student 从 step 0 起 dtype/attn 双 mismatch（fp32 teacher 还多占内存）。同库 PR #7597（2026-10-09 merge）已为 DPO/KTO/GRPO/RLOO 的 **reference model** 修了同型代码（`setdefault` 从实例反射 dtype/attn），但 SDFT/SDPO 的 teacher 分支未跟进——修复 #7616/#7619（build teacher with student's dtype and attn）在途。
+- **来源**：trl #7618（2026-10-09；CPU tiny-model repro：policy bf16+eager → teacher fp32+sdpa；同型 #7597 repro：DPO step-1 loss 0.6472 vs 期望 ln2=0.6931，修复后 0.6931、Qwen3-8B DPO 1×B300 吞吐 +16%/内存 168→142GB）。https://github.com/huggingface/trl/issues/7618 ；同型修复先例 https://github.com/huggingface/trl/pull/7597
+- **行为效应**：无 crash——蒸馏目标从第一步就对着一个**精度与 attention 实现都不同**的 teacher 计算：KL/JSD 信号系统性偏差、蒸馏结果随「哪个后端实现 SDPA」漂移，日志无任何 mismatch 提示。与 NUM.13（ms-swift GKD student FP32/teacher BF16 混精 logits 致 JSD 符号翻转）为**跨栈同机制**（`var:`）：那边显式混精配置进 loss、这边 fallback 默认值隐式造成；与 RL-RO.23/24（精度意图只落一侧）同族「双模型分支的精度假设不闭包」，差异是这边打击 teacher 侧而非 rollout 侧。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # RL-RWD · reward
@@ -1871,7 +1972,7 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 stage: `rl` · Cov: `NEW` · 置信度 `documented`
 
 - **机制**：trl OpenReward 环境 `environment.py:192` 把 `self.reward` 初始化为 `0.0`、只在 `_call_ors_tool`（L266-296）拿到非 null reward 时覆写；默认 reward 函数 `_outcome_only_reward_func`（`_spec.py:69-75`）无条件返回 `env.reward`。从未调过打分工具的 rollout（放弃 / 撞 `max_tool_calling_iterations` / 全部工具调用抛异常）与「真被打 0 分」的 rollout **bit 级同值**——sentinel 与合法测量坍缩成同一个数。修复形状已有先例：PR #6430 的 `has_reward` 标志（仅工具返回非 null 时置位、`reset()` 复位、未打分返回 `None` 使 `unscorable_mask` 正确剔除）曾被维护者正面评审为 "a clean, well-reasoned fix for a real reward-hacking vector"，后因无关测试覆盖问题被关未合；`environment.py`/`_spec.py` 此后无 commit，缺陷在当前 HEAD 仍活。
-- **来源**：trl #7364（2026-09-24；逐函数源替换 repro 三例对照：A 未打分 vs B 真错 vs C 真对——A/B 下游全同；附 PR #6430 兴衰史）。https://github.com/huggingface/trl/issues/7364 ；trl #6430（先行修复、正评后被关）。https://github.com/huggingface/trl/pull/6430 ；修复在途（2026-09-28 补）：`[OpenReward] Return None for unrewarded rollouts (fixes #7364)` 连开三 PR #7369（closed）/#7370（open）/#7371（closed 2026-09-24 04:29 UTC）——修复方向即条目所述「未打分返回 None 使下游剔除」，社区仍在以多 PR 形式迭代、尚未见维护者 merge 裁决。https://github.com/huggingface/trl/pull/7371
+- **来源**：trl #7364（2026-09-24；逐函数源替换 repro 三例对照：A 未打分 vs B 真错 vs C 真对——A/B 下游全同；附 PR #6430 兴衰史）。https://github.com/huggingface/trl/issues/7364 ；trl #6430（先行修复、正评后被关）。https://github.com/huggingface/trl/pull/6430 ；修复在途（2026-09-28 补）：`[OpenReward] Return None for unrewarded rollouts (fixes #7364)` 连开三 PR #7369（closed）/#7370（open）/#7371（closed 2026-09-24 04:29 UTC）——修复方向即条目所述「未打分返回 None 使下游剔除」，社区仍在以多 PR 形式迭代、尚未见维护者 merge 裁决。https://github.com/huggingface/trl/pull/7371 ；2026-10-10 补：**PR #7467 已于 2026-10-06 merge**（默认 reward 函数经 reward 历史判 None、`env.reward` 保持 float 兼容），但残留面仍在——自定义 reward 函数读 `env.reward` 仍把未打分当 0.0，清尾 PR #7541（`env.reward` 初始化为 `None`、未打分算术改 TypeError）截至 2026-10-10 open。https://github.com/huggingface/trl/pull/7467 ；https://github.com/huggingface/trl/pull/7541
 - **行为效应**：无 crash——组内中心化后「未测」与「测了且零分」同为 0.0：genuinely-failed 样本无法与 never-scored 区分，`unscorable_mask` 剔除逻辑失效；放弃/超限 rollout 被当作真实负信号参与 advantage，按 0 分中心化的组统计把「评分覆盖缺口」转成方向性梯度偏置（放弃行为可能被错误奖励或惩罚，取决于组内其余得分）。与 RL-RWD.05（prefilled tag 使 reward 恒 0 的死区）行为效应同型「合法 0 分与未测坍缩」，差异在这边是**环境侧哨兵值**而非 tokenizer/模板错位；与 RL-RWD.07（verifier 误差组内相关）互补：那边是测量的噪声结构、这边是测量的**缺席**被编码为测量值。
 - **发现来源**：2026-09-24 每日扫描
 
@@ -1979,6 +2080,15 @@ stage: `rl` · Cov: `NEW` · 置信度 `documented`
 - **来源**：verl #7956（2026-09-18；在 main `23a341e3` 上的代码路径核对与无 GPU 的 CPU 复现；截至 2026-09-24 issue 为 open）。https://github.com/verl-project/verl/issues/7956
 - **行为效应**：来源的 CPU 路径复现了优势值与轨迹键错配而没有异常；在上述配置下，策略梯度会把 credit assignment 赋给错误轨迹。**未提供长程训练回报或任务指标实测，未评估检测器效果**。与 RL-ADV.09 的 shaped reward 过滤谓词错配不同，这里是有放回重采样后跨键写回破坏样本身份。
 - **发现来源**：2026-09-18 远程扫描回填；2026-09-24 合并复核
+
+### RL-ADV.11 `vectorized_grpo_intermediate_rewards_pollute_group_stats`
+
+stage: `rl` · Cov: `var:singleton_group_vectorized_zero_path` · 置信度 `verified`
+
+- **机制**：verl V1 trainer 的 `grpo_vectorized` estimator 跳过 session-aware 路径：多输出 session 的 reward 被 copy 到**每个中间输出**后进组统计——组均值/标准差把同一 session 的 reward 数 n 次；advantage 用中间输出的（被污染）组统计计算而非该 session 最终输出的统计。修复（PR #8100）= `GRPO_VECTORIZED` 纳入既有 final-output 选择 + advantage 广播路径（`grpo` 本就走）。
+- **来源**：verl PR #8100（2026-10-03；真实 reward-copy 后处理器回归：3 session rewards `[1,4,5]` 存储成 `[1,4,5,5,5,5]`；reward-4 session advantage 修复前 `−0.104031` → 修复后 `+0.320256`；36 CPU 测试过、原始 dispatcher 下挂）。https://github.com/verl-project/verl/pull/8100
+- **行为效应**：无 crash——多轮 agent session 的 GRPO 组统计被**中间输出的重复 reward 加权**：长 session（输出多）的 reward 在均值/方差中被超权，advantage 符号在中间输出与最终输出间错配（实例中 advantage 直接翻号）。与 RL-ADV.07（singleton 组向量化 `*(c>1)` 清零 vs 标量透传）同族「**grpo_vectorized 的分组约定与 reward 语义错配**」：那边是 1-sample 组被清零、这边是 session 内多输出重复计数；与 RL-ADV.10（PF-PPO 重采样错配）同打击样本身份/分组记账。截至 2026-10-10 open。
+- **发现来源**：2026-10-10 每日扫描
 
 ---
 
@@ -2298,6 +2408,24 @@ stage: `rl` · Cov: `NEW` · 置信度 `verified`
 - **行为效应**：无 crash——resume 后到下一个倍数步之前，策略梯度对着**上一个 ckpt 的策略**采样出的 rollout 计算，off-policy 程度随 resume 点漂移且完全不可见（loss 正常、指标正常）。与 RL-RO.19（ms-swift IPC ACK 时序使 rollout 用半新半旧权重）同族「权重同步时序契约破坏」但机制正交：那边是**同一轮同步内的读撕裂**、这边是**同步事件本身被步数取模错门控**；与 CKPT.27（resume 判无 ckpt 从 step 0 重训）方向相反：那边 resume 效果全丢、这边 resume 的训练续上但 rollout 锚错版本。截至收录 open；sahil-mangla 2026-10-06 评论已有对齐 GOLD 模式的修复 + 回归测试待 PR。
 - **发现来源**：2026-10-09 每日扫描（停机补扫）
 
+### RL-RO.26 `veomni_chunked_logprob_backward_drops_decoder_grads`
+
+stage: `rl` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：verl VeOmni 0.1.11 的 chunked log-probability backward 从 **saved reshaped hidden states 读 `requires_grad`** 决定梯度流，storage-sharing 别名的梯度标志未跟随 `ctx.needs_input_grad`——decoder 梯度可被静默丢弃，log-prob/entropy 计算链失真。修复（PR #8108）= 委托给 released backward、别名梯度标志对齐 `ctx.needs_input_grad`（仅 VeOmni 0.1.11、一阶梯度）。
+- **来源**：verl PR #8108（2026-10-04；CPU 回归 10 过：released-kernel 数学对 dense oracle、PyTorch 2.13.0 + Transformers 5.12.1；CUDA fused-CE 与分布式 FSDP2 未重跑——报告自述）。https://github.com/verl-project/verl/pull/8108
+- **行为效应**：无 crash——RL 打分阶段的 decoder 参数拿不到（部分）梯度：策略/价值头前的表征学习静默退化，loss 与指标正常。与 RL-RO.19/25（rollout 权重同步族）不同域：这边是**训练侧 backward 图的梯度流断裂**；与 ACT.06/KER.17（saved-state 语义与 autograd 记账失联）同病根——「保存的中间态不携带正确的梯度标志」。仅 CPU 侧闭合、CUDA 路径未验证，置信度 documented。截至 2026-10-10 open。
+- **发现来源**：2026-10-10 每日扫描
+
+### RL-RO.27 `dp_vllm_seedless_group_sampling_collapses_diversity`
+
+stage: `rl` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：trl `AsyncGRPOTrainer` 把组内每个 generation 作为独立 `n=1` 请求发给 data-parallel vLLM server、**不携带 seed**——各 engine 分发同源的请求种子序列，组内 generations 常常 **verbatim 相同**。修复（PR #7549，2026-10-07 merge）= async rollout worker 每个采样请求附唯一随机 seed。实测 8 个内部 dense 模型 async GRPO run（vLLM 0.25.1、DP=8、16 gen/prompt、T=1.0）：duplicate share（组内重复早先 completion 的比例）整 run 6.1%–70%，短 completion 最重（run H：组均 5.5/16 distinct、22% completion 对完全相同）；seeded baseline 0.00–0.13%。
+- **来源**：trl PR #7549（2026-10-06；8 run 量化表 + seeded 对照）。https://github.com/huggingface/trl/pull/7549
+- **行为效应**：无 crash——GRPO 组内样本**有效多样性坍缩**：组 std 被重复样本压小 → advantage 尺度失真（近 duplicate 互相抵消）、探索被抑制，训练看似正常推进。与 RL-ADV.01（组 std=0）共享后果面但机制不同：那边是 reward 全同致 std=0、这边是**采样侧种子同源使 completion 全同**（reward 也随之全同）；与 RL-RO.21（组内 continuation 接错成员历史）同族「**组内样本独立性假设被后端破坏**」。已修复 merge。
+- **发现来源**：2026-10-10 每日扫描
+
 ---
 
 # OBS · 观测性
@@ -2438,4 +2566,13 @@ stage: `pretrain/shared` · Cov: `NEW` · 置信度 `documented`
 - **来源**：Megatron-LM #7900（2026-10-06；builder 双通道配置分叉逐行定位 + 单元测试 `test_gpt_oss_gpt_model_has_no_learned_position_table` / `test_gpt_oss_hybrid_model_uses_yarn` + 236 MB 量化）。https://github.com/NVIDIA/Megatron-LM/issues/7900 ；修复：PR #7850（2026-10-09 merge）。https://github.com/NVIDIA/Megatron-LM/pull/7850
 - **行为效应**：无 crash、无 warning——官方 recipe 默认组合下 post-training 的每个 embedding 都叠加一张**从未被 ckpt 提供也未被监督信号单独校正**的随机初始化位置表：序列位置信息被 YaRN 正确编码的同时又注入与位置无关的固定随机向量，训练静默降质（干扰幅度未量化）；SP 路径的 `reduce_scatter_embeddings` 优化同时被静默关闭。与 DATA.09（SWA fallback 无条件覆写 caller mask）同族「Megatron 配置双通道（config 属性 vs 构造器实参）分叉」：那边 mask 被 fallback 覆盖、这边**同一 position_embedding_type 写进两条通道各取一个值**；与 KER.06（compile 冻结 clamp kwargs）的共性是「配置冻结在错误的初始值上」。0 评论、修复当日 merge（oncall 直接消化）。
 - **发现来源**：2026-10-09 每日扫描（停机补扫）
+
+### OBS.16 `wandb_step_commit_drops_later_logs_same_step`
+
+stage: `shared` · Cov: `NEW` · 置信度 `documented`
+
+- **机制**：torchtitan `WandBLogger.log` 调 `wandb.log(metrics, step=N, commit=True)`——每次 log 即刻提交该 step 行；行一旦提交，W&B **丢弃后续对同一 step 的所有 log**。验证指标在训练之后 log 到同一 step：默认 `log_freq=10` + validator `freq=10` 时**每一次核心验证都被丢弃**；RL 的 post-training 验证 log 在最后一个训练 step、同样被吞。修复（PR #5227）= logger 按 step 累积进同一行、显式 `commit()` 由 trainer 在验证后触发。
+- **来源**：torchtitan PR #5227（2026-10-09；从离线 `.wandb` 文件回读验证：main 上 `validation_metrics/*` 全缺、修复后 1/5/10 step 全部并列出现；W&B 0.28.1）。https://github.com/pytorch/torchtitan/pull/5227
+- **行为效应**：无 crash、无 warning——**全部验证指标从未到达 W&B**：用户看到的 validation 面板是空的或停在旧 run，训练侧认为「验证跑了但没日志」，与 OBS.02（空指标当健康）互补：那边指标文件空、这边指标被上游丢弃；与 OBS.13（grad_norm 算出即丢）同族「**观测值在产出点与消费点之间被静默丢弃**」。监控完整性缺口而非训练正确性，归 OBS。截至 2026-10-10 open（1/2 系列）。
+- **发现来源**：2026-10-10 每日扫描
 

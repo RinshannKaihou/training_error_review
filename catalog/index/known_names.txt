@@ -25,6 +25,7 @@ NUM.15	training_args_env_leak_sticky_bf16_precision
 NUM.16	invalid_group_norm_sentinel_squared_to_healthy
 NUM.17	onecycle_rebuilds_betas_hardcodes_beta2
 NUM.18	simplefsdp_grad_reduce_rounds_fp32_sum_to_bf16
+NUM.19	invalid_grad_norm_check_ungated_overrides_opt_out
 PAR.01	zero2_bf16_multi_subgraph_incomplete_reduce
 PAR.02	allreduce_silent_wrong_value
 PAR.03	dp_consensus_washes_out_bad_rank
@@ -78,6 +79,7 @@ CKPT.29	hf_rotary_inv_freq_uninitialized_after_to_empty
 CKPT.30	cyclic_sharded_resume_dp_resize_reorder
 CKPT.31	cyclic_unsharded_resume_epoch_boundary_dp_remainder
 CKPT.32	cli_resume_arg_never_reaches_train
+CKPT.33	explicit_ckpt_step_overridden_by_release_or_newer_nonpersistent
 DATA.01	rank_shuffle_seed_desync
 DATA.02	packing_cross_document_attention
 DATA.03	loss_mask_includes_prompt

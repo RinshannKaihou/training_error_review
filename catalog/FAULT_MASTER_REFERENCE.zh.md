@@ -75,6 +75,8 @@
 
 > 2026-10-10：每日扫描（窗口放宽 `created:>=2026-10-01` 补齐 10-09 补扫未及评审的窗口中段候选；GitHub 7 仓库 7/7 成功、arXiv 4 组重试后全部有效；核心 API 限额触顶后改用 search API 补抓状态）。新增 NUM.17 / NUM.18 / PAR.21 / DATA.18 / OPT.21 / ACT.09 / ACT.10 / KER.18 / MOE.15 / LOSS.13 / SFT.16 / RL-ADV.11 / RL-RO.26 / RL-RO.27 / OBS.16 共 **15 条**（DeepSpeed OneCycle 每次重建 betas 硬编码 beta2=0.99 覆写用户配置；torchtitan SimpleFSDP fp32 梯度归约和值 round 回 bf16——GraphTrainer 与 eager step 2 起静默分叉；DeepSpeed ZeRO++ qgZ 两级归约只除节点数——权重梯度 ×L 放大；ms-swift GKD 离线蒸馏沿用 rollout 默认 add_eos=False 丢 EOS 监督；DeepSpeed ZeRO-2 低精度 master offload scratch 残留 NaN 误杀后续有限 step；Megatron checkpointing 全局标志异常/嵌套下不恢复；torchtitan DeepEP FullAC 重放 dispatch 原子序换行——专家梯度相对 L2 偏 1.41、cosine 0.02 而 loss 只差 0.0005；torchtitan module cast 把刻意构建的 fp32/complex64 buffer 一并转 bf16——RoPE cache/inv_freq/MoE token 计数全毁；trl SFT MoE aux loss 被 world size × gas 双重放大 4×；verl bypass 模式 token-mean 分母用拒采前计数——有效 LR 随拒绝率缩水；trl SDFT/SDPO teacher 从实例重建时回落 fp32+默认 attn——蒸馏目标从 step 0 错位；verl grpo_vectorized 中间输出 reward 重复计数进组统计——advantage 符号翻转；verl VeOmni chunked logprob backward 丢 decoder 梯度；trl AsyncGRPO 无 seed 请求发给 DP vLLM——组内 completion verbatim 重复 6–70%；torchtitan WandBLogger commit=True 吞同 step 验证指标），补 CKPT.13（#8787 独立重报 + 修复 #8788 在途、#8460 closed unmerged 缺陷仍在）/ RL-RWD.08（修复 PR #7467 已 merge、清尾 #7541 open）来源。10-09 留观的 Megatron #7911（MFSDP 静默跳过 LoRA）连续无 upstream 回应、DeepSpeed #8749/#8780 维持边界外判定。**263 条**。
 
+> 2026-10-12：每日扫描（10-11 未运行，窗口 `created:>=2026-10-05` 按 issue 号去重覆盖缺口；GitHub 8 仓库搜索全部成功、arXiv 5 组全部有效）。新增 NUM.19 / CKPT.33 共 **2 条**（DeepSpeed #8638 引入的 invalid-grad-norm→overflow 规则不受 `bf16.check_grad_overflow` 门控——clipping 开启时显式 opt-out 失效、两种配置训练动力学不可区分、CI 恒绿因单 rank runner 跳过 world_size=2 用例；Megatron `--ckpt-step` 三路静默覆写——truthiness 吞 step 0、release 标志不重置、更新的 non-persistent ckpt 抢占显式选择，rollback/按步评估加载错 ckpt）。轮巡：Megatron #7725（#7201 验证 PR）10-10 **merge**；trl #8086 修复 PR merge 后评审者 ZhiliangWu 指出第二处改动（`enable_thinking_default` 传入 `extract_system_prompt_and_generation`）对 Qwen3 式模板 `enable_thinking=False` 可能引入新 loss-mask bug，报告者未回应、无后续 issue——下轮首查；verl #8178（Ulysses SP GDN 梯度 cos 0.68-0.96）报告者自撤关闭（异构无法孤立复现）不收；DeepSpeed #8751/#7541 无变化；ms-swift #10318（GKD 不等词表对齐）仍 open 待 merge 继续跟踪。窗口内其余候选均判边界外（见当日日报）。**265 条**。
+
 | 轴 | 分布 |
 |---|---|
 | **stage** | `shared` 为主，另有 `pretrain` / `sft` / `rl`（见各类节头） |
@@ -88,9 +90,9 @@
 | 前缀 | 主题 | 条数 |
 |---|---|---|
 | HW | 硬件 / 训练期 SDC | 9 |
-| NUM | 数值 / 混精 / 非确定性 | 18 |
+| NUM | 数值 / 混精 / 非确定性 | 19 |
 | PAR | 并行 / 梯度归约 | 21 |
-| CKPT | 检查点 / resume | 32 |
+| CKPT | 检查点 / resume | 33 |
 | DATA | 数据管线 | 18 |
 | OPT | 优化器 | 21 |
 | ACT | 重计算 / 卸载 | 10 |
@@ -367,6 +369,15 @@ stage: `pretrain` · Cov: `NEW` · 置信度 `verified`
 - **来源**：torchtitan PR #5171（2026-10-08；dense Llama3/Qwen3 与 Qwen3 MoE numerics 测试在 step 2 与 eager 分叉（#5110/#5133 xfail）、修复后 bitwise 一致；根因上游 pytorch/pytorch#194434）。https://github.com/pytorch/torchtitan/pull/5171
 - **行为效应**：无 crash——GraphTrainer 与 eager FSDP2 的 TP-replicated 参数梯度出现**系统性精度分叉**（fp32 归约结果被 bf16 截断）：同一 ckpt/seed 下两种 trainer 从 step 2 起静默不同，A/B 对照实验结论被污染。与 NUM.08/KER.18（混精 cast 截断族）共享「fp32 中间量被 round 到 bf16」数值面，但断点在**梯度归约输出 dtype 契约**而非 buffer/参数 cast；与 PAR.21（qgZ 除数分叉）同打击「归约路径决定数值」。本质是 trainer 间等价性契约失守，端到端任务影响未实测（bitwise 分叉已闭合证明）。
 - **发现来源**：2026-10-10 每日扫描
+
+### NUM.19 `invalid_grad_norm_check_ungated_overrides_opt_out`
+
+stage: `shared` · Cov: `NEW` · 置信度 `verified`
+
+- **机制**：DeepSpeed ZeRO-1/2 `step()`（`runtime/zero/stage_1_and_2.py:2791`）由 PR #8638 引入的第二条溢出判定 `is_invalid_grad_norm(scaled_global_grad_norm) → self.overflow = True` **不受 `bf16.check_grad_overflow` 门控**——该开关的文档语义是「检出梯度溢出/下溢并跳步」的 opt-out（默认 True）；`gradient_clipping > 0` 时 `compute_grad_norm` 被强制开启，而 #8638 的哨兵→overflow 规则落在 `self.check_grad_overflow` 块**之外**：`check_grad_overflow=False` + clipping 开启时 invalid-norm 仍置 `overflow=True` 跳步。修复 = 用 `if self.check_grad_overflow and is_invalid_grad_norm(...)` 把新规则关回用户开关之下。
+- **来源**：DeepSpeed #8805（2026-10-12；逐行因果隔离：删除 L2791-2793 三行 `4 passed`、保留则 `4 failed`；`test_ignore_grad_overflow` 在 ≥2 rank 下断言失败——CI 恒绿是因为 cpu-torch-latest runner 单 rank 跳过全部 `world_size=2` 用例，2-rank job 114158646231 可复现）。https://github.com/deepspeedai/DeepSpeed/issues/8805
+- **行为效应**：无 crash——bf16 用户显式 `check_grad_overflow: False`（选「让 Inf 梯度直接进优化器」语义）时，clipping 开启即回到静默跳步 regime：**两种配置训练动力学不可区分**（`skipped_steps` 相同），文档承诺的 opt-out 失效且无任何警告。与 NUM.16（哨兵平方洗白溢出，#8638 所修）互补：那条是「坏 step 被放行」、这条是同一 PR 引入的「用户开关管不住新的跳步路径」；与 OBS.14（autocast z0 溢出跳步误记为已应用）同打击溢出路径的配置语义契约。任务影响未实测（multi-rank 单测断言已闭合证明行为分叉）。
+- **发现来源**：2026-10-12 每日扫描
 
 ---
 
@@ -856,6 +867,15 @@ stage: `sft/rl` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `doc
 - **来源**：trl PR #7391（2026-09-25；15 个新用例 base 全挂/修复后全过；Windows 2 个失败为 base 上既有的 NamedTemporaryFile 权限问题、与本改动无关）。https://github.com/huggingface/trl/pull/7391
 - **行为效应**：无 crash、无警告——用户以为在续训的 run **从 step 0 重新训练**：进度条从零起步是唯一可见信号，长跑 job 的 resume 契约静默失效（与 CKPT.27「ckpt 完好在盘、resume_mode=auto 判无 ckpt 从头训」行为面同型）。与 CKPT.07（死配置族）同根：参数在配置面声明、执行面缺席；差异是这边**唯一**消费点是一行显式传参缺失、修复即接通，那边死键分布在配置复制/覆盖链。CLI 路径影响面：凡 `trl sft/dpo/grpo/... --resume_from_checkpoint` 用户。
 - **发现来源**：2026-09-28 每日扫描
+
+### CKPT.33 `explicit_ckpt_step_overridden_by_release_or_newer_nonpersistent`
+
+stage: `shared` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `verified`
+
+- **机制**：Megatron 显式 ckpt 选择 `--ckpt-step` 在三条路径上被静默覆写（`megatron/training/checkpointing.py`）：① `get_load_checkpoint_path_by_args` L353 与 `_load_base_checkpoint` L2224 都用 `getattr(args, 'ckpt_step', None)` 真值检查——**`--ckpt-step 0` 被吞**；② tracker `latest_checkpointed_iteration.txt` 含 `release` 时 `read_metadata` 返回 `(iteration, release=True)`，数字覆写只改 `iteration`、**不重置 `release`**，`get_checkpoint_name` 仍选 `release/` 目录；③ `_load_base_checkpoint` L2229 起 non-persistent iteration ≥ 显式请求值时优先加载 non-persistent ckpt——比请求值**更新**的非持久 ckpt 抢占显式选择的持久 ckpt。修复 = 真值检查改 `is not None`、显式请求时强制 `release=False`、显式请求优先于 non-persistent 发现。
+- **来源**：Megatron-LM #8110（2026-10-10；CPU mock repro：tracker=100/请求 0 → 实选 `iter_0000100`、tracker=release/请求 100 → 实选 `release`；逐行引用 main@`4603a836`。本扫描对 raw main 源码 L353-354/L2224-2225/L2229-2236 逐行核验一致）。https://github.com/NVIDIA/Megatron-LM/issues/8110
+- **行为效应**：无 crash、无警告——**故意 rollback 与按步评估加载了错误的 ckpt**：数据进度与模型状态错配（recovery workflow 的静默前提被破坏）、评估指标归因到错误步。与 CKPT.32（trl CLI resume 参数不转发）行为面同型「显式续训/回滚请求静默失效」，但断点在**选择器覆写**而非参数不透传；与 CKPT.31（FP32 重建分支 tag 不透传加载 later 版本）共享「自动发现机制压过显式请求」家族。任务影响未实测（mock repro 因果闭合）。
+- **发现来源**：2026-10-12 每日扫描
 
 ---
 

@@ -60,6 +60,7 @@ NVIDIA/Megatron-LM#7649
 NVIDIA/Megatron-LM#7850
 NVIDIA/Megatron-LM#7900
 NVIDIA/Megatron-LM#7975
+NVIDIA/Megatron-LM#8110
 OpenRLHF/OpenRLHF#1270
 OpenRLHF/OpenRLHF#1293
 OpenRLHF/OpenRLHF#1295
@@ -121,6 +122,7 @@ deepspeedai/DeepSpeed#8729
 deepspeedai/DeepSpeed#8750
 deepspeedai/DeepSpeed#8751
 deepspeedai/DeepSpeed#8787
+deepspeedai/DeepSpeed#8805
 huggingface/trl#6430
 huggingface/trl#6586
 huggingface/trl#6594

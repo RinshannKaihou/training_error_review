@@ -6,16 +6,18 @@
 
 | 选择 | 取值 |
 |---|---|
-| 编目拓扑 | **一份** `FAULT_MASTER` + `stage` 字段，不按阶段拆三份 |
+| 编目拓扑 | **一份**结构化编目 `catalog/entries/*.yaml` + `labels.stage` 字段，不按阶段拆三份 |
 | 栈范围 | 实验室主栈（Megatron）+ 社区主流（DeepSpeed / torchtitan / TRL / veRL / OpenRLHF / ms-swift） |
 | 收录 | 静默或延迟可见的正确性 / 稳定性。fail-fast 默认不进主编目 |
 
-编号是「领域前缀 + 两位序号」，例如 `NUM.01`、`CKPT.03`、`RL-RO.02`。  
-**不要**再使用推理侧的 A / 1–15 / K 三层编号。
+**编号**：`TRN-0001` 起，由 `tools/catalog_tool.py new` 分配，只表示顺序、不含分类语义。
+旧编号（`NUM.01`、`CKPT.03` 等「领域前缀 + 两位序号」）保留在条目的 `legacy_ids`，仍可用 `catalog_tool.py find` 查到。
 
-`stage` 取值：`pretrain` · `sft` · `rl` · `shared`。一条可以是 `pretrain/sft`。
+`labels.stage` 取值：`pretrain` · `sft` · `rl` · `shared`，可多值（列表）。
 
-## 类目
+## 类目（旧前缀，仅用于理解旧编号）
+
+分类现在用 `catalog/vocab.yaml` 的 `subsystem`（原因对象）与 `effect_object`（影响对象），按“修复要改哪里”判定。下表是旧编号前缀的含义，新条目不再按前缀归类。
 
 | 前缀 | 领域 | 默认 stage | 收什么 |
 |---|---|---|---|
@@ -62,12 +64,12 @@
 
 | 现象 | 写哪里 |
 |---|---|
-| 训练期 SDC 污染权重 | 本仓库 `HW` |
-| 带毒 ckpt 被 vLLM 加载 | 推理目录已有 `1.6 training_sdc_checkpoint_inherit`；本仓库只留指针 |
-| FA / Triton 内核静默错值 | 训练路径 → 本仓库 `KER`；纯 serving 路径 → 推理目录 |
-| 训推 logprob 不一致 | 本仓库 `RL-RO`（这是 RL 系统故障，不是推理 serving 故障） |
+| 训练期 SDC 污染权重 | 本仓库（subsystem `硬件`） |
+| 带毒 ckpt 被 vLLM 加载 | 推理目录已有 `INF-0006`（旧号 1.6）；本仓库只留指针 |
+| FA / Triton 内核静默错值 | 训练路径 → 本仓库；纯 serving 路径 → 推理目录 |
+| 训推 logprob 不一致 | 本仓库（subsystem `RL训练回路`；这是 RL 系统故障，不是推理 serving 故障） |
 
-指针格式：`交叉：inference_error_review 1.6 \`training_sdc_checkpoint_inherit\``。
+指针写法：`relations: [{kind: cross, target: INF-0006}]`（`kind: 指针` 的条目）。
 
 ## 置信度
 
@@ -77,12 +79,11 @@
 | `documented` | 症状与修复理由有公开出处，未逐行核代码 |
 | `speculative` | 合理假设，未确证；种子编目尽量不用 |
 
-## 覆盖（Cov）
+## 覆盖（labels.coverage）
 
 - `NEW`：新机制或新的门控变量
-- `var:snake_case`：已有机制的另一实例 / 另一栈
+- `var`：已有机制的另一实例 / 另一栈；`relations` 写 `{kind: var, target: TRN-xxxx}`
 
 ## 计数
 
-只数主文档里匹配 `^### [A-Z][A-Z0-9-]*\.\d+ \`` 的标题。  
-`rejected.md` / `blindspots.md` / META 说明不计条。
+用 `python3 tools/catalog_tool.py stats`。`rejected.md` / `blindspots.md` / META 说明不计条。

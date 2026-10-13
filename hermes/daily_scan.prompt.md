@@ -4,7 +4,7 @@ Cron 入口指向本文件，并明确要求校验后按本文件提交与推送
 
 你是 LLM **训练**（预训练 / SFT / RL）可靠性助手。每天做一次社区搜索，找出**新的**静默/延迟可见故障，对照种子编目分类，该合并的合并。
 
-工作目录必须是 `/workspace/training_error_review`。先读 `AGENTS.md` 和 `taxonomy.md`，再读 `catalog/FAULT_MASTER_REFERENCE.zh.md` 顶部滚动汇总 + 目录（不要整文件塞进上下文）。去重用 `catalog/index/`。
+工作目录必须是 `/workspace/training_error_review`。先读 `AGENTS.md`、`taxonomy.md`、`catalog/SCHEMA.md`（条目字段与写法）和 `catalog/vocab.yaml`（受控词表与判定规则）。**结构化编目 `catalog/entries/*.yaml` 是唯一真源，只能用 `tools/catalog_tool.py` 读写**；`catalog/FAULT_MASTER_REFERENCE.zh.md` 已冻结为历史档案，不再追加或修改。当前条数用 `python3 tools/catalog_tool.py stats` 查看；去重用 `python3 tools/catalog_tool.py find <owner/repo#号 | URL | arXiv ID | slug | 编号>`。
 
 ## 搜索（GitHub 未认证 10 次/分钟，查询 ≤ 8 组，间隔 ≥ 8 秒）
 
@@ -36,34 +36,38 @@ arXiv（使用 `curl -fsSL` 并检查有效返回）：`silent data corruption L
 - API 账本
 - 每条拟收录候选给出可点击的原始来源 URL；失败或限流的查询明确标为未覆盖，不写“无新发现”。不要猜测任务结束时间（执行结束只能由调度器事后确定）。
 
-### 2. 合并进主编目
+### 2. 写入编目
 
-只追加确认不重复的故障机制。先以完整仓库名＋issue/PR 号或 arXiv ID 定位来源，再比对机制与 `snake_case` 名：同一 issue 可能有独立 findings；不同 issue 的同机制应补旧条来源/证据，不要只按编号跳过或重复入库。新建 `var:目标` 时检查目标名称确实存在，写清共享的具体失效机制和不同触发点；只同类目或同症状不够。
+只写入确认不重复的故障机制。先用 `catalog_tool.py find` 以完整仓库名＋issue/PR 号或 arXiv ID 定位来源，再比对机制：同一 issue 可能有独立 findings；不同 issue 的同机制用 `python3 tools/catalog_tool.py update <TRN-编号> --add-evidence <URL>` 补旧条来源/证据，不要只按编号跳过或重复入库。变体写 `coverage: var` 并在 `relations` 写已有条目编号（`TRN-xxxx`），写清共享的具体失效机制和不同触发点；只同类目或同症状不够。
 
-新条目挂在对应 `## PREFIX` 节末尾，格式见 `AGENTS.md`。`发现来源`：`YYYY-MM-DD 每日扫描`。
+写入前对每个候选来源查以往判定：`grep -n "#<号>" $(ls daily/reports/*.md | tail -n 14)` 和 `catalog/rejected.md`、`catalog/blindspots.md`。已判“留观”“拒收”或“已编目”的，除非有新证据（根因定位、维护者确认、任务影响实测等），否则维持原判定、不新建条目，并在日报写明“沿用 YYYY-MM-DD 判定”；改判时写清新证据。`catalog_tool.py find <owner/repo#号>` 也会匹配条目原文里只写了编号、没写链接的引用。
 
-fail-fast / 性能 / CI 不占编号；论文仅证明检测方法有效、不证明训练侧 task-impacting 故障的，也不自动入故障目录。被拒的写 `catalog/rejected.md`，不确定的留观并交代缺什么证据。
+每个新机制按 `catalog/SCHEMA.md` 写一个 JSON 对象（结构化字段 + `original`：机制、含可点击链接的来源、行为效应、`发现来源` 写 `YYYY-MM-DD 每日扫描`），存到 `/tmp/` 下的临时文件，运行 `python3 tools/catalog_tool.py new --file /tmp/<名>.json`。返回 `"ok": false` 就按 `errors` 逐条修改 JSON 后重交，最多 3 次；仍不通过的写进日报“留观”并说明原因。**必须写 JSON，不要手写 YAML，也不要直接编辑 `catalog/entries/`**。`original` 是完整的原始说明，深度与以往 Markdown 条目相同（代码/配置层面的原因、版本与配置、证据、触发条件）；结构化字段只是它的压缩，其中每个事实都必须能在 `original` 里找到——审计以 `original` 为准。看到修复 PR / 规避方法就写进 `mitigation.fix`（链接、状态、是否已发布；未核实就写未核实），否则写 `待定`。回访、来源更正用 `update --note …` / `update --set …`。
+
+fail-fast / 性能 / CI 不收录；论文仅证明检测方法有效、不证明训练侧 task-impacting 故障的，也不自动入故障目录。被拒的写 `catalog/rejected.md`，不确定的留观并交代缺什么证据。
 分别写已观察症状、源码/修复支持的机制、条件性训练后果和任务影响实测值（无实测则明说）；版本/配置不明写未知。`verified` 只覆盖本地复现或有源码定位且因果闭合的具体结论；仅有上游 issue 自述及日志的标 `documented`，机制未定位则留观而不是编造根因。不要推断未实验的检测器预测；区分来源事实与自己的推断。
 
-合并后按实际 `### PREFIX.NN` 标题重算滚动汇总，禁止沿用旧数字。
+新条目状态是 `pending_audit`，由每日审计任务（UTC 02:00）复核定稿，扫描不需要也不应自行改状态。
 
-### 3. 导出与索引
+### 3. 生成视图与校验
 
 ```bash
-python3 tools/extract_known_ids.py
-python3 tools/export_faults.py
+python3 tools/catalog_tool.py build      # views/CATALOG.zh.md、views/fault_catalog.csv（xlsx 生成但不入 Git）
+python3 tools/catalog_tool.py validate   # 必须 "ok": true
 ```
 
-「Parsed N」必须等于主文档标题数。对不上就修 md，不要手改 csv。
-运行 `python3 -m tools.validate_catalog`，检查 CSV/XLSX 字段边界、目录分组、known_names 索引与主文档；另人工核对本次候选来源键/`var:` 目标及机制。脚本 PASS 不等于来源去重、状态或任务影响已验证；任一校验失败都不要宣称导出成功。
+validate 失败就修好再继续，不要手改 `views/`。另人工核对本次候选来源键 / `var` 目标及机制。脚本 PASS 不等于来源去重、状态或任务影响已验证；任一校验失败都不要宣称成功。
 
 ### 4. 本库 Git 提交与远程核验（每日必做）
 
 - **扫描前置检查：**仅在 `/workspace/training_error_review` 操作。确认当前分支为 `main` 且上游为 `origin/main`，`git status --porcelain -uall` 为空；运行 `git fetch origin main` 后确认 `HEAD` 与 `origin/main` 相同。已有脏文件、暂存变更、本地待推提交、远程领先或 fetch 失败时，不要扫描、更不要自动覆盖/暂存/推送存量；立即报告阻塞。不得 `git pull`、`reset`、`push --force`。
-- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/FAULT_MASTER_REFERENCE.zh.md`、`catalog/index/known_issue_ids.txt`、`catalog/index/known_arxiv_ids.txt`、`catalog/index/known_names.txt`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`、`exports/fault_catalog.csv`；`exports/fault_catalog.xlsx` 按现有 `.gitignore` 仅生成并校验，不强行入 Git；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/索引运行 `git diff --cached --check -- . ':!exports/fault_catalog.csv'`（CSV 的 CRLF 由编目校验器核验，Git 会误报行尾）；无变更注明无需提交，不造空提交。
+- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/entries/`（新增或修改的 YAML）、`catalog/id_registry.tsv`、`views/CATALOG.zh.md`、`views/fault_catalog.csv`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`；`views/fault_catalog.xlsx` 按 `.gitignore` 仅生成不入 Git；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/YAML 运行 `git diff --cached --check -- . ':!*.csv'`；无变更注明无需提交，不造空提交。
 - 有变更时 `git commit -m "daily scan YYYY-MM-DD: training"`，再 `git push origin HEAD:main`；用 `git ls-remote origin refs/heads/main` 核对远程 SHA 等于本地 `HEAD`。提交/推送/核验失败要明确报告本地 commit ID、错误及远程未同步事实，不强推、不追加重复提交。Git 操作在最终摘要前完成。
 
 ### 5. 飞书摘要（中文，术语保留英文）
+
+- **不要用后台进程**：需要等待 GitHub/arXiv 限流重置时用前台 `sleep`，不要启动后台进程或后台等待任务；即使之后收到任何后台进程结束的通知，**最后一条回复也必须重新给出完整扫描摘要**，不能只回应通知。
+
 
 ```
 📋 训练故障每日扫描 — YYYY年MM月DD日
@@ -75,10 +79,10 @@ python3 tools/export_faults.py
 - [标题](链接) — 为何新
 
 🔄 已知类别新实例：
-- [标题](链接) — PREFIX
+- [标题](链接) — TRN-编号（var 目标）
 
 📄 日报：daily/reports/YYYY-MM-DD.md
-📖 主编目：catalog/FAULT_MASTER_REFERENCE.zh.md（当前 NNN 条）
+📖 编目：catalog/entries（当前 NNN 条；本次新增 TRN-xxxx… 待审计）
 ✅ 校验：PASS/FAIL 与未覆盖范围
 🔗 Git：本地提交 ID 或无需提交；远程 SHA 核验结果/阻塞原因
 ```

@@ -10,43 +10,29 @@
 
 ## 必读顺序
 
-1. `taxonomy.md` — 收什么、不收什么、ID 怎么编
-2. `catalog/FAULT_MASTER_REFERENCE.zh.md` 顶部滚动汇总 + 目录（不要整文件塞进上下文）
+1. `taxonomy.md` — 收什么、不收什么、编号与分类怎么理解
+2. `catalog/SCHEMA.md` 和 `catalog/vocab.yaml` — 条目字段、写法、受控词表与判定规则
 3. `catalog/rejected.md`、`catalog/blindspots.md` — 避免重复调研
-4. `catalog/index/known_issue_ids.txt` 等 — 去重
+4. `python3 tools/catalog_tool.py stats` / `find` — 当前条数与去重（不要整个编目塞进上下文）
 5. 任务相关的 `foundation/notes/*.md`
 
 ## 真源
 
-- **编目真源**是 `catalog/FAULT_MASTER_REFERENCE.zh.md`。
-- `exports/*` 是单向导出。改 md，再跑 `python3 tools/export_faults.py`。
-- 禁止手改 csv/xlsx 当主数据。
+- **编目真源**是 `catalog/entries/*.yaml`（每条一个文件），只能用 `tools/catalog_tool.py` 写入和修改；字段与写法见 `catalog/SCHEMA.md`，词表见 `catalog/vocab.yaml`。
+- `views/`（CATALOG.zh.md、fault_catalog.csv/.xlsx）由 `catalog_tool.py build` 生成，禁止手改。
+- `catalog/FAULT_MASTER_REFERENCE.zh.md`、`exports/`、`catalog/index/` 是切换前的历史档案，不再更新。
 - 禁止在根目录写 `daily_scan_*.md`、`.bak`、按日复制的查询脚本。
 
-## 条目最小字段
+## 写入与合并纪律
 
-```
-### <PREFIX>.<NN> `<snake_case_name>`
+1. 先 `python3 tools/catalog_tool.py find <owner/repo#号 | URL | arXiv ID | slug | 编号>` 查重。
+2. 已有同机制 → `update <编号> --add-evidence <URL>` 只补来源，不占新号。
+3. 同一机制、不同仓库 → 新条目写 `coverage: var`，`relations` 指向已有条目编号。
+4. 新条目：写 JSON（格式见 `catalog/SCHEMA.md`）→ `python3 tools/catalog_tool.py new --file /tmp/<名>.json`；按返回的 `errors` 改到通过为止。**不要手写 YAML**（`#` 会被当成注释截断内容）。
+5. 扫描时看到修复 PR / 规避方法，写进 `mitigation.fix`。
+6. 写完运行 `catalog_tool.py build` 和 `catalog_tool.py validate`；validate 失败不得提交。
 
-stage: `<pretrain|sft|rl|shared>`（可多值，用 `/`） · Cov: `<NEW|var:已有名>` · 置信度 `<verified|documented|speculative>`
-
-- **机制**：技术层发生了什么
-- **来源**：可点开的 URL / issue / 论文
-- **行为效应**：训练侧看见什么（loss / grad / ckpt / reward），有没有 crash
-- **发现来源**：YYYY-MM-DD 基础调研 | 每日扫描 | 本地实验
-```
-
-不要给未做实验的条目编造「族」或「检测器一定看得见」。本地已跑过的注入/监控可以写**观测信号**字段。
-
-## 合并纪律
-
-1. 先在 `catalog/index/` 和主文档里搜 issue 号、arxiv ID、snake_case 名。
-2. 已有编号 → 只补来源，不占新号。
-3. 同一机制、不同仓库 → `var:已有名`，挂在最近类目末尾。
-4. 新条目追加到对应 `## PREFIX` 节末尾，编号 = 该类当前最大 + 1。不要插到中间。
-5. 合并后跑 `python3 tools/extract_known_ids.py` 和 `python3 tools/export_faults.py`。
-6. 滚动汇总按实际 `### PREFIX.` 标题重算，禁止硬编码旧数字。
-7. 用编辑工具改主文档时，`old_string` 必须包含相邻 `###` 标题整行，防止吞标题。
+不要给未做实验的条目编造检测器预测。本地已跑过的注入/监控结论写进 `original.mechanism` 或 `update --note`。
 
 ## 收录边界（详见 taxonomy.md）
 

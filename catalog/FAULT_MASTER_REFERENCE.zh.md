@@ -1,3 +1,5 @@
+> ⚠️ **本文件已于 2026-10-13 冻结，不再更新。** 编目真源已迁至结构化条目 `catalog/entries/*.yaml`（写入与查询用 `tools/catalog_tool.py`，字段见 `catalog/SCHEMA.md`；浏览用 `views/CATALOG.zh.md`、`views/fault_catalog.csv`）。本文件条目与新编号的对照见 `catalog/id_registry.tsv`。
+
 # LLM 训练故障模式总参考（Master Fault Reference）
 
 > **本文档是什么**：预训练 / SFT / RL 已编目故障的**单一自包含参考**。对照仓库是 `../inference_error_review`（推理 serving）。本文档只收**训练期**机制；与推理交叉的条目写指针，不复制正文。

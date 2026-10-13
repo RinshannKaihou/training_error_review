@@ -10,17 +10,20 @@
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | 任意 CLI agent 的操作入口 |
 | [`taxonomy.md`](taxonomy.md) | 类目、stage 轴、收录边界 |
-| [`catalog/FAULT_MASTER_REFERENCE.zh.md`](catalog/FAULT_MASTER_REFERENCE.zh.md) | **唯一编目真源** |
+| [`catalog/entries/`](catalog/entries) | **唯一编目真源**：每条一个 YAML，只能用 `tools/catalog_tool.py` 写入；字段见 [`catalog/SCHEMA.md`](catalog/SCHEMA.md) |
+| [`views/CATALOG.zh.md`](views/CATALOG.zh.md) | 由条目生成的浏览视图（另有 `views/fault_catalog.csv`） |
+| [`catalog/FAULT_MASTER_REFERENCE.zh.md`](catalog/FAULT_MASTER_REFERENCE.zh.md) | 2026-10-13 起冻结的历史档案 |
 | [`foundation/REPORT.md`](foundation/REPORT.md) | 基础报告（历史摸底） |
 
 ## 目录
 
 ```
-catalog/          编目 SoT + 负结果 + 去重索引
+catalog/          编目 SoT（entries/）+ 词表/规范 + 负结果；FAULT_MASTER 与 index/ 为冻结档案
 foundation/       当前主战场：基础报告、矿源、工作笔记
 daily/            后期每日洞察（现在只有约定，不开 cron）
-exports/          md → csv/xlsx 单向导出
-tools/            导出、去重、稳定查询集
+views/            由 catalog/entries 生成的 Markdown/CSV 视图
+exports/          旧 md → csv 导出（冻结档案）
+tools/            catalog_tool.py（写入/查询/生成/校验）、catalog_audit.py + daily_audit.sh（每日审计）；旧导出脚本为档案
 hermes/           cron prompt 版本化（后置）
 docs/             分析短文，不是编目
 ```

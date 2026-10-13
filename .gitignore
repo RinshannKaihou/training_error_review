@@ -6,3 +6,4 @@ foundation/raw/**/*.json
 !foundation/raw/**/.gitkeep
 daily/raw/**
 !daily/raw/.gitkeep
+views/*.xlsx

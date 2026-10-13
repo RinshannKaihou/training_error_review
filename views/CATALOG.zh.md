@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 265 条；状态：active 265
+共 266 条；状态：active 265、pending_audit 1
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -15,7 +15,7 @@
 | 并行切分 | 20 |
 | 量化 | 7 |
 | 位置编码 | 5 |
-| 分词/模板 | 6 |
+| 分词/模板 | 7 |
 | 模型定义 | 6 |
 | 权重/检查点 | 26 |
 | 数据管线 | 24 |
@@ -784,6 +784,18 @@
 - **影响详情**：无报错；vLLM 对 N 个 token 算 log-prob，trainer 对 len(prefix)+N 个算，模型认为 prefix 不太可能时其主导序列 log-prob，本应≈1 的 ppl_ratio 爆炸，优势与 KL 均含非采样 token。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/modelscope/ms-swift/issues/10106；https://github.com/modelscope/ms-swift/pull/10107
+
+### TRN-0266 `tokenizer_rebuild_drops_pre_tokenizer_spaces` AutoTokenizer 重建忽略 pre-tokenizer 致空格丢失
+
+`故障` · `pending_audit` · `sft；rl` · `documented` · `var` · 发现 2026-10-13 · 旧号 SFT.17
+
+- **原因对象**：分词/模板 / transformers / AutoTokenizer 构建
+- **原因行为**：AutoTokenizer 对可由类配方重建的 tokenizer 类忽略 tokenizer.json 中存储的 pre-tokenizer，按类默认行为重建，空格/换行在 encode/decode 中被丢弃。
+- **影响对象**：输入编码；训练轨迹（静默错误）
+- **影响详情**：无 crash、无 NaN：prompt、验证文本与解码回复变为粘连文本；训练侧与 rollout 侧用同一套错误 token ids，一致性检查对两侧同错失明，训练在错误 token 序列上正常推进，训后模型静默劣化。transformers 5.5.3/5.12.0/5.17.0 复现。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/verl-project/verl/pull/8193
+- **关联**：var:TRN-0178
 
 ## 模型定义
 

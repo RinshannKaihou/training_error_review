@@ -191,6 +191,7 @@ SFT.13	per_message_tokenization_drops_think_block
 SFT.14	padding_free_ld_prefix_uses_physical_segment_length
 SFT.15	explicit_loss_type_path_drops_token_weights
 SFT.16	teacher_model_rebuilt_fp32_default_attn_mismatch
+SFT.17	tokenizer_rebuild_drops_pre_tokenizer_spaces
 RL-RWD.01	format_reward_hacking
 RL-RWD.02	length_reward_explosion
 RL-RWD.03	reward_model_overoptimization

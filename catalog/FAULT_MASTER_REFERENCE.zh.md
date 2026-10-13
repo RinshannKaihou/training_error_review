@@ -76,6 +76,8 @@
 > 2026-10-10：每日扫描（窗口放宽 `created:>=2026-10-01` 补齐 10-09 补扫未及评审的窗口中段候选；GitHub 7 仓库 7/7 成功、arXiv 4 组重试后全部有效；核心 API 限额触顶后改用 search API 补抓状态）。新增 NUM.17 / NUM.18 / PAR.21 / DATA.18 / OPT.21 / ACT.09 / ACT.10 / KER.18 / MOE.15 / LOSS.13 / SFT.16 / RL-ADV.11 / RL-RO.26 / RL-RO.27 / OBS.16 共 **15 条**（DeepSpeed OneCycle 每次重建 betas 硬编码 beta2=0.99 覆写用户配置；torchtitan SimpleFSDP fp32 梯度归约和值 round 回 bf16——GraphTrainer 与 eager step 2 起静默分叉；DeepSpeed ZeRO++ qgZ 两级归约只除节点数——权重梯度 ×L 放大；ms-swift GKD 离线蒸馏沿用 rollout 默认 add_eos=False 丢 EOS 监督；DeepSpeed ZeRO-2 低精度 master offload scratch 残留 NaN 误杀后续有限 step；Megatron checkpointing 全局标志异常/嵌套下不恢复；torchtitan DeepEP FullAC 重放 dispatch 原子序换行——专家梯度相对 L2 偏 1.41、cosine 0.02 而 loss 只差 0.0005；torchtitan module cast 把刻意构建的 fp32/complex64 buffer 一并转 bf16——RoPE cache/inv_freq/MoE token 计数全毁；trl SFT MoE aux loss 被 world size × gas 双重放大 4×；verl bypass 模式 token-mean 分母用拒采前计数——有效 LR 随拒绝率缩水；trl SDFT/SDPO teacher 从实例重建时回落 fp32+默认 attn——蒸馏目标从 step 0 错位；verl grpo_vectorized 中间输出 reward 重复计数进组统计——advantage 符号翻转；verl VeOmni chunked logprob backward 丢 decoder 梯度；trl AsyncGRPO 无 seed 请求发给 DP vLLM——组内 completion verbatim 重复 6–70%；torchtitan WandBLogger commit=True 吞同 step 验证指标），补 CKPT.13（#8787 独立重报 + 修复 #8788 在途、#8460 closed unmerged 缺陷仍在）/ RL-RWD.08（修复 PR #7467 已 merge、清尾 #7541 open）来源。10-09 留观的 Megatron #7911（MFSDP 静默跳过 LoRA）连续无 upstream 回应、DeepSpeed #8749/#8780 维持边界外判定。**263 条**。
 
 > 2026-10-12：每日扫描（10-11 未运行，窗口 `created:>=2026-10-05` 按 issue 号去重覆盖缺口；GitHub 8 仓库搜索全部成功、arXiv 5 组全部有效）。新增 NUM.19 / CKPT.33 共 **2 条**（DeepSpeed #8638 引入的 invalid-grad-norm→overflow 规则不受 `bf16.check_grad_overflow` 门控——clipping 开启时显式 opt-out 失效、两种配置训练动力学不可区分、CI 恒绿因单 rank runner 跳过 world_size=2 用例；Megatron `--ckpt-step` 三路静默覆写——truthiness 吞 step 0、release 标志不重置、更新的 non-persistent ckpt 抢占显式选择，rollback/按步评估加载错 ckpt）。轮巡：Megatron #7725（#7201 验证 PR）10-10 **merge**；trl #8086 修复 PR merge 后评审者 ZhiliangWu 指出第二处改动（`enable_thinking_default` 传入 `extract_system_prompt_and_generation`）对 Qwen3 式模板 `enable_thinking=False` 可能引入新 loss-mask bug，报告者未回应、无后续 issue——下轮首查；verl #8178（Ulysses SP GDN 梯度 cos 0.68-0.96）报告者自撤关闭（异构无法孤立复现）不收；DeepSpeed #8751/#7541 无变化；ms-swift #10318（GKD 不等词表对齐）仍 open 待 merge 继续跟踪。窗口内其余候选均判边界外（见当日日报）。**265 条**。
+>
+> 2026-10-13：每日扫描（窗口 `created:>=2026-10-06`；GitHub 7 仓库搜索 7/7 成功、arXiv 5 组有效）。新增 SFT.17（transformers 5 `AutoTokenizer` 对类名指向可重建类的词表忽略 `tokenizer.json` 存储 pre-tokenizer——byte-level BPE 空格/换行全丢、训练与 rollout 同错故一致性检查失明），补 DATA.18 来源（verl PR #8197 多轮 SFT tokenization 丢 reasoning content）。GitHub 核心 API 未认证 60/hr 限额中途耗尽（403），9 项轮巡目标以搜索 API 快照 + HTML 状态位覆盖、trl #8086 评论变化未能核（标记未覆盖，下轮首查）；OpenRLHF 窗口内 0 命中。窗口内其余候选均判边界外（见当日日报）。**266 条**。
 
 | 轴 | 分布 |
 |---|---|
@@ -99,7 +101,7 @@
 | KER | 训练 kernel | 18 |
 | MOE | MoE 路由 / EP | 15 |
 | LOSS | loss spike / 长跑退化 | 13 |
-| SFT | 模板 / packing / 标签 | 16 |
+| SFT | 模板 / packing / 标签 | 17 |
 | RL-RWD | reward | 9 |
 | RL-ADV | advantage / GRPO 统计 | 11 |
 | RL-KL | KL / entropy | 9 |
@@ -1041,7 +1043,7 @@ stage: `sft` · Cov: `var:dead_or_shadowed_arg_silent_noop` · 置信度 `verifi
 stage: `sft` · Cov: `var:secondary_eos_mask_misclassifies_terminated` · 置信度 `documented`
 
 - **机制**：ms-swift GKD 离线蒸馏（`--lmbda 0`，数据集样本非生成 rollout）给 `GKDSample` 沿用了 **rollout 默认 `add_eos=False`**：数据集 response 不带字面 EOS 时，蒸馏 KL loss 与辅助 SFT loss 的**终止监督双双缺席**——学生学不到何时停止；只修学生 labels 还会让远端 teacher prompt logprobs 缺 EOS 位、被 KL 过滤掉。修复（PR #10285，2026-10-02 merge）= 数据集 `GKDSample` 用常规训练 EOS 策略（`None`）、`RolloutInferRequest.add_eos` 新增 `'auto'` 值由模板在编码时按 stop-word/分隔符/重叠规则决定（生成 rollout 仍为 `False`，含截断）。
-- **来源**：ms-swift #10282（2026-10-01；用户报告离线蒸馏学不到 EOS logits）+ 修复 PR #10285（真实 Qwen3 tokenizer验证：原样本 15 监督 token 无 EOS、常规训练 17 含 EOS、修复后对齐；414 项本地检查）。https://github.com/modelscope/ms-swift/issues/10282 ；https://github.com/modelscope/ms-swift/pull/10285
+- **来源**：ms-swift #10282（2026-10-01；用户报告离线蒸馏学不到 EOS logits）+ 修复 PR #10285（真实 Qwen3 tokenizer验证：原样本 15 监督 token 无 EOS、常规训练 17 含 EOS、修复后对齐；414 项本地检查）。https://github.com/modelscope/ms-swift/issues/10282 ；https://github.com/modelscope/ms-swift/pull/10285 ；后续（2026-10-13 补）：verl PR #8197 `preserve reasoning content in multi-turn SFT tokenization`——同族「tokenization 丢内容」在 verl 侧的独立实例，多轮 SFT 分词路径丢 reasoning content，修复在途。https://github.com/verl-project/verl/pull/8197
 - **行为效应**：无 crash——离线蒸馏训出的模型 EOS 行为不受监督：终止概率漂移、生成不停止或过早停止，蒸馏 loss 曲线完全正常。与 DATA.10（多 EOS 模型 completion 边界只认单 id）同族「**EOS 语义在训练/生成两侧或路径间错位**」：那边是次级 EOS 不被 mask 认、这边是 EOS 位整体从监督中消失；与 SFT.13（逐消息 tokenization 丢 `<think>` 块）同为「监督信号在数据管线中静默蒸发」。10-09 曾以「需核修复是否引入新静默面」留观，本轮核 PR 描述（`'auto'` 仅数据集样本路径、生成 rollout 行为不变）后收录。
 - **发现来源**：2026-10-10 每日扫描
 
@@ -1917,6 +1919,15 @@ stage: `sft` · Cov: `var:distillation_teacher_dtype_mismatch_jsd_sign_flip` · 
 - **来源**：trl #7618（2026-10-09；CPU tiny-model repro：policy bf16+eager → teacher fp32+sdpa；同型 #7597 repro：DPO step-1 loss 0.6472 vs 期望 ln2=0.6931，修复后 0.6931、Qwen3-8B DPO 1×B300 吞吐 +16%/内存 168→142GB）。https://github.com/huggingface/trl/issues/7618 ；同型修复先例 https://github.com/huggingface/trl/pull/7597
 - **行为效应**：无 crash——蒸馏目标从第一步就对着一个**精度与 attention 实现都不同**的 teacher 计算：KL/JSD 信号系统性偏差、蒸馏结果随「哪个后端实现 SDPA」漂移，日志无任何 mismatch 提示。与 NUM.13（ms-swift GKD student FP32/teacher BF16 混精 logits 致 JSD 符号翻转）为**跨栈同机制**（`var:`）：那边显式混精配置进 loss、这边 fallback 默认值隐式造成；与 RL-RO.23/24（精度意图只落一侧）同族「双模型分支的精度假设不闭包」，差异是这边打击 teacher 侧而非 rollout 侧。
 - **发现来源**：2026-10-10 每日扫描
+
+### SFT.17 `tokenizer_rebuild_drops_pre_tokenizer_spaces`
+
+stage: `sft/rl` · Cov: `var:chat_template_train_serve_mismatch` · 置信度 `documented`
+
+- **机制**：transformers 5 的 `AutoTokenizer` 对 `tokenizer_config.json` 里类名指向可从「类配方」重建的 tokenizer 类（如 `LlamaTokenizer`）时，**忽略 `tokenizer.json` 里存储的 pre-tokenizer**，按类默认行为重新构建——byte-level BPE 词表下所有空格/换行被丢弃：`"Solve it  step by step.\n\tx = 3"` → `"Solveitstepbystep.x=3"`。encode/decode 双向破坏，且**训练侧与 rollout 侧用同一套错误 token ids**，任何 train/rollout 一致性检查都拦不住。修复 PR 加了「AutoTokenizer 返回值必须与本地 `tokenizer.json` 原始 `tokenizers` 编码一致，不一致则按存储文件加载 `PreTrainedTokenizerFast`」的守卫；transformers 5.5.3/5.12.0/5.17.0 三版本复现。
+- **来源**：verl PR #8193（2026-10-13 open，未 merge；`tests/utils/test_hf_tokenizer_on_cpu.py` Llama 用例修复前挂、修复后过；Claude Code 辅助起草、作者本人测试）。https://github.com/verl-project/verl/pull/8193
+- **行为效应**：无 crash、无 NaN——prompt/验证文本/解码回复全部变成粘连文本，训练在**错误的 token 序列**上正常推进，训后模型行为静默劣化。与 SFT.01（train/serve 模板不一致）同族但根因更深一层：不是模板语义错位，是 **tokenizer 构建协议**在库大版本升级下静默丢失 `tokenizer.json` 的存储语义；与 SFT.13（逐消息 tokenization 丢 think 块）同为「序列恒等性在预处理层被破坏且一致性检查对两侧同错失明」。
+- **发现来源**：2026-10-13 每日扫描
 
 ---
 

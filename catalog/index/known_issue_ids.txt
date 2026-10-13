@@ -270,3 +270,5 @@ verl-project/verl#8076
 verl-project/verl#8100
 verl-project/verl#8108
 verl-project/verl#8176
+verl-project/verl#8193
+verl-project/verl#8197

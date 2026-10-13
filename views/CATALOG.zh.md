@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 266 条；状态：active 265、pending_audit 1
+共 266 条；状态：active 266
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -787,7 +787,7 @@
 
 ### TRN-0266 `tokenizer_rebuild_drops_pre_tokenizer_spaces` AutoTokenizer 重建忽略 pre-tokenizer 致空格丢失
 
-`故障` · `pending_audit` · `sft；rl` · `documented` · `var` · 发现 2026-10-13 · 旧号 SFT.17
+`故障` · `active` · `sft；rl` · `documented` · `var` · 发现 2026-10-13 · 旧号 SFT.17
 
 - **原因对象**：分词/模板 / transformers / AutoTokenizer 构建
 - **原因行为**：AutoTokenizer 对可由类配方重建的 tokenizer 类忽略 tokenizer.json 中存储的 pre-tokenizer，按类默认行为重建，空格/换行在 encode/decode 中被丢弃。

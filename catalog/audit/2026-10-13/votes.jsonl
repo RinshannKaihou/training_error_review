@@ -1,0 +1,15 @@
+{"job": "baseC|TRN-0266|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0266|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0266|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0266|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空格/换行在 encode/decode 中被丢弃", "evidence": "byte-level BPE 词表下所有空格/换行被丢弃……encode/decode 双向破坏"}}]}
+{"job": "baseF|TRN-0266|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0266|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0266|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0266|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "质量退化"}}
+{"job": "panelF|TRN-0266|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空格/换行在 encode/decode 中被丢弃", "evidence": "按类默认行为重新构建——byte-level BPE 词表下所有空格/换行被丢弃"}}]}
+{"job": "panelC|TRN-0266|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0266|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0266|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "AutoTokenizer 对可由类配方重建的 tokenizer 类忽略 tokenizer.json 中存储的 pre-tokenizer，按类默认行为重建，空格/换行在 encode/decode 中被丢弃。", "evidence": "transformers 5 的 `AutoTokenizer` 对 `tokenizer_config.json` 里类名指向可从「类配方」重建的 tokenizer 类（如 `LlamaTokenizer`）时，**忽略 `tokenizer.json` 里存储的 pre-tokenizer**，按类默认行为重新构建——byte-level BPE 词表下所有空格/换行被丢弃"}}]}
+{"job": "panelF|TRN-0266|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空格/换行在 encode/decode 中被丢弃", "evidence": "byte-level BPE 词表下所有空格/换行被丢弃"}}]}
+{"job": "panelF|TRN-0266|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空格/换行在 encode/decode 中被丢弃", "evidence": "byte-level BPE 词表下所有空格/换行被丢弃"}}]}
+{"job": "fix|TRN-0266", "model": "qwen3.8-max", "result": null}

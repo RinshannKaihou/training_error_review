@@ -3,6 +3,11 @@
 
 window_days: 7
 
+# NPU REST sources are collected by the shared cross-platform collector.
+# They are not counted against the legacy GitHub Search query-group budget.
+npu_registry: tools/scan/npu_sources.json
+npu_policy: NPU_SCAN.md
+
 github:
   - repo: NVIDIA/Megatron-LM
     keywords: [NaN, "loss spike", "silent", "wrong gradient", checkpoint]

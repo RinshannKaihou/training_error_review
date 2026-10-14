@@ -8,9 +8,11 @@ Cron 入口指向本文件，并明确要求校验后按本文件提交与推送
 
 ## 搜索（GitHub 未认证 10 次/分钟，查询 ≤ 8 组，间隔 ≥ 8 秒）
 
+**新增 NPU 必须执行：**先读 `NPU_SCAN.md` 和 `tools/scan/npu_sources.json`；使用 Cron 前置脚本的共享采集批次，按 training scope 扫描全部新增来源。缺少摘要时按该文件显式运行前置入口。原 GitHub 查询与 arXiv 不取消；NPU REST 列表分页是独立来源采集，不受“≤8组 GitHub Search”的仓库数限制。失败或未完整评估必须报告，NPU 不是拒收理由。
+
 **如已配置环境变量 `GITHUB_TOKEN`**（`[ -n "$GITHUB_TOKEN" ]` 判断），所有 GitHub API 请求加 `-H "Authorization: Bearer $GITHUB_TOKEN"`（认证后 core 5000 次/小时、Search 30 次/分钟，间隔 ≥2 秒即可），并在日报注明“已认证”；未配置就按标题的未认证限额执行。token 只通过环境变量引用，不得写进日报、摘要、提交或命令回显（不要 `set -x`、`curl -v`、`echo $GITHUB_TOKEN`）。
 
-窗口：`created:>=$(date -u -d '7 days ago' '+%Y-%m-%d')`；核对实际发出的每组查询的起始日、仓库、分页和 HTTP 状态。另复核近 7 日已入库来源的后续更新（尤其撤回根因、关闭误报、修复结论），并每日轮巡至少 3 个更早入库、长期未复核或仍标 `open` 的来源；额度不足时记录剩余范围。记录复核日、适用版本/配置和上游 issue/PR 状态；`closed`、PR merge、某版本已修与端到端验证不能混同，状态无变化不必天天改旧条目。来源更正才修改旧条目及当日报告，不因为编号已入库就跳过更新。GitHub 去重键使用仓库全名 + issue/PR 号；不同 issue 的同机制也要比对。
+窗口：`created:>=$(date -u -d '7 days ago' '+%Y-%m-%d')`；核对实际发出的每组查询的起始日、仓库、分页和 HTTP 状态。另复核近 7 日已入库来源的后续更新（尤其撤回根因、关闭误报、修复结论），并每日轮巡至少 3 个更早入库、长期未复核或仍标 `open` 的来源；额度不足时记录剩余范围。记录复核日、适用版本/配置和上游 issue/PR 状态；`closed`、PR merge、某版本已修与端到端验证不能混同，状态无变化不必天天改旧条目。来源更正才修改旧条目及当日报告，不因为编号已入库就跳过更新。来源去重键使用平台 + 仓库全名 + issue/PR 类型 + 字符串编号，新增平台必须以完整规范 URL 查重；不同 issue 的同机制也要比对。
 
 优先仓库：
 
@@ -20,12 +22,13 @@ Cron 入口指向本文件，并明确要求校验后按本文件提交与推送
 - `OpenRLHF/OpenRLHF` — advantage / TIS / KL / NaN
 - `huggingface/trl` — GRPO / vLLM / importance
 - `pytorch/torchtitan` — NaN / spike / correctness
+- `modelscope/ms-swift` — packing / mask / template / GRPO
 
 关键词优先：`silent`、`wrong gradient`、`NaN`、`mismatch`、`logprob`、`checkpoint corrupt`、`loss spike`。跳过纯 OOM、timeout、CI、文档。
 
 arXiv（使用 `curl -fsSL` 并检查有效返回）：`silent data corruption LLM training`、`training inference mismatch RL`、`loss spike pre-training`、`GRPO advantage`。
 
-查询集草稿：`tools/scan/repos.yaml`。原始结果写入 `daily/raw/YYYY-MM-DD/`，禁止再搞 `scan_cache_*`。
+原 GitHub 查询集：`tools/scan/repos.yaml`；新增 NPU 注册表：`tools/scan/npu_sources.json`（与公共采集器和推理库注册表一致）。原始结果写入 `daily/raw/YYYY-MM-DD/`，禁止再搞 `scan_cache_*`。
 
 ## 四步
 
@@ -40,11 +43,11 @@ arXiv（使用 `curl -fsSL` 并检查有效返回）：`silent data corruption L
 
 ### 2. 写入编目
 
-只写入确认不重复的故障机制。先用 `catalog_tool.py find` 以完整仓库名＋issue/PR 号或 arXiv ID 定位来源，再比对机制：同一 issue 可能有独立 findings；不同 issue 的同机制用 `python3 tools/catalog_tool.py update <TRN-编号> --add-evidence <URL>` 补旧条来源/证据，不要只按编号跳过或重复入库。变体写 `coverage: var` 并在 `relations` 写目标条目：可写新编号 `TRN-xxxx`，也可直接写旧编号（如 `HW.01`），工具按编号表换算；**提交后核对返回的 `relations` 回显，目标标题必须是你要的那条**，不要凭记忆换算旧编号（推理库 10-13 曾因此把关系指错条目）。写清共享的具体失效机制和不同触发点；只同类目或同症状不够。
+只写入确认不重复的故障机制。先用 `catalog_tool.py find <规范URL>`（或 arXiv ID）定位来源，跨平台保留类型与原始字符串编号；GitHub 快捷号仅作 GitHub 旧引用补查，再比对机制：同一 issue 可能有独立 findings；不同 issue 的同机制用 `python3 tools/catalog_tool.py update <TRN-编号> --add-evidence <URL>` 补旧条来源/证据，不要只按编号跳过或重复入库。变体写 `coverage: var` 并在 `relations` 写目标条目：可写新编号 `TRN-xxxx`，也可直接写旧编号（如 `HW.01`），工具按编号表换算；**提交后核对返回的 `relations` 回显，目标标题必须是你要的那条**，不要凭记忆换算旧编号（推理库 10-13 曾因此把关系指错条目）。写清共享的具体失效机制和不同触发点；只同类目或同症状不够。
 
-写入前对每个候选来源查以往判定：`grep -n "#<号>" $(ls daily/reports/*.md | tail -n 14)` 和 `catalog/rejected.md`、`catalog/blindspots.md`。已判“留观”“拒收”或“已编目”的，除非有新证据（根因定位、维护者确认、任务影响实测等），否则维持原判定、不新建条目，并在日报写明“沿用 YYYY-MM-DD 判定”；改判时写清新证据。`catalog_tool.py find <owner/repo#号>` 也会匹配条目原文里只写了编号、没写链接的引用。
+写入前对每个候选来源查以往判定：在近 14 天 `daily/reports/*.md` 和 `catalog/rejected.md`、`catalog/blindspots.md` 搜索完整规范 URL（迁移来源另查已核实旧别名），不按裸编号跨仓库/平台匹配。已判“留观”“拒收”或“已编目”的，除非有新证据（根因定位、维护者确认、任务影响实测等），否则维持原判定、不新建条目，并在日报写明“沿用 YYYY-MM-DD 判定”；改判时写清新证据。仅 GitHub 来源可另用 `catalog_tool.py find <owner/repo#号>` 补查无链接旧引用。仅因 NPU 非主平台被留观的候选允许按本次范围扩展重新评估，注明范围变更，不升级未经验证的证据。
 
-每个新机制按 `catalog/SCHEMA.md` 写一个 JSON 对象（结构化字段 + `original`：机制、含可点击链接的来源、行为效应、`发现来源` 写 `YYYY-MM-DD 每日扫描`），存到 `/tmp/` 下的临时文件，运行 `python3 tools/catalog_tool.py new --file /tmp/<名>.json`。返回 `"ok": false` 就按 `errors` 逐条修改 JSON 后重交，最多 3 次；仍不通过的写进日报“留观”并说明原因。**必须写 JSON，不要手写 YAML，也不要直接编辑 `catalog/entries/`**。`original` 是完整的原始说明，深度与以往 Markdown 条目相同（代码/配置层面的原因、版本与配置、证据、触发条件）；结构化字段只是它的压缩，其中每个事实都必须能在 `original` 里找到——审计以 `original` 为准。看到修复 PR / 规避方法就写进 `mitigation.fix`（链接、状态、是否已发布；未核实就写未核实），否则写 `待定`。回访、来源更正用 `update --note …` / `update --set …`；关系增删用 `update <编号> --relation var:<新或旧编号> --drop-relation var:<错误编号>`。update 前先用 `find <旧编号 | owner/repo#号>` 确认目标条目的编号和标题，并核对返回的回显。
+每个新机制按 `catalog/SCHEMA.md` 写一个 JSON 对象（结构化字段 + `original`：机制、含可点击链接的来源、行为效应、`发现来源` 写 `YYYY-MM-DD 每日扫描`），存到当前 profile 的 `$TMPDIR` 下（未设置时先 `export TMPDIR=/root/.hermes/profiles/third/cache/scratch`）的临时文件，运行 `python3 tools/catalog_tool.py new --file "$TMPDIR/<名>.json"`。返回 `"ok": false` 就按 `errors` 逐条修改 JSON 后重交，最多 3 次；仍不通过的写进日报“留观”并说明原因。**必须写 JSON，不要手写 YAML，也不要直接编辑 `catalog/entries/`**。`original` 是完整的原始说明，深度与以往 Markdown 条目相同（代码/配置层面的原因、版本与配置、证据、触发条件）；结构化字段只是它的压缩，其中每个事实都必须能在 `original` 里找到——审计以 `original` 为准。看到修复 PR / 规避方法就写进 `mitigation.fix`（链接、状态、是否已发布；未核实就写未核实），否则写 `待定`。回访、来源更正用 `update --note …` / `update --set …`；关系增删用 `update <编号> --relation var:<新或旧编号> --drop-relation var:<错误编号>`。update 前先用 `find <目标条目编号 | 旧编号 | 规范URL>` 确认目标条目的编号和标题，并核对返回的回显。
 
 fail-fast / 性能 / CI 不收录；论文仅证明检测方法有效、不证明训练侧 task-impacting 故障的，也不自动入故障目录。被拒的写 `catalog/rejected.md`，不确定的留观并交代缺什么证据。
 分别写已观察症状、源码/修复支持的机制、条件性训练后果和任务影响实测值（无实测则明说）；版本/配置不明写未知。`verified` 只覆盖本地复现或有源码定位且因果闭合的具体结论；仅有上游 issue 自述及日志的标 `documented`，机制未定位则留观而不是编造根因。不要推断未实验的检测器预测；区分来源事实与自己的推断。
@@ -74,7 +77,7 @@ validate 失败就修好再继续，不要手改 `views/`。另人工核对本�
 ```
 📋 训练故障每日扫描 — YYYY年MM月DD日
 
-🔍 范围：N 个 GitHub 仓库 + arXiv
+🔍 范围：原 GitHub 来源 + NPU 跨平台来源 + arXiv（写有效覆盖、批次实际窗口及缺口）
 📊 结果：相关 X 条（新合并 Y 条）
 
 🆕 新签名（如有）：

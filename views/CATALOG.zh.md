@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 266 条；状态：active 266
+共 269 条；状态：active 266、pending_audit 3
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -18,7 +18,7 @@
 | 分词/模板 | 7 |
 | 模型定义 | 6 |
 | 权重/检查点 | 26 |
-| 数据管线 | 24 |
+| 数据管线 | 27 |
 | 优化器 | 28 |
 | 损失计算 | 17 |
 | MoE路由 | 12 |
@@ -553,7 +553,7 @@
 - **影响对象**：训练信号；训练样本流（静默错误）
 - **影响详情**：SP>1 时无 crash：每个分片边界丢监督、边界 token 监督错位、分片 loss 加权错值，预训练 loss 带结构性 bias，与 SP=1 基线不可比。
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8457
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8457；https://github.com/deepspeedai/DeepSpeed/pull/8811
 
 ### TRN-0117 `tp_sharded_param_unmarked_skipped_by_grad_norm_filter` softmax_offset 未标 TP 分片致 grad norm 少算
 
@@ -679,8 +679,8 @@
 - **原因行为**：在 meta 设备建模后 to_empty()，缓冲区 inv_freq 未初始化；兼容补丁依赖 Transformers 5.x 已移除的 rope_init_fn 属性，覆写的 _init_weights 又漏掉 rotary 分支。
 - **影响对象**：隐状态（静默错误）
 - **影响详情**：模型初始化与 checkpoint load 都不恢复正确的 RoPE 频率且无异常；CPU 复现中 to_empty 后填为 NaN 的 inv_freq 初始化后仍为 NaN。错误频率污染位置编码与前向，当前版本的端到端训练影响未实测。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/pytorch/torchtitan/issues/4783
+- **改进措施**：检测 待定；修复 修复 PR #5214 已 merge（2026-10-13）：RotaryEmbedding 分支委托 HF PreTrainedModel._init_weights（import 时捕获），删除依赖 rope_init_fn 的死循环；regression 测试 NaN 预填 4/4 red→green；bit-identical logits 对照正常构造模型 max diff 0（main 上 5.6e-4）。https://github.com/pytorch/torchtitan/pull/5214（尚未核实发版）
+- **来源**：https://github.com/pytorch/torchtitan/issues/4783；https://github.com/pytorch/torchtitan/pull/5214
 
 ### TRN-0140 `triton_block_local_mask_oob_rope_write` MLA YaRN RoPE Triton kernel 掩码过宽致越界写
 
@@ -1441,6 +1441,39 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/verl-project/verl/issues/7464
 
+### TRN-0267 `kto_unpaired_single_label_blocks` trl KTO 成对数据集拆成单标签整块 batch
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-14
+
+- **原因对象**：数据管线 / trl / KTO 成对数据集 unpair 分组
+- **原因行为**：成对 KTO 数据集按文档路径进入 trainer 时被 unpair 成 desirable/undesirable 各自连续的大块，数据加载层未打散标签块，绝大多数 micro-batch 内只有一种标签。
+- **影响对象**：训练样本流；训练信号（静默错误）
+- **影响详情**：配对数据集按文档用法训练时 300 batch 仅 2 个混合双标签；多数步无 rewards/margins，块内 KTO 对比统计退化；训练静默完成无报错；手工 unpair+shuffle 后 295/300 混合、指标恢复。
+- **改进措施**：检测 在数据加载层检查每个 micro-batch 的标签构成（含两种标签的 batch 占比），0% 混合即报警。；修复 修复 PR #7684（2026-10-13 closed unmerged，未落地）：unpair 后按 args.seed shuffle 打散标签块（IterableDataset 无 shuffle 保持原样）。当前 workaround：构造 trainer 前自行 unpair_preference_dataset + shuffle。https://github.com/huggingface/trl/pull/7684
+- **来源**：https://github.com/huggingface/trl/issues/7682
+
+### TRN-0268 `loss_mask_probe_ignores_enable_thinking_default` verl loss mask 探针不感知 thinking 默认值
+
+`故障` · `pending_audit` · `sft` · `verified` · `NEW` · 发现 2026-10-14
+
+- **原因对象**：数据管线 / verl / MultiTurnSFTDataset 探针
+- **原因行为**：loss mask 探针不接收 enable_thinking_default，按模板内置默认测 generation_prompt 长度，与逐消息渲染的 thinking 模式不一致。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：显式设 enable_thinking_default 且模板两种模式前缀长度不同时，assistant turn 的模板前缀 token 被误计入 loss（或反向误 mask 丢梯度）；训练无报错、loss 正常。
+- **改进措施**：检测 对每条样本分别以两种 thinking 设置渲染探针并比对 loss mask 边界 token 是否均被 mask；或核对 loss_mask==1 段首是否含模板控制 token。；修复 PR #8086 描述的第二处修复（extract_system_prompt_and_generation 接收 enable_thinking_default）未进入 merge diff：该 PR 最终只合入 YAML 默认值 none→null 一行（https://github.com/verl-project/verl/pull/8086/files），截至 2026-10-14 main 代码 verl/utils/dataset/multiturn_sft_dataset.py:180-182 仍不传该参数，缺陷仍在 HEAD。
+- **来源**：https://github.com/verl-project/verl/pull/8086
+
+### TRN-0269 `streamed_shards_repeat_window_mismatch` trl 流式数据集分片下静默跳过/重复训练 prompt
+
+`故障` · `pending_audit` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-14
+
+- **原因对象**：数据管线 / trl / GRPO/RLOO 流式数据加载分组
+- **原因行为**：每进程独享 shard 时 get_train_dataloader 仍按全局 prompt 数构造 repeat 窗口，进程内窗口含多个不同 batch 而非单一 batch 的重复，分组前提与分片现实不符。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：流式数据集 shard 数 ≥ 进程数时，每进程只对窗口首个 batch 生成、其余 batch 被静默跳过并重复训练其余部分：2 进程 16 prompt 实测只训 8 个，无任何错误或警告；训练正常完成。
+- **改进措施**：检测 训练步数×每步 prompt 数与数据集总 prompt 数对账；或按 uid 统计被生成 prompt 集合。；修复 修复 PR #7697（open 未 merge）：各进程只按自己份额（generation_batch_size // num_generations // num_processes）分组，份额切不开时 ValueError；修复后 16/16 prompt 全训。https://github.com/huggingface/trl/pull/7697
+- **来源**：https://github.com/huggingface/trl/issues/7690；https://github.com/huggingface/trl/pull/7697
+
 ## 优化器
 
 ### TRN-0013 `loss_scaler_swallows_overflow` 动态 loss scaler 把 SDC 引起的 inf 当普通溢出跳过
@@ -1498,8 +1531,8 @@
 - **原因行为**：PR #8638 在 ZeRO-1/2 step() 引入的无效范数→overflow=True 判定落在 check_grad_overflow 门控之外；开 gradient_clipping 时范数被强制计算，关闭开关后仍会跳步。
 - **影响对象**：训练轨迹；模型权重（静默错误）
 - **影响详情**：无 crash、无警告：bf16 用户显式设 check_grad_overflow: False 且开 clipping 时，仍回到静默跳步，两种配置训练动力学不可区分（skipped_steps 相同）；单 rank CI 跳过 world_size=2 用例而恒绿，≥2 rank 可复现。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8805
+- **改进措施**：检测 待定；修复 修复 PR #8818（open 未 merge）：invalid-norm overflow 判定改为受 bf16.check_grad_overflow 门控；双 H200 ZeRO-1/2 八配置修复前 4 组失败、修复后全过。https://github.com/deepspeedai/DeepSpeed/pull/8818
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8805；https://github.com/deepspeedai/DeepSpeed/pull/8818
 
 ### TRN-0060 `resume_resets_first_microbatch_flag` resume 重置 TE 首微批 flag，MTP 丢一个 depth 梯度
 
@@ -2705,8 +2738,8 @@
 - **原因行为**：top_p/top_k/min_p 截断采样时 vLLM 返回截断后重归一化分布的 logprob，trainer 重算全词表 log-softmax，温度对称处理而截断没有；AsyncGRPO 还直接拿它作 old_log_probs。
 - **影响对象**：训练信号（静默错误）
 - **影响详情**：无 NaN、无 clip 迹象，IS ratio 带逐 token 恒负偏置，off-policy 校正系统性失真；AsyncGRPO 中策略未动时 coef_1 即等于幸存质量（top_p=0.7→0.7），负优势 token 的 clip 每步误触发。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/huggingface/trl/issues/6789；https://github.com/huggingface/trl/issues/6945
+- **改进措施**：检测 待定；修复 AsyncGRPO 修复方向（PR #7627，open 未 merge）：trainer 侧按与 sampler 相同的 top-k/top-p 候选集重归一化 log-probs（vLLM --return-sampling-mask 返回候选集，keep-sampling-mask 策略，DeepSeek-V3.2/prime-rl 同路线）。https://github.com/huggingface/trl/pull/7627
+- **来源**：https://github.com/huggingface/trl/issues/6789；https://github.com/huggingface/trl/issues/6945；https://github.com/huggingface/trl/pull/7627
 
 ### TRN-0230 `adapter_omitted_from_weight_sync` verl 异步 RL 的 LoRA adapter 从不进入权重同步
 
@@ -2821,8 +2854,8 @@
 - **原因行为**：默认向 vLLM 请求 processed_logprobs，截断采样下按保留集归一化，而 trainer 的 old_log_probs 按全词表 log-softmax，两者之差逐 token 带 log(kept mass) 偏置。
 - **影响对象**：训练信号；训练轨迹（质量退化）
 - **影响详情**：Geo-RS/Seq-MIS 预设拒绝每条序列、actor 梯度恒 0：top_p=0.8 时 100/100 步全拒，reward 停在 0.13–0.14 而对照升至 0.83；只有通用 warning 与 advantages NaN，不点名原因；k3 预设下偏置不可见。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/verl-project/verl/issues/8020
+- **改进措施**：检测 待定；修复 修复方向（PR #8207，open 未 merge）：validate_config 在 rollout_is/rollout_rs 校正与截断采样+processed logprobs 组合时直接报错；批内全拒/全零权重时 warning 点名；ESS 除零改报 0.0。https://github.com/verl-project/verl/pull/8207
+- **来源**：https://github.com/verl-project/verl/issues/8020；https://github.com/verl-project/verl/pull/8207
 - **关联**：var:TRN-0229
 
 ### TRN-0243 `group_prefix_dedup_discards_tool_continuations` trl GRPO server 模式组内去重使工具多轮续写共用首个成员历史

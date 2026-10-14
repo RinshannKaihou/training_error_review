@@ -27,7 +27,7 @@
 
 1. 先 `python3 tools/catalog_tool.py find <owner/repo#号 | URL | arXiv ID | slug | 编号>` 查重。
 2. 已有同机制 → `update <编号> --add-evidence <URL>` 只补来源，不占新号。
-3. 同一机制、不同仓库 → 新条目写 `coverage: var`，`relations` 指向已有条目编号。
+3. 同一机制、不同仓库 → 新条目写 `coverage: var`，`relations` 指向已有条目（新编号或旧编号均可，工具换算并回显目标标题，须核对）。
 4. 新条目：写 JSON（格式见 `catalog/SCHEMA.md`）→ `python3 tools/catalog_tool.py new --file /tmp/<名>.json`；按返回的 `errors` 改到通过为止。**不要手写 YAML**（`#` 会被当成注释截断内容）。
 5. 扫描时看到修复 PR / 规避方法，写进 `mitigation.fix`。
 6. 写完运行 `catalog_tool.py build` 和 `catalog_tool.py validate`；validate 失败不得提交。

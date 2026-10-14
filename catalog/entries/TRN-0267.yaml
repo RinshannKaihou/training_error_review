@@ -4,7 +4,7 @@ slug: kto_unpaired_single_label_blocks
 aliases: []
 title: trl KTO 成对数据集拆成单标签整块 batch
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -16,7 +16,7 @@ effect:
   - 训练样本流
   - 训练信号
   detail: 配对数据集按文档用法训练时 300 batch 仅 2 个混合双标签；多数步无 rewards/margins，块内 KTO 对比统计退化；训练静默完成无报错；手工 unpair+shuffle 后 295/300 混合、指标恢复。
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 在数据加载层检查每个 micro-batch 的标签构成（含两种标签的 batch 占比），0% 混合即报警。
   fix: '修复 PR #7684（2026-10-13 closed unmerged，未落地）：unpair 后按 args.seed shuffle 打散标签块（IterableDataset 无 shuffle 保持原样）。当前 workaround：构造 trainer 前自行 unpair_preference_dataset + shuffle。https://github.com/huggingface/trl/pull/7684'
@@ -52,3 +52,18 @@ migration:
   - date: '2026-10-14'
     fields:
     - original.notes
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化

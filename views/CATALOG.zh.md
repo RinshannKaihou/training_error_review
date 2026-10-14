@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 269 条；状态：active 266、pending_audit 3
+共 269 条；状态：active 269
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -1443,18 +1443,18 @@
 
 ### TRN-0267 `kto_unpaired_single_label_blocks` trl KTO 成对数据集拆成单标签整块 batch
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-14
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-14
 
 - **原因对象**：数据管线 / trl / KTO 成对数据集 unpair 分组
 - **原因行为**：成对 KTO 数据集按文档路径进入 trainer 时被 unpair 成 desirable/undesirable 各自连续的大块，数据加载层未打散标签块，绝大多数 micro-batch 内只有一种标签。
-- **影响对象**：训练样本流；训练信号（静默错误）
+- **影响对象**：训练样本流；训练信号（质量退化）
 - **影响详情**：配对数据集按文档用法训练时 300 batch 仅 2 个混合双标签；多数步无 rewards/margins，块内 KTO 对比统计退化；训练静默完成无报错；手工 unpair+shuffle 后 295/300 混合、指标恢复。
 - **改进措施**：检测 在数据加载层检查每个 micro-batch 的标签构成（含两种标签的 batch 占比），0% 混合即报警。；修复 修复 PR #7684（2026-10-13 closed unmerged，未落地）：unpair 后按 args.seed shuffle 打散标签块（IterableDataset 无 shuffle 保持原样）。当前 workaround：构造 trainer 前自行 unpair_preference_dataset + shuffle。https://github.com/huggingface/trl/pull/7684
 - **来源**：https://github.com/huggingface/trl/issues/7682
 
 ### TRN-0268 `loss_mask_probe_ignores_enable_thinking_default` verl loss mask 探针不感知 thinking 默认值
 
-`故障` · `pending_audit` · `sft` · `verified` · `NEW` · 发现 2026-10-14
+`故障` · `active` · `sft` · `verified` · `NEW` · 发现 2026-10-14
 
 - **原因对象**：数据管线 / verl / MultiTurnSFTDataset 探针
 - **原因行为**：loss mask 探针不接收 enable_thinking_default，按模板内置默认测 generation_prompt 长度，与逐消息渲染的 thinking 模式不一致。
@@ -1465,12 +1465,12 @@
 
 ### TRN-0269 `streamed_shards_repeat_window_mismatch` trl 流式数据集分片下静默跳过/重复训练 prompt
 
-`故障` · `pending_audit` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-14
+`故障` · `active` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-14
 
 - **原因对象**：数据管线 / trl / GRPO/RLOO 流式数据加载分组
-- **原因行为**：每进程独享 shard 时 get_train_dataloader 仍按全局 prompt 数构造 repeat 窗口，进程内窗口含多个不同 batch 而非单一 batch 的重复，分组前提与分片现实不符。
+- **原因行为**：repeat_iterable_dataset按全局prompt数构造窗口内同一batch重复，_prepare_inputs只对首个batch生成；独享shard时进程窗口含多个不同batch。
 - **影响对象**：训练样本流（静默错误）
-- **影响详情**：流式数据集 shard 数 ≥ 进程数时，每进程只对窗口首个 batch 生成、其余 batch 被静默跳过并重复训练其余部分：2 进程 16 prompt 实测只训 8 个，无任何错误或警告；训练正常完成。
+- **影响详情**：流式数据集且dispatch_batches=False，Accelerate分配独享shard（1.14起n_shards≥进程数、此前>进程数）时，仅窗口首个batch生成并训练，其余batch的prompt静默跳过，其余步重复训练；2进程16prompt实训8，无报错警告且训练正常完成。
 - **改进措施**：检测 训练步数×每步 prompt 数与数据集总 prompt 数对账；或按 uid 统计被生成 prompt 集合。；修复 修复 PR #7697（open 未 merge）：各进程只按自己份额（generation_batch_size // num_generations // num_processes）分组，份额切不开时 ValueError；修复后 16/16 prompt 全训。https://github.com/huggingface/trl/pull/7697
 - **来源**：https://github.com/huggingface/trl/issues/7690；https://github.com/huggingface/trl/pull/7697
 

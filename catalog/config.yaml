@@ -3,3 +3,6 @@ namespace: TRN
 title: LLM 训练故障模式编目
 # narrative fields the daily scan must write under "original" for every new entry
 narrative_required: [mechanism, source, behavior, discovery]
+# the other catalog repo (relative to this one): cross relations are checked there, and
+# `catalog_tool.py cross-sync` adds the reverse links
+sibling: ../inference_error_review

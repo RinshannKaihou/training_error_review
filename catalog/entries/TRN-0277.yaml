@@ -32,11 +32,11 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/hcomm/issues/1046
-  kind: other
+  kind: gitcode_issue
 - url: https://gitcode.com/cann/hcomm/merge_requests/6017
-  kind: other
+  kind: gitcode_pr
 - url: https://gitcode.com/cann/hcomm/merge_requests/6018
-  kind: other
+  kind: gitcode_pr
 relations: []
 original:
   mechanism: cann/hcomm 的 AllGather Recursive Halving-Doubling（src/legacy/ascend910/algorithm/base/alg_template/temp_all_gather/all_gather_recursive_hd.cc，master 3136a8c6f 与 9.2.0 073e8237e 两基线均在）在非 2 次幂 rank 数下，第一阶段偶数 rank 接收相邻奇数 peer 数据时，GatherInPartOneToEven 偶数接收分支错误地用本端 rank 计算接收切片和远端读取偏移（应为 peerRank）。TransportP2p 的接收端发起读场景读错 peer 的输出切片并覆盖本端自己的输出切片；TransportIbverbs 的 RoCE 路径由发送端写入正确切片、RxAsync 只等通知，故该错误在 RoCE 上被掩盖。离线验证：仓库 ST 算法检查器（CheckerDevType::DEV_TYPE_910B，CANN 9.2.0-beta.1 本地环境），3/5/6/7 rank × OPBASE/OFFLOAD 共 8 个 HCCS 组合修复前全报内存语义错误、修复后全过；RoCE 对照 8 组合均通过。报告者明示未执行真实 HCCS/RoCE 硬件上板验证。触发配置：HCCL_ALGO=level1:H-D_R 显式选路、INT32 100 元素。
@@ -53,3 +53,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

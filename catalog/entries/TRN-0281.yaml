@@ -32,7 +32,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5295
-  kind: other
+  kind: gitcode_issue
 relations: []
 original:
   mechanism: 'Ascend/pytorch issue #5295（2026-10-08，open）：torch_npu/_inductor/codegen/ir.py::eliminate_modular() 处理乘积时提取乘数后只用其中一个变量的长度判断取模是否多余：对 r=0..4 计算 5%7==5 后把 (7*r)%7 错误化为 7*r（实际 (7*r)%7 恒为 0）。小归约展开后第一列 load 地址由 14*r 变 21*r，其他列仍按 14*r+c 读取。环境：Ubuntu 22.04 aarch64、Ascend 910B3、CANN 9.1.0、PyTorch 2.15.0.dev20260902、torch-npu master cea4a6a9、Triton-Ascend 3.2.1、Inductor default。最小复现（backing=arange(140)、as_strided (5,7)/(14,1)、config.patch(unroll_reductions_threshold=8)、torch.compile(torch.amax)）：compiled 84.0 vs expected 62.0，负值输入 amin 同错；问题发生在 PTA 索引表达式化简阶段，生成 Triton 源码地址已错，非浮点误差。'
@@ -53,3 +53,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

@@ -33,9 +33,9 @@ labels:
 remarks: ''
 evidence:
 - url: https://atomgit.com/mindspore/mindformers/merge_requests/8868
-  kind: other
+  kind: gitcode_pr
 - url: https://gitcode.com/mindspore/org-issues/issues/43525
-  kind: other
+  kind: gitcode_issue
 relations: []
 original:
   mechanism: mindformers（分支 src/master d3f5dc943）8 卡 PyNative LoRA 微调连续训 50 步、第 40 步仅保存 LoRA 参数和优化器后恢复：第 41-50 步与连续训练不对齐（loss 最大绝对误差 0.000389；grad norm 最大绝对误差 0.043512、最大相对误差 27.44%）。根因两点：1) save_trainable_only 只保存 LoRA A/B，遗漏每步更新并影响下一步专家路由的 MoE expert_bias 与 tokens_per_expert；2) checkpoint 未保存各 rank 的 MindSpore 默认 RNG 状态，恢复进程后 lora_dropout=0.05 的随机序列从 YAML seed 重新开始。隔离实验：仅恢复 RNG 时 grad norm 最大误差仍 0.042410；仅恢复 MoE 状态、不恢复 RNG 时仍 0.005193——两类状态都需恢复。修复 MR !8868 补存两类状态并加 RNG sidecar（原子写、老断点兼容告警）；修复后 8 卡续训 41-50 步 loss/grad norm 最大误差均为 0.0，新增 3 个单测通过。RNG 漏存与 TRN-0062（DeepSpeed 存错 RNG 对象）/TRN-0067（ms-swift resume 丢 epoch 种子）同族，但 MoE 路由态漏存为本条主机制（影响下一步专家分派）。关联 issue：https://gitcode.com/mindspore/org-issues/issues/43525
@@ -58,6 +58,9 @@ migration:
   - date: '2026-10-15'
     fields:
     - cause
+  - date: '2026-10-15'
+    fields:
+    - evidence
   audit:
     round: daily-audit-2026-10-15
     base:

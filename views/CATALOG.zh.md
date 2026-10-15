@@ -290,6 +290,7 @@
 - **影响详情**：A3 真机确定性复现：cross_entropy 越界 target 返回数值不报错；gather 越界返回垃圾；scatter_ 越界写被静默丢弃。数据侧 bug 被无声吞掉。
 - **改进措施**：检测 训练前对 index/target 做范围断言；与 CPU 参考实现对账。；修复 待定（F.embedding、Tensor.select 越界在 NPU 仍会 raise，说明该校验可实现；issue 建议 host 端补齐对齐 CPU/CUDA 语义，未见修复 MR）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5296
+- **关联**：cross:INF-1378
 
 ### TRN-0282 `add_rms_norm_tiling_mode_bypass_silent` AddRmsNorm tiling 不拦 PRE/POST 模式静默算错越界
 
@@ -301,6 +302,7 @@
 - **影响详情**：regbase tiling 未剥离 PRE/POST 模式 gamma 前导 1，numRow 少算（(B,S,H) 只算 B 行），输出大半为未初始化内存；kernel 无条件写 rstd/xOut 越界写；全程不报错。aclnn 公开接口与 A2/A3 不受影响。
 - **改进措施**：检测 TTK/GE 直调路径下对输出与参考对账；PR #11564 反例 UT（pre/post_mode_rejected）可作探针。；修复 已修复：PR #11564（merged）tiling 层拒绝 PRE/POST 模式返回 GRAPH_FAILED，修复后 ophost UT 30/30、opapi UT 18/18、950+910b 定向 CI 全过。https://gitcode.com/cann/ops-nn/pull/11564
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6482；https://gitcode.com/cann/ops-nn/pull/11564
+- **关联**：cross:INF-1382
 
 ## 编译器
 
@@ -359,6 +361,7 @@
 - **影响详情**：triton_experimental 后端 torch.compile 下 SDPA+attn_mask（fp16）约 97% 元素与 eager 不符，5/5 确定性复现；同内核同配置下，r0_numel 常量 96 烧入约 97% 错，运行时 i32 传参 mismatch=0/36864。
 - **改进措施**：检测 编译前后数值对账（eager vs compiled）；ASTSource constants 是否含 r0_numel 可静态检查。；修复 本源未修（triton-ascend 内部出错 pass 未定位）。临时规避：torch_npu 侧去掉静态 r-tree numel 的常量注入（codeg/triton.py），令 r0_numel 回到运行时 i32 传参，放弃 R0_BLOCK==rnumel 时消 r0_mask 边界检查的编译期收益，本源修复后应撤除。同文件 rsplit 组合核 constants:{r0_numel: total_cores} 疑似同型风险。
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2531；https://gitcode.com/Ascend/pytorch/issues/5366
+- **关联**：cross:INF-1375
 
 ### TRN-0281 `inductor_mod_eliminate_noncontig_reduction` torch_npu Inductor 取模消除错致非连续归约错值
 

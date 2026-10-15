@@ -32,7 +32,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5396
-  kind: other
+  kind: gitcode_issue
 - url: https://github.com/pytorch/pytorch/issues/200756
   kind: github_issue
 relations: []
@@ -57,3 +57,7 @@ migration:
     - glm-5.3
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

@@ -32,9 +32,9 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/hccl/issues/825
-  kind: other
+  kind: gitcode_issue
 - url: https://gitcode.com/cann/hccl/merge_requests/3607
-  kind: other
+  kind: gitcode_pr
 relations:
 - kind: var
   target: TRN-0012
@@ -60,3 +60,7 @@ migration:
     uncertain:
     - visibility
     - behavior
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

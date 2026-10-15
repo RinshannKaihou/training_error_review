@@ -32,7 +32,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/6523
-  kind: other
+  kind: gitcode_issue
 relations:
 - kind: var
   target: TRN-0147
@@ -51,3 +51,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

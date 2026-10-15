@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/OpenRLHF/OpenRLHF/issues/1295
   kind: github_issue
 relations: []
-pattern: PAT-0040
+pattern: PAT-TRN-0040
 original:
   category: RL-RO
   section: RL-RO

@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0181
-pattern: PAT-0015
+pattern: PAT-TRN-0015
 original:
   category: SFT
   section: SFT

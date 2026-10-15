@@ -40,7 +40,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0033
-pattern: PAT-0022
+pattern: PAT-TRN-0022
 original:
   category: PAR
   section: PAR

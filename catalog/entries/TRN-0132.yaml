@@ -36,7 +36,7 @@ evidence:
 - kind: citation
   text: '`opensource_training_megatron` `fault_injected_attention.py` / `fault_injection.py`；'
 relations: []
-pattern: PAT-0034
+pattern: PAT-TRN-0034
 original:
   category: KER
   section: KER

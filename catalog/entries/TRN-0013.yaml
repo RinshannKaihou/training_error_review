@@ -37,7 +37,7 @@ evidence:
 - url: https://arxiv.org/abs/2605.04213
   kind: arxiv
 relations: []
-pattern: PAT-0003
+pattern: PAT-TRN-0003
 original:
   category: NUM
   section: NUM

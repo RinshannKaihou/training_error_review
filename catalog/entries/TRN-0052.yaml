@@ -39,7 +39,7 @@ evidence:
 relations:
 - kind: cross
   target: INF-1118
-pattern: PAT-0010
+pattern: PAT-TRN-0010
 original:
   category: CKPT
   section: CKPT

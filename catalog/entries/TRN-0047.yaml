@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/deepspeedai/DeepSpeed/issues/8692
   kind: github_issue
 relations: []
-pattern: PAT-0024
+pattern: PAT-TRN-0024
 original:
   category: PAR
   section: PAR

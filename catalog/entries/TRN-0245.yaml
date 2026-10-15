@@ -38,7 +38,7 @@ evidence:
 - url: https://arxiv.org/abs/2510.13786
   kind: arxiv
 relations: []
-pattern: PAT-0042
+pattern: PAT-TRN-0042
 original:
   category: RL-RO
   section: RL-RO

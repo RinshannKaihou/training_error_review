@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0104
-pattern: PAT-0008
+pattern: PAT-TRN-0008
 original:
   category: OPT
   section: OPT

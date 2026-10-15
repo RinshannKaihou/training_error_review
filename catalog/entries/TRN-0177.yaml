@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0173
-pattern: PAT-0014
+pattern: PAT-TRN-0014
 original:
   category: LOSS
   section: LOSS

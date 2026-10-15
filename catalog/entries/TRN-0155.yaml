@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/pytorch/torchtitan/issues/4394
   kind: github_issue
 relations: []
-pattern: PAT-0036
+pattern: PAT-TRN-0036
 original:
   category: MOE
   section: MOE

@@ -36,7 +36,7 @@ evidence:
 - url: https://arxiv.org/abs/2407.21783
   kind: arxiv
 relations: []
-pattern: PAT-0017
+pattern: PAT-TRN-0017
 original:
   category: HW
   section: HW

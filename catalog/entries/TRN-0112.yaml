@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/NVIDIA/Megatron-LM/issues/7173
   kind: github_issue
 relations: []
-pattern: PAT-0021
+pattern: PAT-TRN-0021
 original:
   category: OPT
   section: OPT

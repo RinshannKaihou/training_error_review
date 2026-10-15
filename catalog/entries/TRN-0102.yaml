@@ -36,7 +36,7 @@ evidence:
 - kind: citation
   text: Ma et al. 2502.12340（SDC 可表现为单步梯度扰动）；
 relations: []
-pattern: PAT-0008
+pattern: PAT-TRN-0008
 original:
   category: OPT
   section: OPT

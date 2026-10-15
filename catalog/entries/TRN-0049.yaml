@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0047
-pattern: PAT-0024
+pattern: PAT-TRN-0024
 original:
   category: PAR
   section: PAR

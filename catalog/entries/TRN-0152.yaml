@@ -37,7 +37,7 @@ evidence:
 - url: https://arxiv.org/abs/2510.11370
   kind: arxiv
 relations: []
-pattern: PAT-0002
+pattern: PAT-TRN-0002
 original:
   category: MOE
   section: MOE

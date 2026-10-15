@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target_raw: aux_loss_normalization_domain
-pattern: PAT-0023
+pattern: PAT-TRN-0023
 original:
   category: PAR
   section: PAR

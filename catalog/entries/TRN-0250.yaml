@@ -35,7 +35,7 @@ evidence:
 - kind: citation
   text: '`opensource_training_megatron` / megatron-lm-training skill。'
 relations: []
-pattern: PAT-0043
+pattern: PAT-TRN-0043
 original:
   category: OBS
   section: OBS

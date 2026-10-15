@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0250
-pattern: PAT-0043
+pattern: PAT-TRN-0043
 original:
   category: OBS
   section: OBS

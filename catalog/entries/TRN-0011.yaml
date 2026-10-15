@@ -38,7 +38,7 @@ evidence:
 - url: https://arxiv.org/abs/2605.14220
   kind: arxiv
 relations: []
-pattern: PAT-0019
+pattern: PAT-TRN-0019
 original:
   category: NUM
   section: NUM

@@ -37,7 +37,7 @@ evidence:
 - url: https://github.com/NVIDIA/Megatron-LM/issues/6585
   kind: github_issue
 relations: []
-pattern: PAT-0001
+pattern: PAT-TRN-0001
 original:
   category: CKPT
   section: CKPT

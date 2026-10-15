@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/pytorch/torchtitan/issues/4205
   kind: github_issue
 relations: []
-pattern: PAT-0035
+pattern: PAT-TRN-0035
 original:
   category: KER
   section: KER

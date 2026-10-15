@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/NVIDIA/Megatron-LM/pull/7081
   kind: github_pr
 relations: []
-pattern: PAT-0020
+pattern: PAT-TRN-0020
 original:
   category: NUM
   section: NUM

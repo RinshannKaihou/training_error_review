@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/modelscope/ms-swift/issues/10076
   kind: github_issue
 relations: []
-pattern: PAT-0014
+pattern: PAT-TRN-0014
 original:
   category: LOSS
   section: LOSS

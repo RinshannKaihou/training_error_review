@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/NVIDIA/Megatron-LM/issues/6660
   kind: github_issue
 relations: []
-pattern: PAT-0022
+pattern: PAT-TRN-0022
 original:
   category: PAR
   section: PAR

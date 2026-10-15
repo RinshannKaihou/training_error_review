@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/pytorch/torchtitan/issues/4688
   kind: github_issue
 relations: []
-pattern: PAT-0033
+pattern: PAT-TRN-0033
 original:
   category: ACT
   section: ACT

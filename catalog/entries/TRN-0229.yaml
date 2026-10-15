@@ -39,7 +39,7 @@ evidence:
 - url: https://github.com/huggingface/trl/pull/7627
   kind: github_pr
 relations: []
-pattern: PAT-0041
+pattern: PAT-TRN-0041
 original:
   category: RL-RO
   section: RL-RO

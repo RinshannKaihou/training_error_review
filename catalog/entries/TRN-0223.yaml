@@ -58,7 +58,7 @@ evidence:
 - url: https://arxiv.org/abs/2609.32444
   kind: arxiv
 relations: []
-pattern: PAT-0016
+pattern: PAT-TRN-0016
 original:
   category: RL-RO
   section: RL-RO

@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0044
-pattern: PAT-0023
+pattern: PAT-TRN-0023
 original:
   category: MOE
   section: MOE

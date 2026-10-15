@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/deepspeedai/DeepSpeed/issues/8443
   kind: github_issue
 relations: []
-pattern: PAT-0030
+pattern: PAT-TRN-0030
 original:
   category: OPT
   section: OPT

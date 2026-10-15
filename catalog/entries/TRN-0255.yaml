@@ -37,7 +37,7 @@ evidence:
 - url: https://github.com/huggingface/trl/issues/6803
   kind: github_issue
 relations: []
-pattern: PAT-0039
+pattern: PAT-TRN-0039
 original:
   category: OBS
   section: OBS

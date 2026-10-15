@@ -37,7 +37,7 @@ evidence:
 - kind: citation
   text: 偏好数据管道的经典静默错误。
 relations: []
-pattern: PAT-0015
+pattern: PAT-TRN-0015
 original:
   category: SFT
   section: SFT

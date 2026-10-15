@@ -37,7 +37,7 @@ evidence:
 - kind: citation
   text: Megatron/DeepSpeed 数据加载常见事故（本实验室 `verify_dataset.py` / MMIDIDX 校验动机之一）。
 relations: []
-pattern: PAT-0007
+pattern: PAT-TRN-0007
 original:
   category: DATA
   section: DATA

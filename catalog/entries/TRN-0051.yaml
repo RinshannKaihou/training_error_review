@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/deepspeedai/DeepSpeed/issues/8230
   kind: github_issue
 relations: []
-pattern: PAT-0025
+pattern: PAT-TRN-0025
 original:
   category: CKPT
   section: CKPT

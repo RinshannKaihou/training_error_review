@@ -43,7 +43,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0083
-pattern: PAT-0007
+pattern: PAT-TRN-0007
 original:
   category: CKPT
   section: CKPT

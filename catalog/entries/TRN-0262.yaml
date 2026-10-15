@@ -37,7 +37,7 @@ evidence:
 - url: https://github.com/deepspeedai/DeepSpeed/issues/7255
   kind: github_issue
 relations: []
-pattern: PAT-0045
+pattern: PAT-TRN-0045
 original:
   category: OBS
   section: OBS

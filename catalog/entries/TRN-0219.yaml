@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0255
-pattern: PAT-0039
+pattern: PAT-TRN-0039
 original:
   category: RL-KL
   section: RL-KL

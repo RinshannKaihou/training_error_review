@@ -36,7 +36,7 @@ evidence:
 - url: https://arxiv.org/abs/2503.20783
   kind: arxiv
 relations: []
-pattern: PAT-0038
+pattern: PAT-TRN-0038
 original:
   category: RL-RWD
   section: RL-RWD

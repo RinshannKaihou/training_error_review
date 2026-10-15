@@ -39,7 +39,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0017
-pattern: PAT-0020
+pattern: PAT-TRN-0020
 original:
   category: KER
   section: KER

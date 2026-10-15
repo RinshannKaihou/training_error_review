@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/huggingface/trl/issues/6879
   kind: github_issue
 relations: []
-pattern: PAT-0037
+pattern: PAT-TRN-0037
 original:
   category: SFT
   section: SFT

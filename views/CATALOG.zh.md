@@ -3,28 +3,28 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 269 条；状态：active 269
+共 282 条；状态：active 269、pending_audit 13
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 9 |
-| 编译器 | 4 |
-| 运行时/执行 | 5 |
-| 集合通信 | 1 |
+| 算子/内核 | 15 |
+| 编译器 | 6 |
+| 运行时/执行 | 6 |
+| 集合通信 | 3 |
 | 并行切分 | 20 |
 | 量化 | 7 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
 | 模型定义 | 6 |
-| 权重/检查点 | 26 |
+| 权重/检查点 | 27 |
 | 数据管线 | 27 |
 | 优化器 | 28 |
 | 损失计算 | 17 |
 | MoE路由 | 12 |
 | 重计算/卸载 | 11 |
 | RL训练回路 | 57 |
-| 观测/评测 | 13 |
+| 观测/评测 | 14 |
 | 配置/参数 | 3 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -235,6 +235,73 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/verl-project/verl/pull/8108
 
+### TRN-0271 `index_put_v2_stride_u32_overflow` IndexPutV2 大 stride 偏移 uint32 溢出写错地址
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / cann / IndexPutV2 偏移计算整型宽度
+- **原因行为**：非连续（大 stride）目标张量上索引偏移以 uint32 计算：idx×stride ≥ 2^32 时回绕，写入落到 (idx×stride) mod 2^32 的错误地址。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend 950DT、CANN 9.2.0：uint8 大张量切片视图（stride(0)=228352 > size(1)=16896）view[18816]=0x5A，期望写行 18816，实际写在行 7/偏移 105472；数据布局静默破坏，无报错。
+- **改进措施**：检测 写入后读回校验目标位置；触发条件为非连续大张量 + 越界乘积超 2^32，可静态排查 stride×max_idx。；修复 待定（issue 未附修复 MR，未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6523
+- **关联**：var:TRN-0147
+
+### TRN-0273 `fa_grad_sink_dsink_uninitialized` NPU FA 反向 sink 场景 dsink 工作区未清零致梯度爆炸
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / cann / FA 反向 dsink 工作区清零
+- **原因行为**：FlashAttentionScoreGrad 的 dsink 工作区仅在 IS_ATTEN_MASK 或 IS_TND 模板清零；causal 等稀疏无 mask 模式对应槽位永不写入，post 阶段累加读未初始化内存。
+- **影响对象**：梯度（数值异常）
+- **影响详情**：带可学习 sink 的网络用 causal 注意力（无 attenMask 张量、BNSD/BSH）训练若干 step 后，sink 参数被垃圾梯度更新、随后全网梯度爆炸；去掉 sink 输入或换无条件清零实现（arch22）训练稳定。
+- **改进措施**：检测 对 dsink 输出与 -Σ(P·dP)·P_sink 参考对账；训练期监控 sink 参数值与梯度范数突变。；修复 修复 MR !13822（open 未合入、未发布）：sink 使能即无条件清零 dsink 工作区，与 arch22 实现对齐。https://gitcode.com/cann/ops-transformer/merge_requests/13822
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6148；https://gitcode.com/cann/ops-transformer/merge_requests/13822
+
+### TRN-0275 `aclnn_empty_input_early_return_unwritten` aclnn 空输入早退不写非空出参返回脏数据
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / cann / aclnn 空张量早退分支
+- **原因行为**：空输入×非空出参组合命中早退分支：置 workspaceSize=0 直接返回 ACLNN_SUCCESS，不建计算节点也不写出参；CheckShape 不约束出参空性随输入联动，该组合可合法通过校验。
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：pad 系反向/UnfoldGrad 的 gradInput、Multinomial 的 out、MedianDim 输出、DynamicQuant 的 scaleOut 残留未初始化内存（实测哨兵/NaN），接口返回成功无报错。
+- **改进措施**：检测 出参预填哨兵值做 round-trip 校验；PyTorch 参考语义为空 grad_output 回全零，可对账。；修复 待定：同机理先例 ops-math #3360（aclnnCdistBackward）已闭环；本批 #3553/#3560/#6582/#6605 暂未见已合入修复（各 issue 关联 MR 状态未逐一核实）。
+- **来源**：https://gitcode.com/cann/ops-math/issues/3553；https://gitcode.com/cann/ops-math/issues/3560；https://gitcode.com/cann/ops-nn/issues/6582；https://gitcode.com/cann/ops-nn/issues/6605
+
+### TRN-0276 `add_rms_norm_gamma_mul_order_overflow` Ascend 950 AddRmsNorm 先乘 gamma 致 FP32 溢出
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / cann / AddRmsNorm trans 模板乘法顺序
+- **原因行为**：Ascend 950 regbase 的 AddRmsNorm/InplaceAddRmsNorm trans 模板按 (x1+x2)*gamma*rstd 计算，先乘 gamma 可使 FP32 中间结果提前超范围，输出 Inf。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：输入与 gamma 均有限、归一化结果也应有限时输出 Inf：x1=2^32、gamma=2^100 期望 2^100 实得 Inf；24 条 trans 溢出用例修复前全 FAIL、修复后全 PASS。
+- **改进措施**：检测 对 AddRmsNorm 输出做有限性抽检；固定输入回归用例（x1=2^32、gamma=2^100）。；修复 修复 MR !11953（open 未合入）：先以 FP32 计算 xSum*rstd 再乘 gamma，两次乘法间不转回低精度；两个算子 arch35 ST CSV 各加一条固定输入回归用例。https://gitcode.com/cann/ops-nn/merge_requests/11953
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6679；https://gitcode.com/cann/ops-nn/merge_requests/11953
+
+### TRN-0279 `torch_npu_oob_index_silent_wrong` torch_npu 索引/损失算子越界输入静默错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / torch_npu / gather/scatter/CE 越界校验缺失
+- **原因行为**：torch_npu 对 gather/scatter/index_put/cross_entropy/nll_loss 缺 host 越界校验：越界读拿垃圾、越界写被丢弃，无异常；CPU/CUDA 会 raise。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：A3 真机确定性复现：cross_entropy 越界 target 返回数值不报错；gather 越界返回垃圾；scatter_ 越界写被静默丢弃。数据侧 bug 被无声吞掉。
+- **改进措施**：检测 训练前对 index/target 做范围断言；与 CPU 参考实现对账。；修复 待定（F.embedding、Tensor.select 越界在 NPU 仍会 raise，说明该校验可实现；issue 建议 host 端补齐对齐 CPU/CUDA 语义，未见修复 MR）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5296
+
+### TRN-0282 `add_rms_norm_tiling_mode_bypass_silent` AddRmsNorm tiling 不拦 PRE/POST 模式静默算错越界
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：算子/内核 / cann / AddRmsNorm tiling 分派校验
+- **原因行为**：Ascend 950 regbase 仅支持普通模式，aclnn 层已拦截但 tiling 层分派时不校验 norm_key：绕过 aclnn 的路径（GE 直构/TTK 直调）传 PRE/POST 形态不被拒。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：regbase tiling 未剥离 PRE/POST 模式 gamma 前导 1，numRow 少算（(B,S,H) 只算 B 行），输出大半为未初始化内存；kernel 无条件写 rstd/xOut 越界写；全程不报错。aclnn 公开接口与 A2/A3 不受影响。
+- **改进措施**：检测 TTK/GE 直调路径下对输出与参考对账；PR #11564 反例 UT（pre/post_mode_rejected）可作探针。；修复 已修复：PR #11564（merged）tiling 层拒绝 PRE/POST 模式返回 GRAPH_FAILED，修复后 ophost UT 30/30、opapi UT 18/18、950+910b 定向 CI 全过。https://gitcode.com/cann/ops-nn/pull/11564
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6482；https://gitcode.com/cann/ops-nn/pull/11564
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -281,6 +348,28 @@
 - **影响详情**：无 crash、无 NaN、无警告，SwiGLU 前向、反向输出系统性偏移、训练曲线照常；按层或按专家类型使用不同 clamp 值（如 Step-3.5-Flash、K-EXAONE-2.0）时，第二组层起全部用旧 clamp 值训练。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/6918；https://github.com/pytorch/pytorch/issues/194976；https://arxiv.org/abs/2606.19348
+
+### TRN-0280 `triton_ascend_static_rnumel_miscompile` triton-ascend 常量特化 r-numel 致行 max 归约误编译
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：编译器 / triton / 归约轴长度编译期常量特化
+- **原因行为**：归约轴长度 r0_numel 被作为 ASTSource 级编译期常量烧入时，fused softmax 的行 max 归约被错误编译：同内核同配置下，常量特化与运行时传参两条路径二进制不同、数值结果不同。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：triton_experimental 后端 torch.compile 下 SDPA+attn_mask（fp16）约 97% 元素错、5/5 确定性复现；常量路径 mismatch=11919/12288，运行时传参路径为 0。
+- **改进措施**：检测 编译前后数值对账（eager vs compiled）；ASTSource constants 是否含 r0_numel 可静态检查。；修复 本源未修（triton-ascend 内部出错 pass 未定位）。临时规避：torch_npu 侧去掉静态 r-tree numel 的常量注入（codeg/triton.py），令 r0_numel 回到运行时 i32 传参，放弃 R0_BLOCK==rnumel 时消 r0_mask 边界检查的编译期收益，本源修复后应撤除。同文件 rsplit 组合核 constants:{r0_numel: total_cores} 疑似同型风险。
+- **来源**：https://github.com/triton-lang/triton-ascend/issues/2531；https://gitcode.com/Ascend/pytorch/issues/5366
+
+### TRN-0281 `inductor_mod_eliminate_noncontig_reduction` torch_npu Inductor 取模消除错致非连续归约错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：编译器 / torch_npu / eliminate_modular 取模消除
+- **原因行为**：eliminate_modular 处理乘积时只用其中一个变量的长度判断取模是否多余：对 (7*r)%7 按 5%7==5 误判可消除，化简为 7*r（实际恒为 0），小归约展开后第一列 load 地址错误。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Inductor default 后端、shape[5,7]/stride[14,1] 非连续输入小归约（unroll_reductions_threshold=8）：amax 期望 62 实得 84、amin 同错；地址错非浮点误差，Triton 源码中地址已错。
+- **改进措施**：检测 非连续输入下编译前后 amax/amin 对账；生成 Triton 源码检查首列地址表达式。；修复 待定（issue open，2026-10-08；修复方向：coeff*(numel-1)<divisor*modulus 才消除并返回 FloorDiv，多变量/负系数/未知范围保留原式）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5295
 
 ## 运行时/执行
 
@@ -339,6 +428,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/6992
 
+### TRN-0272 `d2h_dma_madvfree_page_reclaim` NPU D2H 拷贝不清 MADV_FREE 脏标记页被回收清零
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：运行时/执行 / torch_npu / aclrtMemcpy D2H 与分配器交互
+- **原因行为**：aclrtMemcpy DMA 写 CPU 内存不经 CPU MMU：不设 PTE_DIRTY、不清 MADV_FREE 标签；kswapd 视这些页为干净直接回收，数据清零。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：aarch64 + mimalloc v2.x（跨线程释放大 tensor 打 MADV_FREE 标签）时 npu_tensor.cpu() 间歇性变 0：MADV_PAGEOUT 复现 87.6% 元素清零，真实 kswapd 压力与 C 直调 100% 复现；NPU 侧原数据不含 0。
+- **改进措施**：检测 D2H 后校验和/CRC；复现脚本监测 LazyFree 页变化。；修复 上游未修。临时规避：用 torch.zeros+copy_ 替代 .cpu()（CPU memset 写入会清 MADV_FREE 标签）；修复建议为 DMA 后对目标页标脏。关联 PyTorch 上游同机制 issue：https://github.com/pytorch/pytorch/issues/200756
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5396；https://github.com/pytorch/pytorch/issues/200756
+
 ## 集合通信
 
 ### TRN-0030 `allreduce_silent_wrong_value` all-reduce 完成但 payload 已错的静默集合通信错误
@@ -351,6 +451,29 @@
 - **影响详情**：所有 rank 同步拿到同一份错误梯度，loss 仍平滑，无 timeout 报警；比单个坏 GPU 更难排查。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://arxiv.org/abs/2407.21783
+
+### TRN-0270 `ccu_allreduce_rank_slot_nondeterminism` CCU AllReduce 槽位随 rank 落位致跨卡归约不一致
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-10-15
+
+- **原因对象**：集合通信 / cann / CCU GroupReduce 归约槽位落位
+- **原因行为**：CCU 引擎 GroupReduce 将本卡输入固定垫底于 GO 内存末槽、远端按 rank 升序占槽 0..N-2，硬件按槽序归约：各卡浮点加法操作数序列随本卡 rank 漂移，同输入不同卡输出 bitwise 不一致。
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：CCU AllReduce one_shot/2die 浮点 SUM 下同输入各卡输出 bitwise 不相等（2die 两分支计算序列也不同）；整型与 MIN/MAX 不受影响。训练侧表现为跨卡归约结果分叉、不可复现。
+- **改进措施**：检测 同输入跨卡 AllReduce 输出 bitwise 对账；确定性模式训练对比。；修复 修复 MR !3607（open）：归约槽位按 rank 落位，各卡操作数序列恒为 (s_0..s_{N-1}) 与 rank 无关；合入后 CCU allreduce one_shot/2die 浮点 SUM 输出将发生预期 bitwise 变化（对齐全卡一致）。https://gitcode.com/cann/hccl/merge_requests/3607
+- **来源**：https://gitcode.com/cann/hccl/issues/825；https://gitcode.com/cann/hccl/merge_requests/3607
+- **关联**：var:TRN-0012
+
+### TRN-0277 `allgather_recursive_hd_peer_offset` AllGather Recursive HD 非 2 次幂接收偏移读错 peer
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：集合通信 / cann / AllGather Recursive HD 偶数
+- **原因行为**：GatherInPartOneToEven 偶数接收分支用本端 rank 而非 peerRank 计算接收切片与远端读取偏移；TransportP2p 接收端发起读时读错 peer 的输出切片并覆盖本端自己的切片。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Recursive HD、非 2 次幂 rank 数（3/5/6/7）、接收端发起读的 P2P/HCCS 链路时 AllGather 输出数据缺失或来源错误；RoCE 路径因发送端写正确切片而掩盖。修复前 HCCS 8 个组合全报内存语义错误。
+- **改进措施**：检测 仓库 ST 算法检查器（Checker::Check 内存/数据来源语义校验，DEV_TYPE_910B）；AllGather 结果与参考布局对账。；修复 修复 MR !6017/!6018（open）：偶数接收分支三处 rank→peerRank（本端接收切片、日志偏移、ExecuteRxSync 远端源偏移），并补 HCCS/RoCE ST 回归。https://gitcode.com/cann/hcomm/merge_requests/6017
+- **来源**：https://gitcode.com/cann/hcomm/issues/1046；https://gitcode.com/cann/hcomm/merge_requests/6017；https://gitcode.com/cann/hcomm/merge_requests/6018
 
 ## 并行切分
 
@@ -1164,6 +1287,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/verl-project/verl/pull/7835；https://github.com/verl-project/verl/issues/7834
 
+### TRN-0278 `lora_ckpt_missing_moe_routing_rng` mindformers LoRA 续训 ckpt 漏存 MoE 路由态与 RNG
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：权重/检查点 / mindspore / LoRA ckpt 保存范围
+- **原因行为**：save_trainable_only 只存 LoRA A/B，漏存每步更新且影响下一步专家路由的 MoE expert_bias/tokens_per_expert，也不存各 rank RNG 状态。
+- **影响对象**：训练轨迹（不可复现）
+- **影响详情**：8 卡 PyNative LoRA 微调第 40 步仅存 LoRA 参数与优化器后续训，第 41-50 步与连续训练不对齐：loss 最大绝对误差 3.89e-4，grad norm 最大绝对误差 0.0435、最大相对误差 27.4%；无报错。
+- **改进措施**：检测 断点续训与连续训练在重叠步做 loss/grad norm 对账；隔离实验分别恢复 RNG 与 MoE 状态定位偏差来源。；修复 修复 MR !8868（open）：LoRA trainable-only ckpt 追加 MoE expert_bias/tokens_per_expert，ckpt I/O 前按 rank 原子保存 RNG sidecar（加载优化器续训时恢复，老断点缺 sidecar 兼容告警）；修复后第 41-50 步 loss/grad norm 误差 0.0/0.0%。https://atomgit.com/mindspore/mindformers/merge_requests/8868
+- **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8868；https://gitcode.com/mindspore/org-issues/issues/43525
+
 ## 数据管线
 
 ### TRN-0057 `epoch_boundary_resume_silent_skip` verl SFT 在 epoch 边界 resume 静默跳过下一 epoch
@@ -1185,8 +1319,8 @@
 - **原因行为**：DeepSpeedDataSampler 用自有 np_rng 采样，state_dict()/load_state_dict() 却存取全局 np.random 状态；resume 时自有 RNG 被重新播种且从不恢复。
 - **影响对象**：训练样本流；训练轨迹（静默错误）
 - **影响详情**：resume 后 curriculum 难度调度与 cluster shuffle 从头重放，后半程重复前半程样本序，训练看似正常推进；恢复全局 RNG 还会牵动进程内其他使用 np.random 的组件。修复 PR #8460 未合入，#8787 独立重报同一失效。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8405；https://github.com/deepspeedai/DeepSpeed/pull/8460
+- **改进措施**：检测 待定；修复 修复 PR #8460 closed unmerged；新修复 PR #8788 open（2026-10-09 后无更新），主干缺陷仍在
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8405；https://github.com/deepspeedai/DeepSpeed/pull/8460；https://github.com/deepspeedai/DeepSpeed/issues/8787
 - **关联**：var:TRN-0083
 
 ### TRN-0067 `resume_rebuilt_sampler_loses_epoch_seed` ms-swift resume 丢失 epoch 种子致样本重复与遗漏
@@ -3049,6 +3183,17 @@
 - **影响详情**：无 crash、无 warning，W&B 丢弃已提交 step 的后续 log：默认 log_freq=10 与 validator freq=10 下每次核心验证的指标都缺失，RL post-training 验证同样被吞，validation 面板为空或停在旧值。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/pytorch/torchtitan/pull/5227
+
+### TRN-0274 `msprof_silent_device_data_loss` msprof 偶发静默丢失 device 侧全部采集数据
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+
+- **原因对象**：观测/评测 / cann / msprof device 侧采集通道
+- **原因行为**：aclgraph+superkernel 负载下 profiling 通道初始化与图捕获/静态 kernel 编译存在时序竞态：device 侧 buffer 从不翻转刷盘，device CSV 不生成、trace 设备事件为 0。
+- **影响对象**：指标/日志（静默错误）
+- **影响详情**：约 13%（15 轮中 2 次）msprof 静默丢失 AI Core 全部数据：msprof 退出码 0、无任何报错、PROF 目录不完整；与负载迭代次数无关、同一命令连续 10 轮成功后仍可失败，呈间歇性。--delay 在图 capture 后开启时确定性完全无产出（#1099）。
+- **改进措施**：检测 采集后校验 op_summary/task_time CSV 存在性与 device flips 数（collection_device_0.log 中 0 device flips 与失败 100% 相关）。；修复 待定（issue open，未见修复 MR；#1099 确定性变体同开）
+- **来源**：https://gitcode.com/cann/runtime/issues/1098；https://gitcode.com/cann/runtime/issues/1099
 
 ## 配置/参数
 

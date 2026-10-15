@@ -4,7 +4,7 @@ slug: add_rms_norm_gamma_mul_order_overflow
 aliases: []
 title: Ascend 950 AddRmsNorm 先乘 gamma 致 FP32 溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-15'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

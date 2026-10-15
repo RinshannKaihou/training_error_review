@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 282 条；状态：active 269、pending_audit 13
+共 282 条；状态：active 282
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -237,7 +237,7 @@
 
 ### TRN-0271 `index_put_v2_stride_u32_overflow` IndexPutV2 大 stride 偏移 uint32 溢出写错地址
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / cann / IndexPutV2 偏移计算整型宽度
 - **原因行为**：非连续（大 stride）目标张量上索引偏移以 uint32 计算：idx×stride ≥ 2^32 时回绕，写入落到 (idx×stride) mod 2^32 的错误地址。
@@ -249,7 +249,7 @@
 
 ### TRN-0273 `fa_grad_sink_dsink_uninitialized` NPU FA 反向 sink 场景 dsink 工作区未清零致梯度爆炸
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / cann / FA 反向 dsink 工作区清零
 - **原因行为**：FlashAttentionScoreGrad 的 dsink 工作区仅在 IS_ATTEN_MASK 或 IS_TND 模板清零；causal 等稀疏无 mask 模式对应槽位永不写入，post 阶段累加读未初始化内存。
@@ -260,18 +260,18 @@
 
 ### TRN-0275 `aclnn_empty_input_early_return_unwritten` aclnn 空输入早退不写非空出参返回脏数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / cann / aclnn 空张量早退分支
-- **原因行为**：空输入×非空出参组合命中早退分支：置 workspaceSize=0 直接返回 ACLNN_SUCCESS，不建计算节点也不写出参；CheckShape 不约束出参空性随输入联动，该组合可合法通过校验。
-- **影响对象**：梯度；数值结果（静默错误）
+- **原因行为**：aclnn 两段式接口早退条件覆盖输入空×出参非空组合：不写出参即返回 ACLNN_SUCCESS；CheckShape 未绑定出参空性随输入联动。
+- **影响对象**：数值结果；梯度（不可复现）
 - **影响详情**：pad 系反向/UnfoldGrad 的 gradInput、Multinomial 的 out、MedianDim 输出、DynamicQuant 的 scaleOut 残留未初始化内存（实测哨兵/NaN），接口返回成功无报错。
 - **改进措施**：检测 出参预填哨兵值做 round-trip 校验；PyTorch 参考语义为空 grad_output 回全零，可对账。；修复 待定：同机理先例 ops-math #3360（aclnnCdistBackward）已闭环；本批 #3553/#3560/#6582/#6605 暂未见已合入修复（各 issue 关联 MR 状态未逐一核实）。
 - **来源**：https://gitcode.com/cann/ops-math/issues/3553；https://gitcode.com/cann/ops-math/issues/3560；https://gitcode.com/cann/ops-nn/issues/6582；https://gitcode.com/cann/ops-nn/issues/6605
 
 ### TRN-0276 `add_rms_norm_gamma_mul_order_overflow` Ascend 950 AddRmsNorm 先乘 gamma 致 FP32 溢出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / cann / AddRmsNorm trans 模板乘法顺序
 - **原因行为**：Ascend 950 regbase 的 AddRmsNorm/InplaceAddRmsNorm trans 模板按 (x1+x2)*gamma*rstd 计算，先乘 gamma 可使 FP32 中间结果提前超范围，输出 Inf。
@@ -282,7 +282,7 @@
 
 ### TRN-0279 `torch_npu_oob_index_silent_wrong` torch_npu 索引/损失算子越界输入静默错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / torch_npu / gather/scatter/CE 越界校验缺失
 - **原因行为**：torch_npu 对 gather/scatter/index_put/cross_entropy/nll_loss 缺 host 越界校验：越界读拿垃圾、越界写被丢弃，无异常；CPU/CUDA 会 raise。
@@ -293,7 +293,7 @@
 
 ### TRN-0282 `add_rms_norm_tiling_mode_bypass_silent` AddRmsNorm tiling 不拦 PRE/POST 模式静默算错越界
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：算子/内核 / cann / AddRmsNorm tiling 分派校验
 - **原因行为**：Ascend 950 regbase 仅支持普通模式，aclnn 层已拦截但 tiling 层分派时不校验 norm_key：绕过 aclnn 的路径（GE 直构/TTK 直调）传 PRE/POST 形态不被拒。
@@ -351,18 +351,18 @@
 
 ### TRN-0280 `triton_ascend_static_rnumel_miscompile` triton-ascend 常量特化 r-numel 致行 max 归约误编译
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：编译器 / triton / 归约轴长度编译期常量特化
-- **原因行为**：归约轴长度 r0_numel 被作为 ASTSource 级编译期常量烧入时，fused softmax 的行 max 归约被错误编译：同内核同配置下，常量特化与运行时传参两条路径二进制不同、数值结果不同。
+- **原因行为**：归约轴长度 r0_numel 被作为 ASTSource 级编译期常量烧入，导致 fused softmax（行 max+exp+sum 归约）内核误编译。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：triton_experimental 后端 torch.compile 下 SDPA+attn_mask（fp16）约 97% 元素错、5/5 确定性复现；常量路径 mismatch=11919/12288，运行时传参路径为 0。
+- **影响详情**：triton_experimental 后端 torch.compile 下 SDPA+attn_mask（fp16）约 97% 元素与 eager 不符，5/5 确定性复现；同内核同配置下，r0_numel 常量 96 烧入约 97% 错，运行时 i32 传参 mismatch=0/36864。
 - **改进措施**：检测 编译前后数值对账（eager vs compiled）；ASTSource constants 是否含 r0_numel 可静态检查。；修复 本源未修（triton-ascend 内部出错 pass 未定位）。临时规避：torch_npu 侧去掉静态 r-tree numel 的常量注入（codeg/triton.py），令 r0_numel 回到运行时 i32 传参，放弃 R0_BLOCK==rnumel 时消 r0_mask 边界检查的编译期收益，本源修复后应撤除。同文件 rsplit 组合核 constants:{r0_numel: total_cores} 疑似同型风险。
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2531；https://gitcode.com/Ascend/pytorch/issues/5366
 
 ### TRN-0281 `inductor_mod_eliminate_noncontig_reduction` torch_npu Inductor 取模消除错致非连续归约错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：编译器 / torch_npu / eliminate_modular 取模消除
 - **原因行为**：eliminate_modular 处理乘积时只用其中一个变量的长度判断取模是否多余：对 (7*r)%7 按 5%7==5 误判可消除，化简为 7*r（实际恒为 0），小归约展开后第一列 load 地址错误。
@@ -430,12 +430,12 @@
 
 ### TRN-0272 `d2h_dma_madvfree_page_reclaim` NPU D2H 拷贝不清 MADV_FREE 脏标记页被回收清零
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：运行时/执行 / torch_npu / aclrtMemcpy D2H 与分配器交互
 - **原因行为**：aclrtMemcpy DMA 写 CPU 内存不经 CPU MMU：不设 PTE_DIRTY、不清 MADV_FREE 标签；kswapd 视这些页为干净直接回收，数据清零。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：aarch64 + mimalloc v2.x（跨线程释放大 tensor 打 MADV_FREE 标签）时 npu_tensor.cpu() 间歇性变 0：MADV_PAGEOUT 复现 87.6% 元素清零，真实 kswapd 压力与 C 直调 100% 复现；NPU 侧原数据不含 0。
+- **影响详情**：aarch64+NPU+mimalloc2.x下npu_tensor.cpu()间歇性得0；内存压力回收MADV_FREE且DMA写过页；MIMALLOC_PURGE_DECOMMITS=0+madvise(MADV_PAGEOUT)秒级87.6%清零；真实kswapd需root；C直调100%复现
 - **改进措施**：检测 D2H 后校验和/CRC；复现脚本监测 LazyFree 页变化。；修复 上游未修。临时规避：用 torch.zeros+copy_ 替代 .cpu()（CPU memset 写入会清 MADV_FREE 标签）；修复建议为 DMA 后对目标页标脏。关联 PyTorch 上游同机制 issue：https://github.com/pytorch/pytorch/issues/200756
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5396；https://github.com/pytorch/pytorch/issues/200756
 
@@ -454,7 +454,7 @@
 
 ### TRN-0270 `ccu_allreduce_rank_slot_nondeterminism` CCU AllReduce 槽位随 rank 落位致跨卡归约不一致
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-10-15
 
 - **原因对象**：集合通信 / cann / CCU GroupReduce 归约槽位落位
 - **原因行为**：CCU 引擎 GroupReduce 将本卡输入固定垫底于 GO 内存末槽、远端按 rank 升序占槽 0..N-2，硬件按槽序归约：各卡浮点加法操作数序列随本卡 rank 漂移，同输入不同卡输出 bitwise 不一致。
@@ -466,7 +466,7 @@
 
 ### TRN-0277 `allgather_recursive_hd_peer_offset` AllGather Recursive HD 非 2 次幂接收偏移读错 peer
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：集合通信 / cann / AllGather Recursive HD 偶数
 - **原因行为**：GatherInPartOneToEven 偶数接收分支用本端 rank 而非 peerRank 计算接收切片与远端读取偏移；TransportP2p 接收端发起读时读错 peer 的输出切片并覆盖本端自己的切片。
@@ -1289,11 +1289,11 @@
 
 ### TRN-0278 `lora_ckpt_missing_moe_routing_rng` mindformers LoRA 续训 ckpt 漏存 MoE 路由态与 RNG
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：权重/检查点 / mindspore / LoRA ckpt 保存范围
 - **原因行为**：save_trainable_only 只存 LoRA A/B，漏存每步更新且影响下一步专家路由的 MoE expert_bias/tokens_per_expert，也不存各 rank RNG 状态。
-- **影响对象**：训练轨迹（不可复现）
+- **影响对象**：训练信号；训练轨迹（静默错误）
 - **影响详情**：8 卡 PyNative LoRA 微调第 40 步仅存 LoRA 参数与优化器后续训，第 41-50 步与连续训练不对齐：loss 最大绝对误差 3.89e-4，grad norm 最大绝对误差 0.0435、最大相对误差 27.4%；无报错。
 - **改进措施**：检测 断点续训与连续训练在重叠步做 loss/grad norm 对账；隔离实验分别恢复 RNG 与 MoE 状态定位偏差来源。；修复 修复 MR !8868（open）：LoRA trainable-only ckpt 追加 MoE expert_bias/tokens_per_expert，ckpt I/O 前按 rank 原子保存 RNG sidecar（加载优化器续训时恢复，老断点缺 sidecar 兼容告警）；修复后第 41-50 步 loss/grad norm 误差 0.0/0.0%。https://atomgit.com/mindspore/mindformers/merge_requests/8868
 - **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8868；https://gitcode.com/mindspore/org-issues/issues/43525
@@ -3186,12 +3186,12 @@
 
 ### TRN-0274 `msprof_silent_device_data_loss` msprof 偶发静默丢失 device 侧全部采集数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-15
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-15
 
 - **原因对象**：观测/评测 / cann / msprof device 侧采集通道
-- **原因行为**：aclgraph+superkernel 负载下 profiling 通道初始化与图捕获/静态 kernel 编译存在时序竞态：device 侧 buffer 从不翻转刷盘，device CSV 不生成、trace 设备事件为 0。
+- **原因行为**：aclgraph+superkernel负载下，msprof采集疑似因profiling通道初始化与图捕获/静态kernel编译时序竞态导致device侧数据完全丢失。
 - **影响对象**：指标/日志（静默错误）
-- **影响详情**：约 13%（15 轮中 2 次）msprof 静默丢失 AI Core 全部数据：msprof 退出码 0、无任何报错、PROF 目录不完整；与负载迭代次数无关、同一命令连续 10 轮成功后仍可失败，呈间歇性。--delay 在图 capture 后开启时确定性完全无产出（#1099）。
+- **影响详情**：msprof采集aclgraph+superkernel时约13%(15轮失败2次)device侧数据完全丢失：三个CSV不生成、trace设备kernel事件为0；host/AICPU正常、退出码0无报错。与迭代次数无关。--delay在图capture后开启则确定性完全无产出或空trace。
 - **改进措施**：检测 采集后校验 op_summary/task_time CSV 存在性与 device flips 数（collection_device_0.log 中 0 device flips 与失败 100% 相关）。；修复 待定（issue open，未见修复 MR；#1099 确定性变体同开）
 - **来源**：https://gitcode.com/cann/runtime/issues/1098；https://gitcode.com/cann/runtime/issues/1099
 

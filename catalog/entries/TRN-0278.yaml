@@ -4,7 +4,7 @@ slug: lora_ckpt_missing_moe_routing_rng
 aliases: []
 title: mindformers LoRA 续训 ckpt 漏存 MoE 路由态与 RNG
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -13,9 +13,10 @@ cause:
   behavior: save_trainable_only 只存 LoRA A/B，漏存每步更新且影响下一步专家路由的 MoE expert_bias/tokens_per_expert，也不存各 rank RNG 状态。
 effect:
   objects:
+  - 训练信号
   - 训练轨迹
   detail: 8 卡 PyNative LoRA 微调第 40 步仅存 LoRA 参数与优化器后续训，第 41-50 步与连续训练不对齐：loss 最大绝对误差 3.89e-4，grad norm 最大绝对误差 0.0435、最大相对误差 27.4%；无报错。
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 断点续训与连续训练在重叠步做 loss/grad norm 对账；隔离实验分别恢复 RNG 与 MoE 状态定位偏差来源。
   fix: 修复 MR !8868（open）：LoRA trainable-only ckpt 追加 MoE expert_bias/tokens_per_expert，ckpt I/O 前按 rank 原子保存 RNG sidecar（加载优化器续训时恢复，老断点缺 sidecar 兼容告警）；修复后第 41-50 步 loss/grad norm 误差 0.0/0.0%。https://atomgit.com/mindspore/mindformers/merge_requests/8868
@@ -57,3 +58,21 @@ migration:
   - date: '2026-10-15'
     fields:
     - cause
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 训练轨迹
+        to: 训练信号
+      visibility:
+        from: 不可复现
+        to: 静默错误

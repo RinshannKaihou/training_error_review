@@ -4,7 +4,7 @@ slug: d2h_dma_madvfree_page_reclaim
 aliases: []
 title: NPU D2H 拷贝不清 MADV_FREE 脏标记页被回收清零
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: aarch64 + mimalloc v2.x（跨线程释放大 tensor 打 MADV_FREE 标签）时 npu_tensor.cpu() 间歇性变 0：MADV_PAGEOUT 复现 87.6% 元素清零，真实 kswapd 压力与 C 直调 100% 复现；NPU 侧原数据不含 0。
+  detail: aarch64+NPU+mimalloc2.x下npu_tensor.cpu()间歇性得0；内存压力回收MADV_FREE且DMA写过页；MIMALLOC_PURGE_DECOMMITS=0+madvise(MADV_PAGEOUT)秒级87.6%清零；真实kswapd需root；C直调100%复现
   visibility: 静默错误
 mitigation:
   detect: D2H 后校验和/CRC；复现脚本监测 LazyFree 页变化。
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-15'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

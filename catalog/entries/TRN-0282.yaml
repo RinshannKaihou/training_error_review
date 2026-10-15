@@ -4,7 +4,7 @@ slug: add_rms_norm_tiling_mode_bypass_silent
 aliases: []
 title: AddRmsNorm tiling 不拦 PRE/POST 模式静默算错越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-15'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

@@ -1,0 +1,47 @@
+id: TRN-0296
+legacy_ids: []
+slug: conv3d_backprop_filter_uint_underflow_oob_write
+aliases: []
+title: conv3d 反向 uint 下溢回绕致 Fixpipe 越界写
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 算子/内核
+    stack: cann
+    component: baseNIter 无符号下溢
+  behavior: baseNIter 在 c1hkwk+head_<hwK_ 时 uint64 下溢回绕（≈2.05e18），j 循环越界写 L0C/GM；host 侧 3D DW L1 估算另有 int64→int32 截断致分支选路错误。
+effect:
+  objects:
+  - 数值结果
+  - 可用性/进度
+  detail: 3D 卷积反向在特定尾部块形状（tail 块元素数+head 小于 kernel 尺寸）下越界写 L0C/GM，内存损坏或崩溃；host 侧 3D DW L1 超限估算链路另有 int64→int32 截断使大 shape 分支选路错误。必现（950）。
+  visibility: 报错
+mitigation:
+  detect: conv3d 反向后校验输出与相邻内存；触发面为特定 tail 块形状组合。
+  fix: 修复 MR !12006（open）：复用 117-119 行条件保护写法替换 :182/:241 两处；host 侧 bl1MinSize/alignedVal/kl1Min/tempStrideH 统一 int64_t、最终比较统一 uint64_t。Ascend950 二级冒烟+本地验证通过。https://gitcode.com/cann/ops-nn/merge_requests/12006
+labels:
+  family: N/A
+  trigger: N/A
+  trigger_review: false
+  trigger_note: N/A
+  stage:
+  - shared
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-10-16'
+remarks: ''
+evidence:
+- url: https://gitcode.com/cann/ops-nn/issues/6706
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/merge_requests/12006
+  kind: gitcode_pr
+relations: []
+original:
+  mechanism: cann/ops-nn conv3d_backprop_filter_v2（Ascend 950，issue 报告必现）：kernel 侧 LoadL0c2GmBaseNUndividedNz2Nd / LoadL0c2GmBaseNUndividedNz2DHWCN（conv_bp_filter_sub_func_store_l0c.h :182/:241）baseNIter=Ceil(c1hkwk-(hwK_-head_),hwK_)+1 无保护，c1hkwk+head_<hwK_ 时 uint64 下溢回绕（示例 hwK_=9、c1hkwk=1、head_=0 → 1-9=2^64-8，baseNIter≈2.05×10^18），j 循环 srcOffset(:210/:273)/dstBaseNOffset(:217/:281) 线性增长越出 L0C/GM；同文件 :117-119 已有条件保护写法。host 侧 aclnn_convolution_backward.cpp CalcBl1MinSizeFor3DDw/IsExceedL1For3DDw（:173-243）多处 int64→int32 截断与 int32 乘法溢出、:242 int32 和 cast uint64 比较失真，大 shape 下 L1 超限分支选路错误。修复 MR !12006（open）：kernel 复用条件保护写法；host 统一 int64_t/uint64_t；Ascend950 二级冒烟+本地验证通过。
+  source: https://gitcode.com/cann/ops-nn/issues/6706 ；修复：https://gitcode.com/cann/ops-nn/merge_requests/12006
+  behavior: 3D 卷积（如视频/医学影像模型）反向传播在特定形状组合（tail 块 c1hkwk+head_<hwK_）下：Fixpipe 循环以天文数字次数越界写 L0C/GM 内存——表现为后续算子读到损坏数据、或直接设备崩溃，报错点与根因相距远；host 侧大 shape 时 L1 超限判断失真导致 tiling 分支选错，症状混杂。issue 标注必现（特定形状输入）。
+  discovery: 2026-10-16 每日扫描
+migration:
+  method: scan
+  scanned: '2026-10-16'

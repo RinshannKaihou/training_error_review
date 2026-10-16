@@ -4,7 +4,7 @@ slug: trl_torch_compile_chunked_loss_zero
 aliases: []
 title: trl torch<2.11 编译 chunked loss 全程 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -45,3 +45,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

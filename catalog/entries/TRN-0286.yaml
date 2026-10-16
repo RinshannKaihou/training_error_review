@@ -4,10 +4,10 @@ slug: zero2_overlap_comm_stream_race_nan_weights
 aliases: []
 title: DeepSpeed 0.18.5-9 ZeRO-2 overlap 竞态 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 重计算/卸载
+  - subsystem: 并行切分
     stack: deepspeed
     component: IPG bucket swap 前的双向流同步被删
   behavior: 'v0.18.5 起 PR #7805 删掉 IPG bucket swap 前的双向流同步，异步 reduce-scatter 在飞时 buffer 被回收复用；正解 record_stream v0.19.0 才合入。'
@@ -48,3 +48,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 重计算/卸载
+        to: 并行切分
+    uncertain:
+    - detail

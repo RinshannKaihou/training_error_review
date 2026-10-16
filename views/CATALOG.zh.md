@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 298 条；状态：active 282、pending_audit 16
+共 298 条；状态：active 298
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -12,7 +12,7 @@
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
 | 集合通信 | 3 |
-| 并行切分 | 20 |
+| 并行切分 | 21 |
 | 量化 | 7 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
@@ -22,7 +22,7 @@
 | 优化器 | 28 |
 | 损失计算 | 17 |
 | MoE路由 | 13 |
-| 重计算/卸载 | 12 |
+| 重计算/卸载 | 11 |
 | RL训练回路 | 59 |
 | 观测/评测 | 14 |
 | 配置/参数 | 3 |
@@ -306,7 +306,7 @@
 
 ### TRN-0283 `silu_grad_exp_intermediate_overflow_flag` SiluGrad 指数中间溢出置硬件溢出标志，AMP 持续跳过更新
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：算子/内核 / cann / SiluGrad sigmoid 实现的中间指数
 - **原因行为**：SiluGrad 各浮点及混合类型路径直接计算 exp(-x)，大负有限输入的中间指数超出 FP32 有限范围产生溢出并置硬件浮点状态；FP16/BF16 转 FP32 路径同样存在。
@@ -317,9 +317,9 @@
 
 ### TRN-0284 `matmulv3_mode4_uninit_k_tail_nan_pollution` MatMulV3 mode4 读同 stream 前序残留 NaN 污染输出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
-- **原因对象**：算子/内核 / cann / MatMulV3 TO_MUL K 尾部
+- **原因对象**：算子/内核 / cann / MatMulV3 A 尾部
 - **原因行为**：FORCE_GRP_ACC_FOR_FP32（mode4）下 A 的 K 尾部未被输入覆盖的加载区不初始化也不屏蔽，NaN×0=NaN 把残留 NaN 扩散进整块归约；mode0 不受影响。
 - **影响对象**：数值结果；训练轨迹（数值异常）
 - **影响详情**：输入矩阵全部有限且逐位不变时输出 16/16 NaN；训练中同 stream 任意前序 NaN fill 可让后续正常 matmul 间歇性全 NaN，随内存历史变化，难以稳定复现。
@@ -328,34 +328,34 @@
 
 ### TRN-0291 `hinge_loss_grad_boundary_gate_decay` HingeLossGrad hinge 边界附近正梯度被错误缩小
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：算子/内核 / cann / epsilon 平滑门函数
 - **原因行为**：kernel 把 margin>0 门函数实现为 (margin+|margin|)/(2*(|margin|+1e-7))，margin 为很小正数时系数<1，有效梯度被错误衰减；文档/注释/golden 均定义为严格阈值。
 - **影响对象**：梯度（静默错误）
-- **影响详情**：margin=5.96e-8 时输出 -0.37345 而定义值 -1（float32）；紧邻边界的样本梯度幅值被压低，可能改变训练更新；远离边界差异小。
+- **影响详情**：预测值紧邻 hinge 边界且 margin 为极小正数（如 5.96e-8）时，梯度幅值被静默压低，最严重约 0.37 倍，更新方向对但步长错；无报错无 NaN，边界样本学习偏慢、收敛质量受损；远离边界样本无差异。
 - **改进措施**：检测 对紧邻边界的 margin（nextafter(1,0) 等）构造梯度对照用例。；修复 issue 附完整修复方案（CompareScalar GT mask + Select、比较窗口 256 字节对齐、尾块 mask 置零；gen_data.py 边界三样本已验证、fix.patch git apply --check 通过、pre-commit 通过）；kernel 编译/运行与完整 UT 未跑，修复 MR 未关联（未见编号）。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6730
 
 ### TRN-0296 `conv3d_backprop_filter_uint_underflow_oob_write` conv3d 反向 uint 下溢回绕致 Fixpipe 越界写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：算子/内核 / cann / baseNIter 无符号下溢
 - **原因行为**：baseNIter 在 c1hkwk+head_<hwK_ 时 uint64 下溢回绕（≈2.05e18），j 循环越界写 L0C/GM；host 侧 3D DW L1 估算另有 int64→int32 截断致分支选路错误。
 - **影响对象**：数值结果；可用性/进度（报错）
-- **影响详情**：3D 卷积反向在特定尾部块形状（tail 块元素数+head 小于 kernel 尺寸）下越界写 L0C/GM，内存损坏或崩溃；host 侧 3D DW L1 超限估算链路另有 int64→int32 截断使大 shape 分支选路错误。必现（950）。
+- **影响详情**：Ascend 950 特定形状输入必现：3D 卷积反向 tail 块 c1hkwk+head_<hwK_ 时 Fixpipe 循环越界写 L0C/GM，后续算子读到损坏数据或设备崩溃，报错点远离根因；大 shape 下 host 侧 L1 超限判断失真致 tiling 分支选错，症状混杂。
 - **改进措施**：检测 conv3d 反向后校验输出与相邻内存；触发面为特定 tail 块形状组合。；修复 修复 MR !12006（open）：复用 117-119 行条件保护写法替换 :182/:241 两处；host 侧 bl1MinSize/alignedVal/kl1Min/tempStrideH 统一 int64_t、最终比较统一 uint64_t。Ascend950 二级冒烟+本地验证通过。https://gitcode.com/cann/ops-nn/merge_requests/12006
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6706；https://gitcode.com/cann/ops-nn/merge_requests/12006
 
 ### TRN-0297 `radix_top_k_ws_sync_missing_int64_overflow` RadixTopK WS 变体 V→MTE3 失同步与 int64 索引越界
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：算子/内核 / cann / radix_top_k WS 同步与索引
-- **原因行为**：V 写 tileTopK 后 MTE3 读同块 UB，同步缺失致 k 配额错乱；i64 索引生成下溢越出 buffer；跨核前缀和 int32 在 sortLen>2^31 溢出。UT 未测 int64 路径。
+- **原因行为**：V写tileTopK、MTE3读同块UB，原SToMTE3Sync覆盖不到V→MTE3，可读旧值；i64多段且tileNum_超UB上限，无符号下溢越出6144元素缓冲区；跨核前缀和可超2^31而累加器int32；UT未测int64主路径
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：sortLen>2^31 的 int64 大 shape topk（910B/910_93）输出 k 配额错乱、索引越界写或前缀和溢出错值；触发面为大 K/大 sortLen 的 MoE/采样路径。
+- **影响详情**：910B/910_93上，超大sortLen（>2^31，约21亿元素）的int64 topk（MoE大词表/超长序列采样）输出k配额错乱（少选/多选）、索引越界写破坏相邻内存或跨核前缀和溢出错值，均无报错；普通规模正常，仅int64大shape且K配额需末轮边界补齐时触发。
 - **改进措施**：检测 对 topk 输出做配额/去重校验；触发面为 sortLen>2^31 或 K 需末轮边界补齐的大 shape。；修复 修复 MR !6396（open WIP）：VToMTE3Sync 替换、CreateVecIndex4TopK 前置防御 return 0 走现算分支、ComputeCumSumPrev 统一 int64（UB/WS 共用基类）、static_assert 固化不变量、host UT 补 bit3 编码。https://gitcode.com/cann/ops-math/merge_requests/6396
 - **来源**：https://gitcode.com/cann/ops-math/issues/3604；https://gitcode.com/cann/ops-math/merge_requests/6396
 
@@ -431,7 +431,7 @@
 
 ### TRN-0287 `trl_torch_compile_chunked_loss_zero` trl torch<2.11 编译 chunked loss 全程 0
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：编译器 / trl / Inductor 变异张量分析失败
 - **原因行为**：#7600 把 kernel 标量参数 cast 成 fp32；torch<2.11 的 Inductor 以 constexpr/float 追踪无 .to() 可调→分析抛异常→按全变异假设生成错误图。
@@ -442,7 +442,7 @@
 
 ### TRN-0288 `torchair_autotune_dlclose_icache_stale` torchair autotune dlclose 致 icache 不一致
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：编译器 / cann / release 即时 dlclose
 - **原因行为**：autotune 选优后对落选 kernel .so 立即 dlclose 释放 HBM 代码段；落选 kernel 已执行、device 代码在 icache，芯片无一致性校验，地址被复用后 HBM 与 icache 代码不一致。
@@ -521,23 +521,23 @@
 
 ### TRN-0292 `megatron_gdn_graph_fla_tensor_cache_uaf` Megatron GDN 图回放读已释放 chunk 元数据致错值/越界
 
-`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：运行时/执行 / megatron-lm / FLA tensor_cache 元数据生命周期
 - **原因行为**：FLA 经 tensor_cache 构建 chunk 元数据：warmup 在捕获外算好，捕获命中缓存录下地址；后续图捕获逐出缓存项且无引用，存储归还池（106 个捕获元数据 98 个已释放），回放时把复用后的字节当索引用。
-- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响对象**：KV状态；数值结果；可用性/进度（静默错误）
 - **影响详情**：prefill/mixed 图回放非法内存访问崩溃（确定性，cu_seqlens[10 亿级]）；保活元数据后仍有静默面：h 状态缓冲按 dummy 布局分配，kernel 按活 cu_seqlens 循环越界写 h，512 次回放 52-61 次越界写进图池，无报错。
 - **改进措施**：检测 graph 回放后对 h 状态/输出做有限性与已知容量校验；compare-address 审计捕获张量是否已被池回收。；修复 待定（issue open 无评论；方向=捕获期间持有元数据引用（如 pool-external 持久分配）并按活 cu_seqlens 分配 h，未核实上游进展）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/8151
 
 ### TRN-0295 `ge_big_hbm_logic_addr_overlap_silent_corruption` GE 大 HBM 机型逻辑地址区间重叠致变量区被误判静默损坏
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：运行时/执行 / cann / GE 逻辑地址基址按 32GB 时代比例硬编码
 - **原因行为**：逻辑地址基址按 32GB 时代硬编码（FM 64GB/SVM 128GB/Var 128GB），HBM fm 区间按 26/32 比例增长（192GB 卡上限 156GB），GetRtAddress 反查内存类型时误判重叠。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：大 HBM 机型（192/256GB 单卡）上变量地址被误判为 fm 地址，产生静默数据损坏；训练/推理全图状态受影响，无报错。
+- **影响详情**：大HBM单卡192/256GB训练/推理，feature map用量越过旧边界>62GB或>126GB，或同图用Host SVM与变量时，变量地址被误判为fm地址，输出错值无报错；特定内存水位以上出现，小规模复现不出，非确定性。
 - **改进措施**：检测 大 HBM 卡上出现无法解释的内存类型相关错值时，检查各内存类型用量是否越过 62/126GB 旧区间边界。；修复 修复 MR !5414（open 未合入）：按 256GB 步长重划逻辑基址（Host FM 256GB、Host SVM 512GB、var 768GB），var 判定宽度优先用 OM 记录值，新增 HBM 区间上界断言；UT 39/39 等通过、需真机 CI 验证。https://gitcode.com/cann/ge/merge_requests/5414
 - **来源**：https://gitcode.com/cann/ge/merge_requests/5414
 
@@ -801,6 +801,17 @@
 - **影响详情**：GDN + TP>1 + SP 关时各 TP 副本只持部分和，out_norm 权重自第一步起确定性分叉并偏小（20 步 Adam 后两副本差 0.0039）；无 crash、无 NaN，下游 loss 无即时信号。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/7452；https://github.com/NVIDIA/Megatron-LM/pull/7613
+
+### TRN-0286 `zero2_overlap_comm_stream_race_nan_weights` DeepSpeed 0.18.5-9 ZeRO-2 overlap 竞态 NaN
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+
+- **原因对象**：并行切分 / deepspeed / IPG bucket swap 前的双向流同步被删
+- **原因行为**：v0.18.5 起 PR #7805 删掉 IPG bucket swap 前的双向流同步，异步 reduce-scatter 在飞时 buffer 被回收复用；正解 record_stream v0.19.0 才合入。
+- **影响对象**：梯度；模型权重；训练信号（数值异常）
+- **影响详情**：第 1 步 backward 梯度即 NaN；第 1 个 optimizer step 把 NaN 写进权重，第 2 步起 loss=0。grad_norm 恒 √2（NaN 范数被掩成 -1 后合并），伪值掩盖真实 NaN。
+- **改进措施**：检测 grad_norm 恒等于 √(param_group 数)（2 组即 √2）即可判定底层梯度 NaN；或第 2 步起 loss 塌 0。；修复 上游修复 PR #7965 已随 v0.19.0 发布（#8061/#8080 于 v0.19.3 补 torch.compile 多流 producer 场景）；规避：overlap_comm=false 或升级 deepspeed >= 0.19.3。ms-swift install_all.sh 的 "deepspeed<0.19" 约束会精确装进受影响窗口，issue 建议提升约束（open 未合）。https://github.com/deepspeedai/DeepSpeed/pull/7965
+- **来源**：https://github.com/modelscope/ms-swift/issues/10372；https://github.com/deepspeedai/DeepSpeed/pull/7965；https://github.com/deepspeedai/DeepSpeed/pull/7805
 
 ## 量化
 
@@ -1093,7 +1104,7 @@
 
 ### TRN-0294 `mindspeed_llm_mtp_dsa_indexer_layer_mapping` MindSpeed-LLM MTP 层 DSA indexer 层号映射错且静默
 
-`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：模型定义 / mindspeed-llm / MTP 层号到全局层元数据的映射
 - **原因行为**：MCore 对 MTP 层按预测深度从 1 编号而非接续 decoder 层号；MindSpeed-LLM 未传 is_mtp_layer，MTP 层映射到错误全局层元数据、错误参与 Compute/Share 分组。不抛异常。
@@ -1723,7 +1734,7 @@
 
 ### TRN-0290 `mswift_lazy_dataset_resume_fallback_divergence` ms-swift LazyLLMDataset resume 后超长替换样本选错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：数据管线 / ms-swift / LazyLLMDataset 替换游标
 - **原因行为**：LazyLLMDataset 用自建 _idx/_idx_list 游标选超长删除后的替换样本，_idx 为实例内部状态；resume 重建实例后 _idx 归零，跳过已消费行不复放此前的编码失败，后续替换选择与连续训练分叉。
@@ -1734,7 +1745,7 @@
 
 ### TRN-0293 `trl_diffusion_gemma_sliding_prefix_eviction` trl DiffusionGemma SFT 滑窗逐出被 mask 的前缀
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：数据管线 / trl / 示例 decoder mask 与滑窗缓存交互
 - **原因行为**：示例 compute_loss 先为 encoder AR co-loss 编码完整序列，再用 decoder mask 限制上下文到 prefix；native 滑窗缓存在 mask 生效前可能已把该 prefix 逐出。
@@ -2399,7 +2410,7 @@
 
 ### TRN-0285 `moe_fused_topk_mapping_oob_and_overlapping_views` MoeFusedTopk 映射数异常越界读、重叠视图未拦截
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：MoE路由 / cann / moe_fused_topk 映射偏移与输出校验
 - **原因行为**：开启专家映射时 kernel 以 mappingNum 原始值（无符号读取）作取模基数算映射表行内偏移，零/负/超表宽时偏移跨出本专家行读到其他专家映射项；host 不检查输出视图步长，内部元素重叠的 y/indices 视图被放行。
@@ -2532,17 +2543,6 @@
 - **影响详情**：默认配置、自管 dataloader 下无报错无日志，第 0 步选出的列沿用整个 run（40 步对照重选 1 次 vs 4 次），训练动态与配置语义背离；auto+整数 interval 组合在初始化期报错。既有 ZenFlow 测试都跑在这条错路径上，但只断言不 crash。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8456
-
-### TRN-0286 `zero2_overlap_comm_stream_race_nan_weights` DeepSpeed 0.18.5-9 ZeRO-2 overlap 竞态 NaN
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-16
-
-- **原因对象**：重计算/卸载 / deepspeed / IPG bucket swap 前的双向流同步被删
-- **原因行为**：v0.18.5 起 PR #7805 删掉 IPG bucket swap 前的双向流同步，异步 reduce-scatter 在飞时 buffer 被回收复用；正解 record_stream v0.19.0 才合入。
-- **影响对象**：梯度；模型权重；训练信号（数值异常）
-- **影响详情**：第 1 步 backward 梯度即 NaN；第 1 个 optimizer step 把 NaN 写进权重，第 2 步起 loss=0。grad_norm 恒 √2（NaN 范数被掩成 -1 后合并），伪值掩盖真实 NaN。
-- **改进措施**：检测 grad_norm 恒等于 √(param_group 数)（2 组即 √2）即可判定底层梯度 NaN；或第 2 步起 loss 塌 0。；修复 上游修复 PR #7965 已随 v0.19.0 发布（#8061/#8080 于 v0.19.3 补 torch.compile 多流 producer 场景）；规避：overlap_comm=false 或升级 deepspeed >= 0.19.3。ms-swift install_all.sh 的 "deepspeed<0.19" 约束会精确装进受影响窗口，issue 建议提升约束（open 未合）。https://github.com/deepspeedai/DeepSpeed/pull/7965
-- **来源**：https://github.com/modelscope/ms-swift/issues/10372；https://github.com/deepspeedai/DeepSpeed/pull/7965；https://github.com/deepspeedai/DeepSpeed/pull/7805
 
 ## RL训练回路
 
@@ -3195,7 +3195,7 @@
 
 ### TRN-0289 `verl_prime_reward_dict_keyerror_batch_zero` verl PrimeRewardManager dict 分数整批置 0
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：RL训练回路 / verl / dict 分数分支缺失
 - **原因行为**：PrimeRewardManager 缺少 dict 分支：reward 函数返回 dict 时抛 KeyError: 0，被 verify 的 except Exception 吞掉，整批奖励置 0.0。
@@ -3206,7 +3206,7 @@
 
 ### TRN-0298 `verl_prime_code_apps_taco_layout_zero_score` verl prime_code 对 APPS/TACO 布局静默 0 分
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-16
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-16
 
 - **原因对象**：RL训练回路 / verl / prime_code 测试布局解析
 - **原因行为**：default_compute_score 无 sandbox 回落 prime_code，call-based 路径按 JSON 行 .split 解析输入；APPS/TACO 测试是列表布局，.split 抛异常，未跑任何测试即记 0。

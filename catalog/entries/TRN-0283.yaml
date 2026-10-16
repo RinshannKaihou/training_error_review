@@ -4,7 +4,7 @@ slug: silu_grad_exp_intermediate_overflow_flag
 aliases: []
 title: SiluGrad 指数中间溢出置硬件溢出标志，AMP 持续跳过更新
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -45,3 +45,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

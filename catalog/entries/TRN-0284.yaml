@@ -4,12 +4,12 @@ slug: matmulv3_mode4_uninit_k_tail_nan_pollution
 aliases: []
 title: MatMulV3 mode4 读同 stream 前序残留 NaN 污染输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
-    component: MatMulV3 TO_MUL K 尾部
+    component: MatMulV3 A 尾部
   behavior: FORCE_GRP_ACC_FOR_FP32（mode4）下 A 的 K 尾部未被输入覆盖的加载区不初始化也不屏蔽，NaN×0=NaN 把残留 NaN 扩散进整块归约；mode0 不受影响。
 effect:
   objects:
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    issue_unfixed:
+    - detail
+    uncertain:
+    - behavior

@@ -4,7 +4,7 @@ slug: hinge_loss_grad_boundary_gate_decay
 aliases: []
 title: HingeLossGrad hinge 边界附近正梯度被错误缩小
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 梯度
-  detail: margin=5.96e-8 时输出 -0.37345 而定义值 -1（float32）；紧邻边界的样本梯度幅值被压低，可能改变训练更新；远离边界差异小。
+  detail: 预测值紧邻 hinge 边界且 margin 为极小正数（如 5.96e-8）时，梯度幅值被静默压低，最严重约 0.37 倍，更新方向对但步长错；无报错无 NaN，边界样本学习偏慢、收敛质量受损；远离边界样本无差异。
   visibility: 静默错误
 mitigation:
   detect: 对紧邻边界的 margin（nextafter(1,0) 等）构造梯度对照用例。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - title

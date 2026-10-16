@@ -4,7 +4,7 @@ slug: verl_prime_code_apps_taco_layout_zero_score
 aliases: []
 title: verl prime_code 对 APPS/TACO 布局静默 0 分
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

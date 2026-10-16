@@ -4,7 +4,7 @@ slug: torchair_autotune_dlclose_icache_stale
 aliases: []
 title: torchair autotune dlclose 致 icache 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -47,3 +47,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

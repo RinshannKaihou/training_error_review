@@ -4,7 +4,7 @@ slug: conv3d_backprop_filter_uint_underflow_oob_write
 aliases: []
 title: conv3d 反向 uint 下溢回绕致 Fixpipe 越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 3D 卷积反向在特定尾部块形状（tail 块元素数+head 小于 kernel 尺寸）下越界写 L0C/GM，内存损坏或崩溃；host 侧 3D DW L1 超限估算链路另有 int64→int32 截断使大 shape 分支选路错误。必现（950）。
+  detail: Ascend 950 特定形状输入必现：3D 卷积反向 tail 块 c1hkwk+head_<hwK_ 时 Fixpipe 循环越界写 L0C/GM，后续算子读到损坏数据或设备崩溃，报错点远离根因；大 shape 下 host 侧 L1 超限判断失真致 tiling 分支选错，症状混杂。
   visibility: 报错
 mitigation:
   detect: conv3d 反向后校验输出与相邻内存；触发面为特定 tail 块形状组合。
@@ -45,3 +45,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - visibility
+    - behavior

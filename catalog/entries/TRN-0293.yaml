@@ -4,7 +4,7 @@ slug: trl_diffusion_gemma_sliding_prefix_eviction
 aliases: []
 title: trl DiffusionGemma SFT 滑窗逐出被 mask 的前缀
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    - behavior

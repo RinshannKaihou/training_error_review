@@ -4,7 +4,7 @@ slug: ge_big_hbm_logic_addr_overlap_silent_corruption
 aliases: []
 title: GE 大 HBM 机型逻辑地址区间重叠致变量区被误判静默损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 大 HBM 机型（192/256GB 单卡）上变量地址被误判为 fm 地址，产生静默数据损坏；训练/推理全图状态受影响，无报错。
+  detail: 大HBM单卡192/256GB训练/推理，feature map用量越过旧边界>62GB或>126GB，或同图用Host SVM与变量时，变量地址被误判为fm地址，输出错值无报错；特定内存水位以上出现，小规模复现不出，非确定性。
   visibility: 静默错误
 mitigation:
   detect: 大 HBM 卡上出现无法解释的内存类型相关错值时，检查各内存类型用量是否越过 62/126GB 旧区间边界。
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-16
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

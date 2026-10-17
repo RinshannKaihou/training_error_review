@@ -4,7 +4,7 @@ slug: scatteraddwithsorted_fp32_missing_sync_stale_row
 aliases: []
 title: ScatterAddWithSorted FP32 缺向量同步偶发混入前行累加
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B3/CANN 9.1.0 上 FP32 行广播索引 scatter_add_（[256,3] 目标、[512,3] 源、索引 stride [1,0]）重复执行偶发输出与 CPU 参考不一致，首次差异轮次不固定，输入未变；无报错
+  detail: 910B3/CANN 9.1.0 上 FP32 scatter_add_ 使用行广播索引（由一维 expand 得 stride [1,0]）时，相同输入重复执行偶发输出与 CPU 参考不一致；首次差异轮次不固定，输入未变，无报错
   visibility: 不可复现
 mitigation:
   detect: 循环比对 NPU 输出与 CPU 参考（逐字节）；出错轮次不固定，单次校验不足
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

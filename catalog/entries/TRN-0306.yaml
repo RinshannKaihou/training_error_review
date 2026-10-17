@@ -4,7 +4,7 @@ slug: mswift_last_ckpt_symlink_shared_tmp_race
 aliases: []
 title: ms-swift last-checkpoint 符号链接共享 tmp 路径竞态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 模型权重
-  detail: 并发 checkpoint 保存（如多卡各自触发保存回调/训练与导出并发）时 last-checkpoint 符号链接指向错误的 checkpoint 目录、一个调用方报成功实际发布他人目标；resume 依赖该链接恢复到旧/错 checkpoint，无数值报错
+  detail: 并发 checkpoint 保存（如多进程训练各自更新 last-checkpoint，或保存与导出重叠）时，训练完成后 last-checkpoint 链接可能指向另一个（旧的或别人的）checkpoint 目录，且一个调用方收到成功返回；按该链接恢复训练会静默加载错检查点，无任何报错。
   visibility: 静默错误
 mitigation:
   detect: 发布后 readlink 校验目标等于自身 checkpoint 名；并发保存时对链接做轮询比对
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

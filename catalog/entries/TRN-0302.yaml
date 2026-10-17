@@ -4,17 +4,17 @@ slug: conv3d_dx_enlarge_partial_tail_oob_read
 aliases: []
 title: Conv3D 反向 enlarge 尾组越界读致尾通道系统性错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: Conv3D dx ENLARGE tiling
-  behavior: multiple_extend 不整除 groups 产生不完整尾放大组，尾组 K 轴 c0 对齐后 GEMM K 迭代越界读 dedy 外内存，输出依赖相邻内存内容；尾块 % 取余还会把有效列数置 0 漏算
+  behavior: ENLARGE下multiple_extend不整除groups产生不完整尾放大组，尾组K轴C0对齐后A矩阵加载越界读dedy外内存；tailN为singleShapeN_正整数倍时%取余把尾组最后N块有效列数误置0致漏算
 effect:
   objects:
   - 梯度
-  detail: Ascend950 bf16 转置卷积（groups=24、enlarge=16 不整除，典型 strideW=8 规格）输出通道 96-143 全错、0-95 全对，10/10 种子稳定复现；enlarge 整除时不受影响；无报错
+  detail: Ascend950分组转置卷积反向，groups不被enlarge整除（如24/16）时梯度输出尾放大组对应通道96-143系统性错误，原失败规格10/10随机种子33.3%元素超差，其余通道正确；相邻内存恰为零侥幸正确、脏数据则错，无crash、无告警
   visibility: 静默错误
 mitigation:
   detect: 按输出通道分组比对梯度（尾放大组通道整体超差是签名）；比对相邻内存清零与否会翻转结果的即为数据依赖错
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - effect

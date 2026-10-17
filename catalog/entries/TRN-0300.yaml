@@ -4,17 +4,17 @@ slug: ragged_bincount_deterministic_switch_ignored
 aliases: []
 title: RaggedBinCount 显式确定性开关未生效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: RaggedBinCount 确定性 tiling
-  behavior: host tiling 未消费 GE 确定性选项：非二值加权开 ge.deterministic=1 后仍走浮点 atomic 累加，同输入多次执行输出位模式不同
+  behavior: host tiling 未消费 GE 确定性选项：非二值加权场景显式开启 ge.deterministic=1 后仍可能走浮点 atomic 累加。
 effect:
   objects:
   - 数值结果
-  detail: Ascend950PR_9579/CANN 9.3.0 非二值 FP32 权重 RaggedBinCount（如 1 bin × 4030 万 value）开确定性后重复执行输出 MD5 仍不同（基线 3 次复测不一致）
+  detail: Ascend 950 非二值加权 RaggedBinCount 显式开启 ge.deterministic=1 后，本地以同一冻结输入重复执行，输出位模式仍不同（3 次 MD5 不一致），无报错。
   visibility: 不可复现
 mitigation:
   detect: 冻结输入重复执行 3+ 次比较输出 MD5；GEIR 显式 --pc=1 --dl=1
@@ -44,3 +44,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior
+    - detail

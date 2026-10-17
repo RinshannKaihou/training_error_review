@@ -4,13 +4,13 @@ slug: foreach_list_pair_tiling_x2_unvalidated
 aliases: []
 title: arch35 foreach 二元 list tiling 不校验 x2 列表
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: foreach list tiling
-  behavior: arch35 foreach 二元 list tiling 只校验 x1 列表，tensorCount/offsets 全按 x1 算；kernel 拿 x1 偏移与 dtype 索引 x2，x2 不匹配时越界访存或静默错值
+  behavior: arch35 foreach 二元 list tiling 仅按 x1 求取 tensorCount、偏移、totalElements，未获取 x2 信息；kernel 用 x1 偏移/dtype 索引 x2。
 effect:
   objects:
   - 数值结果
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

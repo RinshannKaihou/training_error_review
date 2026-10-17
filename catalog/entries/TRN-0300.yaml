@@ -1,0 +1,46 @@
+id: TRN-0300
+legacy_ids: []
+slug: ragged_bincount_deterministic_switch_ignored
+aliases: []
+title: RaggedBinCount 显式确定性开关未生效
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 算子/内核
+    stack: cann
+    component: RaggedBinCount 确定性 tiling
+  behavior: host tiling 未消费 GE 确定性选项：非二值加权开 ge.deterministic=1 后仍走浮点 atomic 累加，同输入多次执行输出位模式不同
+effect:
+  objects:
+  - 数值结果
+  detail: Ascend950PR_9579/CANN 9.3.0 非二值 FP32 权重 RaggedBinCount（如 1 bin × 4030 万 value）开确定性后重复执行输出 MD5 仍不同（基线 3 次复测不一致）
+  visibility: 不可复现
+mitigation:
+  detect: 冻结输入重复执行 3+ 次比较输出 MD5；GEIR 显式 --pc=1 --dl=1
+  fix: '修复 MR !6428（open，多轮受测）：非二值输出加确定性 key 8/9，固定线程扫描/固定分块固定顺序合并/有界精确整数直方图+RNE 舍入；本地冻结输入各 10 次 MD5 一致、A100 三方 200/200、ST36；线上 CI 仍在跑（run5154 ABI 问题已修）。issue #3626 附完整回归账本。https://gitcode.com/cann/ops-math/merge_requests/6428'
+labels:
+  family: N/A
+  trigger: hw_specific
+  trigger_review: false
+  trigger_note: Ascend950PR_9579（56 AIV）；CANN 9.3.0 weekly.20260923；非二值（加权 FP32）输出 + 显式 ge.deterministic=1；源码基线 2195fa02 / 97de49ad
+  stage:
+  - shared
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-10-17'
+remarks: ''
+evidence:
+- url: https://gitcode.com/cann/ops-math/issues/3626
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-math/merge_requests/6428
+  kind: gitcode_pr
+relations: []
+original:
+  mechanism: 'cann/ops-math issue #3626 + MR !6428（2026-10-16）。Ascend 950 RaggedBinCount host tiling 未消费 GE 确定性选项：非二值加权场景显式开启 ge.deterministic=1 后仍可能走浮点 atomic 累加，同一输入多次执行输出位模式不同（本地冻结输入 SHA256 核验后源码基线 3 次 MD5 不一致；应用修复 PR 后两条冻结用例各 10 次 MD5 一致）。原始反馈来自 wangyueting/changwei_sunyibo/issues/5（无现场 SHA/seed/冻结输入，本地以相同输入验证，不等同现场逐字节复现）。issue 内附最终回归更新：受测提交 d6656c0，A100 三方默认/确定性各 100 条 200/200 通过、回归 3189 条次、插桩越界/竞争 90 次无错误；后续 PR 范围调整（撤销 README）与 Host UT ABI 兼容修复（73e9d70）均如实分账，线上 CI 已启动未完结。默认模式浮点归约允许不同累加顺序是预期行为；本条收录的是显式确定性请求未满足。'
+  source: https://gitcode.com/cann/ops-math/issues/3626 （关联修复 https://gitcode.com/cann/ops-math/merge_requests/6428 ）
+  behavior: 在 950 上跑非二值加权的 RaggedBinCount 并显式要求确定性输出（ge.deterministic=1），重复执行同一段冻结输入，bin 计数结果的字节级 MD5 仍会变——用户以为开了确定性做数值对拍/复现调试，实际两次运行的浮点累加顺序依旧不同。无报错；不开确定性时这属于预期，开了仍不一致即为开关失效。
+  discovery: 2026-10-17 每日扫描
+migration:
+  method: scan
+  scanned: '2026-10-17'

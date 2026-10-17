@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 298 条；状态：active 298
+共 308 条；状态：active 298、pending_audit 10
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 20 |
+| 算子/内核 | 25 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
-| 集合通信 | 3 |
+| 集合通信 | 4 |
 | 并行切分 | 21 |
 | 量化 | 7 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
 | 模型定义 | 7 |
-| 权重/检查点 | 27 |
+| 权重/检查点 | 28 |
 | 数据管线 | 29 |
 | 优化器 | 28 |
-| 损失计算 | 17 |
+| 损失计算 | 18 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 11 |
 | RL训练回路 | 59 |
-| 观测/评测 | 14 |
-| 配置/参数 | 3 |
+| 观测/评测 | 15 |
+| 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
 
@@ -345,7 +345,7 @@
 - **原因行为**：baseNIter 在 c1hkwk+head_<hwK_ 时 uint64 下溢回绕（≈2.05e18），j 循环越界写 L0C/GM；host 侧 3D DW L1 估算另有 int64→int32 截断致分支选路错误。
 - **影响对象**：数值结果；可用性/进度（报错）
 - **影响详情**：Ascend 950 特定形状输入必现：3D 卷积反向 tail 块 c1hkwk+head_<hwK_ 时 Fixpipe 循环越界写 L0C/GM，后续算子读到损坏数据或设备崩溃，报错点远离根因；大 shape 下 host 侧 L1 超限判断失真致 tiling 分支选错，症状混杂。
-- **改进措施**：检测 conv3d 反向后校验输出与相邻内存；触发面为特定 tail 块形状组合。；修复 修复 MR !12006（open）：复用 117-119 行条件保护写法替换 :182/:241 两处；host 侧 bl1MinSize/alignedVal/kl1Min/tempStrideH 统一 int64_t、最终比较统一 uint64_t。Ascend950 二级冒烟+本地验证通过。https://gitcode.com/cann/ops-nn/merge_requests/12006
+- **改进措施**：检测 conv3d 反向后校验输出与相邻内存；触发面为特定 tail 块形状组合。；修复 修复 MR !12006 状态 closed（2026-10-16 关闭，非 merged，原因未核实；issue #6706 仍 open）：复用 117-119 行条件保护写法替换 :182/:241 两处；host 侧统一 int64_t/uint64_t。https://gitcode.com/cann/ops-nn/merge_requests/12006
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6706；https://gitcode.com/cann/ops-nn/merge_requests/12006
 
 ### TRN-0297 `radix_top_k_ws_sync_missing_int64_overflow` RadixTopK WS 变体 V→MTE3 失同步与 int64 索引越界
@@ -356,8 +356,63 @@
 - **原因行为**：V写tileTopK、MTE3读同块UB，原SToMTE3Sync覆盖不到V→MTE3，可读旧值；i64多段且tileNum_超UB上限，无符号下溢越出6144元素缓冲区；跨核前缀和可超2^31而累加器int32；UT未测int64主路径
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：910B/910_93上，超大sortLen（>2^31，约21亿元素）的int64 topk（MoE大词表/超长序列采样）输出k配额错乱（少选/多选）、索引越界写破坏相邻内存或跨核前缀和溢出错值，均无报错；普通规模正常，仅int64大shape且K配额需末轮边界补齐时触发。
-- **改进措施**：检测 对 topk 输出做配额/去重校验；触发面为 sortLen>2^31 或 K 需末轮边界补齐的大 shape。；修复 修复 MR !6396（open WIP）：VToMTE3Sync 替换、CreateVecIndex4TopK 前置防御 return 0 走现算分支、ComputeCumSumPrev 统一 int64（UB/WS 共用基类）、static_assert 固化不变量、host UT 补 bit3 编码。https://gitcode.com/cann/ops-math/merge_requests/6396
+- **改进措施**：检测 对 topk 输出做配额/去重校验；触发面为 sortLen>2^31 或 K 需末轮边界补齐的大 shape。；修复 修复 MR !6396 已 merged（2026-10-16，批次快照核实）；issue #3604 已 closed。VToMTE3Sync 替换、CreateVecIndex4TopK 前置防御、ComputeCumSumPrev 统一 int64、static_assert、host UT 补 bit3 编码。https://gitcode.com/cann/ops-math/merge_requests/6396
 - **来源**：https://gitcode.com/cann/ops-math/issues/3604；https://gitcode.com/cann/ops-math/merge_requests/6396
+
+### TRN-0300 `ragged_bincount_deterministic_switch_ignored` RaggedBinCount 显式确定性开关未生效
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：算子/内核 / cann / RaggedBinCount 确定性 tiling
+- **原因行为**：host tiling 未消费 GE 确定性选项：非二值加权开 ge.deterministic=1 后仍走浮点 atomic 累加，同输入多次执行输出位模式不同
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：Ascend950PR_9579/CANN 9.3.0 非二值 FP32 权重 RaggedBinCount（如 1 bin × 4030 万 value）开确定性后重复执行输出 MD5 仍不同（基线 3 次复测不一致）
+- **改进措施**：检测 冻结输入重复执行 3+ 次比较输出 MD5；GEIR 显式 --pc=1 --dl=1；修复 修复 MR !6428（open，多轮受测）：非二值输出加确定性 key 8/9，固定线程扫描/固定分块固定顺序合并/有界精确整数直方图+RNE 舍入；本地冻结输入各 10 次 MD5 一致、A100 三方 200/200、ST36；线上 CI 仍在跑（run5154 ABI 问题已修）。issue #3626 附完整回归账本。https://gitcode.com/cann/ops-math/merge_requests/6428
+- **来源**：https://gitcode.com/cann/ops-math/issues/3626；https://gitcode.com/cann/ops-math/merge_requests/6428
+
+### TRN-0301 `scatteraddwithsorted_fp32_missing_sync_stale_row` ScatterAddWithSorted FP32 缺向量同步偶发混入前行累加
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：算子/内核 / cann / ScatterAddWithSorted FP32
+- **原因行为**：FP32 路径初始化累加缓存后缺少向量流水同步，当前行可读到前一行残留值，相同输入重复执行 scatter_add_ 偶发错果
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：910B3/CANN 9.1.0 上 FP32 行广播索引 scatter_add_（[256,3] 目标、[512,3] 源、索引 stride [1,0]）重复执行偶发输出与 CPU 参考不一致，首次差异轮次不固定，输入未变；无报错
+- **改进措施**：检测 循环比对 NPU 输出与 CPU 参考（逐字节）；出错轮次不固定，单次校验不足；修复 待定（issue open；报告者按上游 commit 8ce9e83 头文件比对定位到 FP32 路径缺同步，修复未提交）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6782
+
+### TRN-0302 `conv3d_dx_enlarge_partial_tail_oob_read` Conv3D 反向 enlarge 尾组越界读致尾通道系统性错
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：算子/内核 / cann / Conv3D dx ENLARGE tiling
+- **原因行为**：multiple_extend 不整除 groups 产生不完整尾放大组，尾组 K 轴 c0 对齐后 GEMM K 迭代越界读 dedy 外内存，输出依赖相邻内存内容；尾块 % 取余还会把有效列数置 0 漏算
+- **影响对象**：梯度（静默错误）
+- **影响详情**：Ascend950 bf16 转置卷积（groups=24、enlarge=16 不整除，典型 strideW=8 规格）输出通道 96-143 全错、0-95 全对，10/10 种子稳定复现；enlarge 整除时不受影响；无报错
+- **改进措施**：检测 按输出通道分组比对梯度（尾放大组通道整体超差是签名）；比对相邻内存清零与否会翻转结果的即为数据依赖错；修复 修复 MR !12064（open）：CalRealG 在 enlarge 不整除 groups 时回退 multiple_extend=1（ORIGIN 分组，无尾放大组）；CalBasicBlockCnt 尾块改减法式。实机 10/10 种子由 33.3% 元素超差转 bit-exact，11 例结构变体通过。https://gitcode.com/cann/ops-nn/merge_requests/12064
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12064
+
+### TRN-0303 `conv3d_dx_vec_fp32_refactor_precision_regression` Conv3D 反向 vec FP32 行计算重构后精度回归
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：算子/内核 / cann / Conv3D dx vec FP32 行累加
+- **原因行为**：9.2.0 为消行数告警把 FP32 专用 ComputeRowBf16Vec 合并进共享函数并改运行期分支+三元缓冲选择，FP32 行累加路径被破坏
+- **影响对象**：梯度（静默错误）
+- **影响详情**：Ascend910B 上 FP32 NCDHW dx 用例最大绝对误差达 4.03e7~6.95e8（A_max）/1.68e5~6.21e5（A_rms），如 dx[1,7,32,32,256]/w[7,1,9,9,9]/p4 g7 规格整体梯度错误；bf16 不受影响；无报错，判例靠精度比对
+- **改进措施**：检测 FP32 conv3d 反向用例 A_max/A_rms 比对（回归用例矩阵在 PR 内）；CI ST 白名单不含本算子（仅 mat_mul_v3/batch_mat_mul_v3），门禁测不到；修复 修复 MR !12084（open）：恢复 FP32 独立函数与显式分派（与整改前逐字一致），行数目标靠搬文件不改逻辑；修复后 3 例由 2.34e7/4.03e7/6.95e8 降到 0.04/0.02/1.56，14/145/169 判否转通过、213 例逐位不变、16 个内核 .o 与直接回退版逐字节一致。https://gitcode.com/cann/ops-nn/merge_requests/12084
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12084
+
+### TRN-0305 `foreach_list_pair_tiling_x2_unvalidated` arch35 foreach 二元 list tiling 不校验 x2 列表
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：算子/内核 / cann / foreach list tiling
+- **原因行为**：arch35 foreach 二元 list tiling 只校验 x1 列表，tensorCount/offsets 全按 x1 算；kernel 拿 x1 偏移与 dtype 索引 x2，x2 不匹配时越界访存或静默错值
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：图模式下 x2 列表与 x1 不匹配（长度短、tensor 小、dtype 不同）的 foreach 二元算子越界访存或结果静默错误，tiling 层无 GRAPH_FAILED 拦截（arch22 与 aclnn 入口均有校验）
+- **改进措施**：检测 调用前自检两个张量列表逐项长度/dtype/shape 一致（框架层）；tiling 层无拦截；修复 修复 MR !12121（open）：共享 validator 新增 ValidateTensorListPair 一次性校验实例个数、逐 tensor dtype 与 storage shape，六个算子 arch35 tiling 接入并补失败/匹配四类单测；本机无昇腾工具链，host UT 未跑（-fsyntax-only 语法检查过），以仓库 CI 为准。https://gitcode.com/cann/ops-nn/merge_requests/12121
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6781；https://gitcode.com/cann/ops-nn/merge_requests/12121
 
 ## 编译器
 
@@ -576,6 +631,17 @@
 - **影响详情**：Recursive HD、非 2 次幂 rank 数（3/5/6/7）、接收端发起读的 P2P/HCCS 链路时 AllGather 输出数据缺失或来源错误；RoCE 路径因发送端写正确切片而掩盖。修复前 HCCS 8 个组合全报内存语义错误。
 - **改进措施**：检测 仓库 ST 算法检查器（Checker::Check 内存/数据来源语义校验，DEV_TYPE_910B）；AllGather 结果与参考布局对账。；修复 修复 MR !6017/!6018（open）：偶数接收分支三处 rank→peerRank（本端接收切片、日志偏移、ExecuteRxSync 远端源偏移），并补 HCCS/RoCE ST 回归。https://gitcode.com/cann/hcomm/merge_requests/6017
 - **来源**：https://gitcode.com/cann/hcomm/issues/1046；https://gitcode.com/cann/hcomm/merge_requests/6017；https://gitcode.com/cann/hcomm/merge_requests/6018
+
+### TRN-0299 `hccl_single_rank_v_op_displacement_ignored` HCCL 单 rank 路径 V 算子忽略位移错位读写
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：集合通信 / cann / SingleRankProc 单 rank 拷贝
+- **原因行为**：单 rank 分支对 AllGatherV/ReduceScatterV/AlltoAllV 只按 count 拷贝、直接用原始地址，未应用 displacement，拷贝成功不报错但结果不符算子语义
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：单 rank 调带非零位移的 V 算子时数据写到错误下标（如 recvDispls={3} 实写到 0、1）或读错片段；缓冲区足够、拷贝成功、无报错，仅数值与语义不符
+- **改进措施**：检测 单 rank 单测覆盖三个 V 算子的非零位移用例并检查未涉及区域不变；现有测试未覆盖该组合；修复 待定（issue open，建议按算子类型计算有效源/目的地址后再同址判断与本地拷贝，并补三个 V 算子单 rank 非零位移回归；源码逻辑分析定位，无修复 MR）
+- **来源**：https://gitcode.com/cann/hccl/issues/827
 
 ## 并行切分
 
@@ -1374,7 +1440,7 @@
 - **影响对象**：模型权重；训练轨迹（静默错误）
 - **影响详情**：DPO LoRA 25 步 loss 钉在 0.6931=ln(2)、模型行为不变；SFT 场景只训了约 7% 的层，loss 会降但远弱于预期，曲线上无法区分。全程无 crash、无 warning，复制官方示例即触发。
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/huggingface/trl/issues/6773
+- **来源**：https://github.com/huggingface/trl/issues/6773；https://github.com/huggingface/trl/issues/7765
 
 ### TRN-0193 `teacher_model_rebuilt_fp32_default_attn_mismatch` trl SDFT/SDPO teacher 回落 fp32 与默认 attn
 
@@ -1421,6 +1487,17 @@
 - **影响详情**：8 卡 PyNative LoRA 微调第 40 步仅存 LoRA 参数与优化器后续训，第 41-50 步与连续训练不对齐：loss 最大绝对误差 3.89e-4，grad norm 最大绝对误差 0.0435、最大相对误差 27.4%；无报错。
 - **改进措施**：检测 断点续训与连续训练在重叠步做 loss/grad norm 对账；隔离实验分别恢复 RNG 与 MoE 状态定位偏差来源。；修复 修复 MR !8868（open）：LoRA trainable-only ckpt 追加 MoE expert_bias/tokens_per_expert，ckpt I/O 前按 rank 原子保存 RNG sidecar（加载优化器续训时恢复，老断点缺 sidecar 兼容告警）；修复后第 41-50 步 loss/grad norm 误差 0.0/0.0%。https://atomgit.com/mindspore/mindformers/merge_requests/8868
 - **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8868；https://gitcode.com/mindspore/org-issues/issues/43525
+
+### TRN-0306 `mswift_last_ckpt_symlink_shared_tmp_race` ms-swift last-checkpoint 符号链接共享 tmp 路径竞态
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：权重/检查点 / ms-swift / last-checkpoint 符号链接更新
+- **原因行为**：update_last_checkpoint_symlink 用固定暂存路径 last-checkpoint.tmp：并发保存回调互删对方暂存链接，os.replace 后发布别人的目标且返回成功，另一方丢暂存链接
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：并发 checkpoint 保存（如多卡各自触发保存回调/训练与导出并发）时 last-checkpoint 符号链接指向错误的 checkpoint 目录、一个调用方报成功实际发布他人目标；resume 依赖该链接恢复到旧/错 checkpoint，无数值报错
+- **改进措施**：检测 发布后 readlink 校验目标等于自身 checkpoint 名；并发保存时对链接做轮询比对；修复 待定（issue open：给出确定性双线程 barrier 复现与修复方向——每次更新用唯一暂存名（如 mkstemp 风格/pid 后缀）；swift 侧修复 PR 未见）
+- **来源**：https://github.com/modelscope/ms-swift/issues/10336
 
 ## 数据管线
 
@@ -2271,6 +2348,18 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/huggingface/trl/issues/6807；https://github.com/huggingface/trl/issues/6808；https://github.com/huggingface/trl/issues/7009；https://github.com/huggingface/trl/pull/7038；https://github.com/huggingface/trl/pull/7062；https://github.com/huggingface/trl/issues/7270
 - **关联**：var:TRN-0055
+
+### TRN-0307 `mindformers_per_token_loss_degenerate_to_per_microbatch` mindformers per-token loss 等价退化
+
+`故障` · `pending_audit` · `hw_specific` · `pretrain；sft` · `documented` · `var` · 发现 2026-10-17
+
+- **原因对象**：损失计算 / cann / _extract_model_loss 归一
+- **原因行为**：崩溃修复把 (numerator, denominator) 当场相除还原标量 loss，数值与开关关闭完全等价：每个 micro-batch 仍按自身 token 数归一，per-token 语义丢失
+- **影响对象**：训练信号；梯度（静默错误）
+- **影响详情**：mindformers pynative（!8656 已入 r2.1.0-beta1、!8655 master open）开 calculate_per_token_loss 后 loss 行为与关闭完全等价、随 micro 分组/dp 切法变化，全局 per-token 归一未发生
+- **改进措施**：检测 改变 micro-batch 大小/dp 切分对比 loss 是否漂移（等价退化即暴露）；8 卡对拍静态图基线（开关两态各自对基线偏差一致才中性）；修复 修复 MR !8875（open，Fixes #2509）：micro-batch 累加未归一 token-loss 与 token 数、每优化器步全局归约 (numerator, denominator) 后按平均 token 数缩放梯度（对齐 Megatron finalize_model_grads），MoE aux loss 接入配置、indexer loss 保持求和、MTP chunk 分支同语义；8 卡七组并行矩阵与静态图基线对拍中性。https://atomgit.com/mindspore/mindformers/merge_requests/8875
+- **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8875
+- **关联**：var:TRN-0175
 
 ## MoE路由
 
@@ -3374,6 +3463,17 @@
 - **改进措施**：检测 采集后校验 op_summary/task_time CSV 存在性与 device flips 数（collection_device_0.log 中 0 device flips 与失败 100% 相关）。；修复 待定（issue open，未见修复 MR；#1099 确定性变体同开）
 - **来源**：https://gitcode.com/cann/runtime/issues/1098；https://gitcode.com/cann/runtime/issues/1099
 
+### TRN-0304 `torchair_benchmark_check_recompile_false_negative` torchair benchmark --check 校验别的 kernel
+
+`故障` · `pending_audit` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：观测/评测 / cann / benchmark.py --check 精度校验
+- **原因行为**：--check 把 eager_fn 片段重交 torch.compile，重编 kernel 与整网 kernel 不同构（kernel 数与 md5 不同），校验通过不代表整网 kernel 正确
+- **影响对象**：测试判定（静默错误）
+- **影响详情**：结构校验假阴性：整网 kernel 在 CANN 0923 上实测产生 23% NaN 导致训练 grad_norm=nan，同一 kernel 的 benchmark.py --check 却报 Precision check passed（CosineSim=1.0）；校验工具给出错误通过结论
+- **改进措施**：检测 对 --check 结果保持怀疑：对比 TORCH_COMPILE_DEBUG=1 下整网与重编产物 kernel 目录数量与 md5（整网 1 个 vs 重编 2 个即暴露）；以固定 commit 源码核对 asc_graph.py 重复链；修复 待定（issue open；已给出直观对比与根因分析（整网 kernel 重复子计算 vs 片段逻辑语义），尚无修复 MR）
+- **来源**：https://gitcode.com/Ascend/torchair/issues/870
+
 ## 配置/参数
 
 ### TRN-0024 `training_args_env_leak_sticky_bf16_precision` TrainingArguments 环境变量泄漏使 fp32 配置沿用 bf16
@@ -3410,6 +3510,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/verl-project/verl/issues/8076
 - **关联**：var:TRN-0245
+
+### TRN-0308 `mindspeed_msswift_fsdp_decoupled_grad_mapping_missing` ms-swift Megatron-FSDP 精度优化器梯度静默丢失
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+
+- **原因对象**：配置/参数 / ms-swift / DDPConfig 同名拷贝构造
+- **原因行为**：swift 同名字段拷贝构造 DDPConfig，漏掉 use_precision_aware_optimizer→megatron_fsdp_use_decoupled_grad 映射，FusedAdam 跳过无梯度参数且不报错
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：Megatron-FSDP v1 + use_precision_aware_optimizer=True（MCore 0.19.x）出现零梯度范数、参数不更新；训练继续跑、无报错，官方 Megatron-LM 入口同配置正常，swift 封装下静默失效
+- **改进措施**：检测 开启精度优化器时核对 megatron_fsdp_use_decoupled_grad 实际取值；观察 grad_norm 是否恒 0/参数指纹不变；修复 待定（issue open：最小示例已隔离 swift 配置构造缺陷，期望按官方入口把 decoupled-gradient 跟随 use_precision_aware_optimizer；swift 侧修复未提交）
+- **来源**：https://github.com/modelscope/ms-swift/issues/10351
 
 ## 构建/发布
 

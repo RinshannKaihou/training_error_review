@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 308 条；状态：active 308
+共 312 条；状态：active 308、pending_audit 4
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -13,17 +13,17 @@
 | 运行时/执行 | 8 |
 | 集合通信 | 4 |
 | 并行切分 | 21 |
-| 量化 | 7 |
+| 量化 | 8 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
 | 模型定义 | 7 |
 | 权重/检查点 | 28 |
 | 数据管线 | 29 |
-| 优化器 | 28 |
+| 优化器 | 29 |
 | 损失计算 | 18 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 11 |
-| RL训练回路 | 59 |
+| RL训练回路 | 61 |
 | 观测/评测 | 15 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -334,8 +334,8 @@
 - **原因行为**：kernel 把 margin>0 门函数实现为 (margin+|margin|)/(2*(|margin|+1e-7))，margin 为很小正数时系数<1，有效梯度被错误衰减；文档/注释/golden 均定义为严格阈值。
 - **影响对象**：梯度（静默错误）
 - **影响详情**：预测值紧邻 hinge 边界且 margin 为极小正数（如 5.96e-8）时，梯度幅值被静默压低，最严重约 0.37 倍，更新方向对但步长错；无报错无 NaN，边界样本学习偏慢、收敛质量受损；远离边界样本无差异。
-- **改进措施**：检测 对紧邻边界的 margin（nextafter(1,0) 等）构造梯度对照用例。；修复 issue 附完整修复方案（CompareScalar GT mask + Select、比较窗口 256 字节对齐、尾块 mask 置零；gen_data.py 边界三样本已验证、fix.patch git apply --check 通过、pre-commit 通过）；kernel 编译/运行与完整 UT 未跑，修复 MR 未关联（未见编号）。
-- **来源**：https://gitcode.com/cann/ops-nn/issues/6730
+- **改进措施**：检测 对紧邻边界的 margin（nextafter(1,0) 等）构造梯度对照用例。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12150（2026-10-17 open）：Compares(GT)+Select 硬阈值替代软门，float32 与 fp16/bf16 路径都改；910B1 三 dtype UT 全绿，未发布
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6730；https://gitcode.com/cann/ops-nn/merge_requests/12150
 
 ### TRN-0296 `conv3d_backprop_filter_uint_underflow_oob_write` conv3d 反向 uint 下溢回绕致 Fixpipe 越界写
 
@@ -379,7 +379,7 @@
 - **影响对象**：数值结果（不可复现）
 - **影响详情**：910B3/CANN 9.1.0 上 FP32 scatter_add_ 使用行广播索引（由一维 expand 得 stride [1,0]）时，相同输入重复执行偶发输出与 CPU 参考不一致；首次差异轮次不固定，输入未变，无报错
 - **改进措施**：检测 循环比对 NPU 输出与 CPU 参考（逐字节）；出错轮次不固定，单次校验不足；修复 待定（issue open；报告者按上游 commit 8ce9e83 头文件比对定位到 FP32 路径缺同步，修复未提交）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/6782
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6782；https://gitcode.com/cann/ops-nn/merge_requests/12144
 
 ### TRN-0302 `conv3d_dx_enlarge_partial_tail_oob_read` Conv3D 反向 enlarge 尾组越界读致尾通道系统性错
 
@@ -959,6 +959,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/verl-project/verl/pull/7986
 - **关联**：var:TRN-0232
+
+### TRN-0312 `opstransformer_swiglu_mx_scale_tail_pad_stale` CANN SwiGLU MX scale 行尾填充槽残留旧值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：量化 / cann / SwiGLU MX scale 写回
+- **原因行为**：SwiGLU MX scale 每行按 64 输出元素存一对 K32 scale；有效分组数为奇数时行尾填充槽未被写零，输出缓冲区旧值残留，被当合法 scale 编码消费。
+- **影响对象**：数值结果；模型权重（静默错误）
+- **影响详情**：无报错。下游按行读取 scale 时把残留旧字节当成合法 scale 编码消费，量化权重/激活 scale 在奇数 K32 分组的行上来自未定义的旧内存；主机级验证为 padding 槽保留非零哨兵，硬件端到端数值精度未验证。
+- **改进措施**：检测 将 scale 输出缓冲区预填非零哨兵，跑奇数有效 K32 分组宽度（outputN=32/96）检查行尾 padding 槽是否为零。；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14006（open）：HasSwigluMxScalePadding 判定尾块归属，尾 tile 清零 staging 并把写回长度加一字节；主机单测覆盖 outputN=1~1024×tileSize=32/64/128/256，未验证设备数值精度
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6247；https://gitcode.com/cann/ops-transformer/merge_requests/14006（均
 
 ## 位置编码
 
@@ -2153,6 +2164,17 @@
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8723
 - **关联**：var:TRN-0262
 
+### TRN-0311 `ascend_fused_adamax_w_fp16_amp_storage_size_mismatch` NpuFusedAdamW BN 梯度 storage 与描述符长度失配
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：优化器 / pytorch / NpuFusedAdamW unscale_ 拼接
+- **原因行为**：FP16 AMP 下 BN 小通道梯度 storage 容量(16)与 NPU 描述符长度(8)分叉；NpuFusedAdamW 按 storage().size() 累计 266、NPU 口径 250，首次 unscale_ 越界报错。
+- **影响对象**：优化器状态（报错）
+- **影响详情**：首个反向后第一次 GradScaler.unscale_ 抛 RuntimeError (266>250)，训练在首个优化器步失败。910B2 单卡小模型即可复现；报错点在 unscale_ 而非数据损坏。
+- **改进措施**：检测 对每个梯度张量比对 storage().size() 与 torch_npu.get_storage_size()，不一致即预警。；修复 待定（issue 2026-10-17 报于 Ascend/pytorch #5501，open；issue 提到 --bn-format3 强制 BN 参数 format 3 时两种长度一致、不触发，可作规避参考，作者未声称已验证为通用规避）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5501（2026-10-17
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -3303,6 +3325,29 @@
 - **影响详情**：apps/taco/codecontests/codeforces 数据源的 call-based 任务：正确解答也得 0 分且无任何日志（30 个种子样本 0/30 满分，重编码为 JSON 行布局后 28/30），RL 训练在这些任务上奖励信号完全失真。
 - **改进措施**：检测 抽查各 data_source 的奖励分布是否异常偏低；用数据集自带首解跑 reward 校准（应为满分）。；修复 待定（issue open 无评论；规避=设置 sandbox_fusion_url 或将测试重编码为 JSON 行布局）
 - **来源**：https://github.com/verl-project/verl/issues/8174
+
+### TRN-0309 `trl_async_opd_rollout_policy_version_mislabel` trl Async OPD rollout 样本策略版本错标
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：RL训练回路 / trl / rollout 版本快照
+- **原因行为**：rollout worker 任务入口读一次共享 model_version 盖章样本，发给 vLLM 的模型名 dispatch 时二次活读；期间 trainer 发布新 adapter 时样本被盖旧版本号。
+- **影响对象**：训练信号；训练样本流（静默错误）
+- **影响详情**：无报错。provenance 错标；staleness 门把刚生成的全新 rollout 当陈旧丢弃（max_staleness=0 时必丢），非零门限下 batching 与 staleness 观测失真。
+- **改进措施**：检测 对同一 batch 比对样本 model_version 与生成请求 payload 中的模型名版本（两者应恒等）。；修复 报告者已备窄修复 fork（在 HTTP 请求构造边界快照版本、用它选 adapter 并随 token 返回），含确定性 CPU 测试：https://github.com/lindicaphxag-tech/trl/tree/fix/async-opd-pin-rollout-sampling-policy-version-20261017 （未合入上游，状态未核实）。
+- **来源**：https://github.com/huggingface/trl/issues/7781（2026-10-17
+
+### TRN-0310 `trl_merged_weight_sync_publish_after_resume` trl merged 权重同步先 resume 后发布版本号
+
+`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-10-18
+
+- **原因对象**：RL训练回路 / trl / merged 同步发布顺序
+- **原因行为**：rank0 在 NCCL 传输与 barrier 后按 resume()→model_version+=1→通知 worker 顺序执行；vLLM 已恢复新权重而 worker 未见到新版本号，窗口内请求用 v8 权重生成、样本仍标 v7。
+- **影响对象**：训练信号；训练样本流（静默错误）
+- **影响详情**：无报错。窗口内样本策略标签与真实采样权重不符；staleness 门可把新样本误判为陈旧丢弃（门限 0 时必丢），provenance 与 batching 观测失真。两条 merged/dense 路径均受影响。
+- **改进措施**：检测 对版本发布与 resume 的相对顺序做单元断言（issue 提供了六场景生产方法级回归，fork CI PASS）。；修复 报告者修复：把版本发布移到 resume 之前（publish while paused → resume），fork https://github.com/lindicaphxag-tech/trl/tree/fix/async-dense-policy-publish-before-resume-20261017 含两个 trainer 的生产方法级单测与 fork CI PASS（未合入上游，状态未核实）。
+- **来源**：https://github.com/huggingface/trl/issues/7782（2026-10-17
+- **关联**：var:TRN-0309
 
 ## 观测/评测
 

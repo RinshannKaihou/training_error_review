@@ -44,6 +44,7 @@ original:
   discovery: 2026-10-16 每日扫描
   notes:
   - '2026-10-17 回访 2026-10-17（批次快照 2026-10-16T23:00Z）：修复 MR !12006 状态变为 closed 而非 merged（2026-10-16T04:02Z 关闭，未见合入说明，未核实 closed 原因）；issue #6706 仍 open。fix 状态据实更新为 closed 未合入。'
+  - '2026-10-18 2026-10-18 回访：issue #6706 仍 open（2026-10-15T07:45 最后更新），修复 MR !12006 维持 closed 非 merged，无新正文。'
 migration:
   method: scan
   scanned: '2026-10-16'
@@ -67,4 +68,7 @@ migration:
   - date: '2026-10-17'
     fields:
     - mitigation.fix
+    - original.notes
+  - date: '2026-10-18'
+    fields:
     - original.notes

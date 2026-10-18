@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 312 条；状态：active 308、pending_audit 4
+共 312 条；状态：active 312
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -642,6 +642,7 @@
 - **影响详情**：单 rank 调带非零位移的 V 算子时数据写到错误下标（如 recvDispls={3} 实写到 0、1）或读错片段；缓冲区足够、拷贝成功、无报错，仅数值与语义不符
 - **改进措施**：检测 单 rank 单测覆盖三个 V 算子的非零位移用例并检查未涉及区域不变；现有测试未覆盖该组合；修复 待定（issue open，建议按算子类型计算有效源/目的地址后再同址判断与本地拷贝，并补三个 V 算子单 rank 非零位移回归；源码逻辑分析定位，无修复 MR）
 - **来源**：https://gitcode.com/cann/hccl/issues/827
+- **关联**：cross:INF-1425
 
 ## 并行切分
 
@@ -962,10 +963,10 @@
 
 ### TRN-0312 `opstransformer_swiglu_mx_scale_tail_pad_stale` CANN SwiGLU MX scale 行尾填充槽残留旧值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：量化 / cann / SwiGLU MX scale 写回
-- **原因行为**：SwiGLU MX scale 每行按 64 输出元素存一对 K32 scale；有效分组数为奇数时行尾填充槽未被写零，输出缓冲区旧值残留，被当合法 scale 编码消费。
+- **原因行为**：SwiGLU MX scale 每行按 64 输出元素存一对 K32 scale；有效 K32 分组数为奇数时，行尾完整填充槽未被覆盖，输出缓冲区旧值残留。
 - **影响对象**：数值结果；模型权重（静默错误）
 - **影响详情**：无报错。下游按行读取 scale 时把残留旧字节当成合法 scale 编码消费，量化权重/激活 scale 在奇数 K32 分组的行上来自未定义的旧内存；主机级验证为 padding 槽保留非零哨兵，硬件端到端数值精度未验证。
 - **改进措施**：检测 将 scale 输出缓冲区预填非零哨兵，跑奇数有效 K32 分组宽度（outputN=32/96）检查行尾 padding 槽是否为零。；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14006（open）：HasSwigluMxScalePadding 判定尾块归属，尾 tile 清零 staging 并把写回长度加一字节；主机单测覆盖 outputN=1~1024×tileSize=32/64/128/256，未验证设备数值精度
@@ -2166,12 +2167,12 @@
 
 ### TRN-0311 `ascend_fused_adamax_w_fp16_amp_storage_size_mismatch` NpuFusedAdamW BN 梯度 storage 与描述符长度失配
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：优化器 / pytorch / NpuFusedAdamW unscale_ 拼接
 - **原因行为**：FP16 AMP 下 BN 小通道梯度 storage 容量(16)与 NPU 描述符长度(8)分叉；NpuFusedAdamW 按 storage().size() 累计 266、NPU 口径 250，首次 unscale_ 越界报错。
-- **影响对象**：优化器状态（报错）
-- **影响详情**：首个反向后第一次 GradScaler.unscale_ 抛 RuntimeError (266>250)，训练在首个优化器步失败。910B2 单卡小模型即可复现；报错点在 unscale_ 而非数据损坏。
+- **影响对象**：可用性/进度；优化器状态（报错）
+- **影响详情**：首个反向后首次 GradScaler.unscale_ 抛 RuntimeError(266>250)，训练无法进入首个 optimizer step；910B2 单卡小模型可复现；报错指向 combined_tensor 越界而非 BN 梯度本身。
 - **改进措施**：检测 对每个梯度张量比对 storage().size() 与 torch_npu.get_storage_size()，不一致即预警。；修复 待定（issue 2026-10-17 报于 Ascend/pytorch #5501，open；issue 提到 --bn-format3 强制 BN 参数 format 3 时两种长度一致、不触发，可作规避参考，作者未声称已验证为通用规避）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5501（2026-10-17
 
@@ -3328,23 +3329,23 @@
 
 ### TRN-0309 `trl_async_opd_rollout_policy_version_mislabel` trl Async OPD rollout 样本策略版本错标
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：RL训练回路 / trl / rollout 版本快照
 - **原因行为**：rollout worker 任务入口读一次共享 model_version 盖章样本，发给 vLLM 的模型名 dispatch 时二次活读；期间 trainer 发布新 adapter 时样本被盖旧版本号。
-- **影响对象**：训练信号；训练样本流（静默错误）
+- **影响对象**：训练样本流；训练信号（静默错误）
 - **影响详情**：无报错。provenance 错标；staleness 门把刚生成的全新 rollout 当陈旧丢弃（max_staleness=0 时必丢），非零门限下 batching 与 staleness 观测失真。
 - **改进措施**：检测 对同一 batch 比对样本 model_version 与生成请求 payload 中的模型名版本（两者应恒等）。；修复 报告者已备窄修复 fork（在 HTTP 请求构造边界快照版本、用它选 adapter 并随 token 返回），含确定性 CPU 测试：https://github.com/lindicaphxag-tech/trl/tree/fix/async-opd-pin-rollout-sampling-policy-version-20261017 （未合入上游，状态未核实）。
 - **来源**：https://github.com/huggingface/trl/issues/7781（2026-10-17
 
 ### TRN-0310 `trl_merged_weight_sync_publish_after_resume` trl merged 权重同步先 resume 后发布版本号
 
-`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-10-18
+`故障` · `active` · `rl` · `documented` · `var` · 发现 2026-10-18
 
 - **原因对象**：RL训练回路 / trl / merged 同步发布顺序
-- **原因行为**：rank0 在 NCCL 传输与 barrier 后按 resume()→model_version+=1→通知 worker 顺序执行；vLLM 已恢复新权重而 worker 未见到新版本号，窗口内请求用 v8 权重生成、样本仍标 v7。
-- **影响对象**：训练信号；训练样本流（静默错误）
-- **影响详情**：无报错。窗口内样本策略标签与真实采样权重不符；staleness 门可把新样本误判为陈旧丢弃（门限 0 时必丢），provenance 与 batching 观测失真。两条 merged/dense 路径均受影响。
+- **原因行为**：rank0 的 _sync_weight_merged 按 resume()→model_version+=1→update_model_version() 执行，版本发布在 resume 之后。
+- **影响对象**：训练样本流；训练信号（静默错误）
+- **影响详情**：非 LoRA merged/dense 每次同步的 resume 与版本发布间隙训练照常、无报错；vLLM 已用新权重出 token 但样本标旧版本，新样本可被 max_staleness 门当过期丢弃（门限 0 时尤甚），staleness 观测/批次构成偏离。
 - **改进措施**：检测 对版本发布与 resume 的相对顺序做单元断言（issue 提供了六场景生产方法级回归，fork CI PASS）。；修复 报告者修复：把版本发布移到 resume 之前（publish while paused → resume），fork https://github.com/lindicaphxag-tech/trl/tree/fix/async-dense-policy-publish-before-resume-20261017 含两个 trainer 的生产方法级单测与 fork CI PASS（未合入上游，状态未核实）。
 - **来源**：https://github.com/huggingface/trl/issues/7782（2026-10-17
 - **关联**：var:TRN-0309

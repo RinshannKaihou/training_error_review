@@ -4,13 +4,13 @@ slug: opstransformer_swiglu_mx_scale_tail_pad_stale
 aliases: []
 title: CANN SwiGLU MX scale 行尾填充槽残留旧值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: SwiGLU MX scale 写回
-  behavior: SwiGLU MX scale 每行按 64 输出元素存一对 K32 scale；有效分组数为奇数时行尾填充槽未被写零，输出缓冲区旧值残留，被当合法 scale 编码消费。
+  behavior: SwiGLU MX scale 每行按 64 输出元素存一对 K32 scale；有效 K32 分组数为奇数时，行尾完整填充槽未被覆盖，输出缓冲区旧值残留。
 effect:
   objects:
   - 数值结果
@@ -50,3 +50,12 @@ migration:
   - date: '2026-10-18'
     fields:
     - mitigation.fix
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

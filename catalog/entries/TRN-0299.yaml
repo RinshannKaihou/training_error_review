@@ -33,7 +33,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/hccl/issues/827
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: INF-1425
 original:
   mechanism: 'cann/hccl issue #827（2026-10-16，源码版本 1510b4c8ae9f7a267ba974a086f345a28d715c62，报告平台 Ascend 950PR、950DT）。src/ops/op_common/op_common.cc:3537 的 SingleRankProc() 对 AllGatherV、ReduceScatterV、AlltoAllV 只根据 count 计算拷贝长度（HcommLocalCopyOnThread(cpuTsThread, param.outputPtr, param.inputPtr, len)），直接使用原始 buffer 地址，没有应用 displacement。上游参数准备代码（all_gather_v.cc:249-261、reduce_scatter_v.cc:245-307/371-373、all_to_all_v.cc:664-690/759-761）保留了原始地址和位移，单 rank 退化为本地拷贝时位移语义仍有效。后果：AllGatherV 目的地址应加 recvDispls[0]×typeSize（写错接收位置）、ReduceScatterV 源地址应加 sendDispls[0]×typeSize（读错数据片段）、AlltoAllV 两侧都应加（读写位置均可能错）。反例：sendCount=2、recvCounts={2}、recvDispls={3} 应写到下标 3、4，实际写到 0、1，缓冲区容量足够、拷贝成功、不报错。报告为源码逻辑分析（issue 明言），无运行时复现日志。'
   source: https://gitcode.com/cann/hccl/issues/827
@@ -55,3 +57,7 @@ migration:
     - glm-5.3
     uncertain:
     - behavior
+  updates:
+  - date: '2026-10-18'
+    fields:
+    - relations

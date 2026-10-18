@@ -4,7 +4,7 @@ slug: trl_async_opd_rollout_policy_version_mislabel
 aliases: []
 title: trl Async OPD rollout 样本策略版本错标
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -13,8 +13,8 @@ cause:
   behavior: rollout worker 任务入口读一次共享 model_version 盖章样本，发给 vLLM 的模型名 dispatch 时二次活读；期间 trainer 发布新 adapter 时样本被盖旧版本号。
 effect:
   objects:
-  - 训练信号
   - 训练样本流
+  - 训练信号
   detail: 无报错。provenance 错标；staleness 门把刚生成的全新 rollout 当陈旧丢弃（max_staleness=0 时必丢），非零门限下 batching 与 staleness 观测失真。
   visibility: 静默错误
 mitigation:
@@ -35,6 +35,7 @@ evidence:
 - url: https://github.com/huggingface/trl/issues/7781（2026-10-17
   kind: github_issue
 relations: []
+pattern: PAT-TRN-0047
 original:
   mechanism: trl AsyncDistillationTrainer 的 rollout worker：`_generate_and_score_one` 在任务入口 `model_version = self.model_version` 读共享版本，随后构造 prompt、`await _generate_one_turn`；而 `_request_model` property 在 dispatch 时再次活读共享 `mp.Value` 拼 `f"{lora_name}-v{self.model_version}"`。trainer 进程在两读之间完成学生权重同步并 publish 新版本时，HTTP 请求打到新 adapter v1，返回的 RolloutSample 却 stamp 旧版本 0。报告者指出该交错不需要罕见事件循环竞态：apply_chat_template 是同步的，weight updater 在 trainer 的独立进程，准备期间即可改共享版本。报告含源码引用与确定性交错推演（0→1 一轮即错标），并有 fork 修复 + 确定性 CPU 测试（共享版本 0→9→10 推进下样本必须 stamp 9、payload 命名 v9）。影响 RolloutQueueDataset staleness 门（丢弃条件 current_model_version - sample.model_version > max_staleness）。截至 2026-10-18 issue open，1 条评论，修复未合上游。来源 https://github.com/huggingface/trl/issues/7781
   source: https://github.com/huggingface/trl/issues/7781（2026-10-17 创建，open；源码级竞态推演 + fork 修复与确定性 CPU 测试）
@@ -44,3 +45,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  updates:
+  - date: '2026-10-18'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 训练信号
+        to: 训练样本流
+    issue_unfixed:
+    - behavior

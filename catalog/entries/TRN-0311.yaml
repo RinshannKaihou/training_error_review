@@ -4,7 +4,7 @@ slug: ascend_fused_adamax_w_fp16_amp_storage_size_mismatch
 aliases: []
 title: NpuFusedAdamW BN 梯度 storage 与描述符长度失配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -13,8 +13,9 @@ cause:
   behavior: FP16 AMP 下 BN 小通道梯度 storage 容量(16)与 NPU 描述符长度(8)分叉；NpuFusedAdamW 按 storage().size() 累计 266、NPU 口径 250，首次 unscale_ 越界报错。
 effect:
   objects:
+  - 可用性/进度
   - 优化器状态
-  detail: 首个反向后第一次 GradScaler.unscale_ 抛 RuntimeError (266>250)，训练在首个优化器步失败。910B2 单卡小模型即可复现；报错点在 unscale_ 而非数据损坏。
+  detail: 首个反向后首次 GradScaler.unscale_ 抛 RuntimeError(266>250)，训练无法进入首个 optimizer step；910B2 单卡小模型可复现；报错指向 combined_tensor 越界而非 BN 梯度本身。
   visibility: 报错
 mitigation:
   detect: 对每个梯度张量比对 storage().size() 与 torch_npu.get_storage_size()，不一致即预警。
@@ -43,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 优化器状态
+        to: 可用性/进度
+    rewritten:
+    - detail

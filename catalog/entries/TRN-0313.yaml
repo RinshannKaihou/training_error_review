@@ -4,7 +4,7 @@ slug: aten_gelu_approximate_attr_ignored_tanh_only
 aliases: []
 title: torch_npu ATen gelu 静默走 tanh 近似
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -45,3 +45,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

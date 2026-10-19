@@ -4,7 +4,7 @@ slug: mimo_whisper_encoder_attends_padded_mel_tail
 aliases: []
 title: MiMo Whisper 冻结塔前向泄漏 padded mel 尾部特征
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -13,8 +13,8 @@ cause:
   behavior: Wrapper 跑完整 3000 帧 encoder 后才按 seq_lengths 掩码；WhisperEncoder 忽略 attention_mask，各 query 仍 attend 到 pad 尾（0.0 非静默值）。
 effect:
   objects:
-  - 输入编码
   - 隐状态
+  - 输入编码
   detail: 掩码后完整前向与未 pad 主体输出不同（CPU tiny encoder 复现）；published AVLM recipe 默认冻结 Whisper 塔取第一 clip，pad 泄漏特征静默进入训练主干，无报错
   visibility: 静默错误
 mitigation:
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 输入编码
+        to: 隐状态

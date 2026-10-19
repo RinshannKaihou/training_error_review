@@ -4,7 +4,7 @@ slug: deepspeed_bf16_safe_set_full_grad_wrong_buffer
 aliases: []
 title: BF16 safe_set_full_grad 写错缓冲致梯度掩蔽失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 优化器状态
-  detail: 用户在 backward 后、step 前对梯度做的掩蔽/替换（如梯度手术、噪声注入、自定义 hook）被静默丢弃，BF16 训练继续用未掩蔽梯度更新；无报错、无日志（immediate 模式跨分区参数则 fail-loud 形状错误）
+  detail: BF16 训练下，backward 后、optimizer.step 前经 safe_set_full_grad 掩蔽/置零/替换梯度会被静默丢弃，更新用未修改梯度；梯度手术/掩蔽/替换类方法（如梯度裁剪定制、对抗训练、调试注入）失效。开启 immediate 累积且参数跨优化器分区时抛形状错误。
   visibility: 静默错误
 mitigation:
   detect: 回归含两真实 DP rank、双累加模式、BF16 ZeRO-1 与 ZeRO-2 兄弟路径、矩阵/偏置参数、双累加微批、零/非零替换梯度，检查公开 getter 与 SGD 参数更新；CPU repro 脚本随 PR 附带（无需编译 DeepSpeed ops）
@@ -44,3 +44,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

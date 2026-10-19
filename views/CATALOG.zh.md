@@ -3,27 +3,28 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 319 条；状态：active 312、pending_audit 7
+共 319 条；状态：active 319
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 27 |
+| 算子/内核 | 28 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
-| 集合通信 | 5 |
+| 集合通信 | 4 |
 | 并行切分 | 21 |
+| 调度/服务 | 1 |
 | 量化 | 8 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
 | 模型定义 | 8 |
 | 权重/检查点 | 28 |
-| 数据管线 | 31 |
+| 数据管线 | 29 |
 | 优化器 | 30 |
 | 损失计算 | 18 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 11 |
-| RL训练回路 | 61 |
+| RL训练回路 | 62 |
 | 观测/评测 | 15 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -416,7 +417,7 @@
 
 ### TRN-0313 `aten_gelu_approximate_attr_ignored_tanh_only` torch_npu ATen gelu 静默走 tanh 近似
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / ATen gelu 分发
 - **原因行为**：ATen gelu 分发到无 approximate 参数的 tanh-only aclnnGelu，未按 'none' 路由到带 attr 的 aclnnGeluV2；正确的 erf 路径已在 CANN 包内存在但未被选用。
@@ -428,7 +429,7 @@
 
 ### TRN-0314 `op_plugin_conv_family_hf32_silent_precision_loss` op-plugin fp32 conv 全族静默 HF32 降精度且污染梯度
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / conv 族 aclnn 出口精度模式选择
 - **原因行为**：fp32 conv 四算子的 aclnn 出口按 HF32 类低位宽执行，不遵循 high_precision 配置，前向与梯度同偏离；set_option（已废弃）与 jit_compile 均无法绕开。
@@ -437,6 +438,17 @@
 - **改进措施**：检测 同机 matmul/bmm/einsum fp32 对照（逐位或 <2.7e-6 达标）排除平台普遍性；conv 形态矩阵与 CPU 双端逐位比对；修复 待定（issue open：要求 op-plugin 确认 conv 族 aclnn 出口选择是否遵循精度模式配置并文档化；high_precision 选项已废弃不生效）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/593
 - **关联**：cross:INF-1434
+
+### TRN-0315 `megamoe_sync_count_missing_dsb_barrier` MegaMoE 同步轮次 count 写后读缺 DSB 屏障致挂起
+
+`故障` · `active` · `infra_off` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：算子/内核 / 通用 / MegaMoE 同步轮次 count 旁路写
+- **原因行为**：同步轮次旁路 GM 写后无 asc_sync_data_barrier(DSB_DDR)；后续重读同一 sequence 时 MTE3 事件不保证 Scalar 旁路写已完成，维测打点改变时序曾掩盖该依赖。
+- **影响对象**：可用性/进度（挂起）
+- **影响详情**：关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012 旧值，接收端持续等待、Cube 等待 countReady；无报错、无 NaN，图整体挂起。
+- **改进措施**：检测 复现配置 EP8、每卡 BS72、H5120、I2304、3 路由专家+1 共享、topk6、预量化 A8W4/共享 A8W8；关闭维测编译后观察 count epoch 校验停滞；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14046 （WIP open，未合入）：IncrementSyncCount 旁路写后补 asc_sync_data_barrier(mem_dsb_t::DSB_DDR)，反汇编确认 ST_DEV.b32 后、跨核通知前增加 DSB #1；八卡 1260 次调用与 30/30 用例通过，但 ON/OFF 数值对照未完成
+- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14046
 
 ## 编译器
 
@@ -667,17 +679,6 @@
 - **改进措施**：检测 单 rank 单测覆盖三个 V 算子的非零位移用例并检查未涉及区域不变；现有测试未覆盖该组合；修复 待定（issue open，建议按算子类型计算有效源/目的地址后再同址判断与本地拷贝，并补三个 V 算子单 rank 非零位移回归；源码逻辑分析定位，无修复 MR）
 - **来源**：https://gitcode.com/cann/hccl/issues/827
 - **关联**：cross:INF-1425
-
-### TRN-0315 `megamoe_sync_count_missing_dsb_barrier` MegaMoE 同步轮次 count 写后读缺 DSB 屏障致挂起
-
-`故障` · `pending_audit` · `infra_off` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
-
-- **原因对象**：集合通信 / 通用 / MegaMoE 同步轮次 count 旁路写
-- **原因行为**：同步轮次旁路 GM 写后无 asc_sync_data_barrier(DSB_DDR)；后续重读同一 sequence 时 MTE3 事件不保证 Scalar 旁路写已完成，维测打点改变时序曾掩盖该依赖。
-- **影响对象**：可用性/进度（挂起）
-- **影响详情**：关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 场景停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012（旧值），接收端持续等待、Cube 等待 countReady；无错误值输出但训练/推理图挂起
-- **改进措施**：检测 复现配置 EP8、每卡 BS72、H5120、I2304、3 路由专家+1 共享、topk6、预量化 A8W4/共享 A8W8；关闭维测编译后观察 count epoch 校验停滞；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14046 （WIP open，未合入）：IncrementSyncCount 旁路写后补 asc_sync_data_barrier(mem_dsb_t::DSB_DDR)，反汇编确认 ST_DEV.b32 后、跨核通知前增加 DSB #1；八卡 1260 次调用与 30/30 用例通过，但 ON/OFF 数值对照未完成
-- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14046
 
 ## 并行切分
 
@@ -914,6 +915,19 @@
 - **影响详情**：第 1 步 backward 梯度即 NaN；第 1 个 optimizer step 把 NaN 写进权重，第 2 步起 loss=0。grad_norm 恒 √2（NaN 范数被掩成 -1 后合并），伪值掩盖真实 NaN。
 - **改进措施**：检测 grad_norm 恒等于 √(param_group 数)（2 组即 √2）即可判定底层梯度 NaN；或第 2 步起 loss 塌 0。；修复 上游修复 PR #7965 已随 v0.19.0 发布（#8061/#8080 于 v0.19.3 补 torch.compile 多流 producer 场景）；规避：overlap_comm=false 或升级 deepspeed >= 0.19.3。ms-swift install_all.sh 的 "deepspeed<0.19" 约束会精确装进受影响窗口，issue 建议提升约束（open 未合）。https://github.com/deepspeedai/DeepSpeed/pull/7965
 - **来源**：https://github.com/modelscope/ms-swift/issues/10372；https://github.com/deepspeedai/DeepSpeed/pull/7965；https://github.com/deepspeedai/DeepSpeed/pull/7805
+
+## 调度/服务
+
+### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
+
+`故障` · `active` · `config` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：调度/服务 / trl / VLLMGeneration 图像特征定位
+- **原因行为**：_place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
+- **影响对象**：输入编码；训练样本流（静默错误）
+- **影响详情**：vLLM 生成完全忽略图像（纯红图+颜色提问→回答『无法判断颜色』而非『Red』）；GRPO/RLOO/Distillation/GOLD/SDFT/SDPO/IW-OPD 所有 server 模式 trainer 中招；无任何报错
+- **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 （以 model config 的 image token 定位特征；merge 状态本轮未核）；issue 另指 PR #6765 为引入点
+- **来源**：https://github.com/huggingface/trl/issues/7772；https://github.com/huggingface/trl/pull/7773
 
 ## 量化
 
@@ -1228,11 +1242,11 @@
 
 ### TRN-0319 `mimo_whisper_encoder_attends_padded_mel_tail` MiMo Whisper 冻结塔前向泄漏 padded mel 尾部特征
 
-`故障` · `pending_audit` · `partial` · `sft` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `partial` · `sft` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：模型定义 / megatron-lm / hf_whisper_encoder 包装
 - **原因行为**：Wrapper 跑完整 3000 帧 encoder 后才按 seq_lengths 掩码；WhisperEncoder 忽略 attention_mask，各 query 仍 attend 到 pad 尾（0.0 非静默值）。
-- **影响对象**：输入编码；隐状态（静默错误）
+- **影响对象**：隐状态；输入编码（静默错误）
 - **影响详情**：掩码后完整前向与未 pad 主体输出不同（CPU tiny encoder 复现）；published AVLM recipe 默认冻结 Whisper 塔取第一 clip，pad 泄漏特征静默进入训练主干，无报错
 - **改进措施**：检测 CPU tiny WhisperEncoder 注入对照：3000 帧（前 13 帧真实前缀+尾垃圾）wrapper 输出 vs 未 pad 主体 vs masked full forward；修复 issue 给出期望实现（未落地）：按行裁剪 input_features[i,:,:mel]（1<=mel<=time）只跑真实帧，S=(mel-1)//2+1 须等于 seq_lengths，不同长度分开 forward 后拼接；issue open（mcore-oncall 已呼叫，无维护者回应）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/8324
@@ -1889,28 +1903,6 @@
 - **改进措施**：检测 对照独立编码 prefix 的 loss/梯度（issue 附 CPU 复现脚本）；检查滑窗保留位置与 mask 窗口的覆盖关系。；修复 待定（issue open 5 评论；参考修法=decoder 侧单独编码 sampled prefix、保留完整 encoder pass，示例代码修正未核实合入）
 - **来源**：https://github.com/huggingface/trl/issues/7734
 
-### TRN-0316 `grpo_resume_inside_generation_block_shifts_schedule` GRPO 块内 resume 使 prompt 训练计划错位
-
-`故障` · `pending_audit` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-19
-
-- **原因对象**：数据管线 / trl / _step 与 skip 基准分叉
-- **原因行为**：resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader；ckpt 落在 generation 块内时两套计数基准分叉，块边界整体移动。
-- **影响对象**：训练样本流（静默错误）
-- **影响详情**：resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常
-- **改进措施**：检测 固定 shuffle_dataset=False、逐 optimizer step 记录 prompt id 集合，对比中断/连续 run（repro 脚本 exit 1 on mismatch）；resume 于块边界（checkpoint-2 对照）则完全一致可作判别；修复 待定（issue open 2026-10-18，无评论；报告者含 CPU repro：8 prompts、num_iterations=2、steps_per_generation=1、Qwen2 tiny）
-- **来源**：https://github.com/huggingface/trl/issues/7787
-
-### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
-
-`故障` · `pending_audit` · `config` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-19
-
-- **原因对象**：数据管线 / trl / VLLMGeneration 图像特征定位
-- **原因行为**：_place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
-- **影响对象**：输入编码；训练样本流（静默错误）
-- **影响详情**：vLLM 生成完全忽略图像（纯红图+颜色提问→回答『无法判断颜色』而非『Red』）；GRPO/RLOO/Distillation/GOLD/SDFT/SDPO/IW-OPD 所有 server 模式 trainer 中招；无任何报错
-- **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 （以 model config 的 image token 定位特征；merge 状态本轮未核）；issue 另指 PR #6765 为引入点
-- **来源**：https://github.com/huggingface/trl/issues/7772；https://github.com/huggingface/trl/pull/7773
-
 ## 优化器
 
 ### TRN-0013 `loss_scaler_swallows_overflow` 动态 loss scaler 把 SDC 引起的 inf 当普通溢出跳过
@@ -2246,12 +2238,12 @@
 
 ### TRN-0317 `deepspeed_bf16_safe_set_full_grad_wrong_buffer` BF16 safe_set_full_grad 写错缓冲致梯度掩蔽失效
 
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：优化器 / deepspeed / safe_set_full_grad 分支
 - **原因行为**：safe_set_full_grad() 对 BF16 写 staging param.grad，而 BF16_Optimizer 从独立累加缓冲 step；backward 与 step 之间的梯度掩蔽/替换被静默忽略。
 - **影响对象**：梯度；优化器状态（静默错误）
-- **影响详情**：用户在 backward 后、step 前对梯度做的掩蔽/替换（如梯度手术、噪声注入、自定义 hook）被静默丢弃，BF16 训练继续用未掩蔽梯度更新；无报错、无日志（immediate 模式跨分区参数则 fail-loud 形状错误）
+- **影响详情**：BF16 训练下，backward 后、optimizer.step 前经 safe_set_full_grad 掩蔽/置零/替换梯度会被静默丢弃，更新用未修改梯度；梯度手术/掩蔽/替换类方法（如梯度裁剪定制、对抗训练、调试注入）失效。开启 immediate 累积且参数跨优化器分区时抛形状错误。
 - **改进措施**：检测 回归含两真实 DP rank、双累加模式、BF16 ZeRO-1 与 ZeRO-2 兄弟路径、矩阵/偏置参数、双累加微批、零/非零替换梯度，检查公开 getter 与 SGD 参数更新；CPU repro 脚本随 PR 附带（无需编译 DeepSpeed ops）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8856 （open 2026-10-18 未合入）：setter 改写既有的完整累加缓冲，匹配 getter 的 BF16 检测；普通梯度与 ZeRO 分片梯度分支不变
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8856
 
@@ -3428,6 +3420,17 @@
 - **改进措施**：检测 对版本发布与 resume 的相对顺序做单元断言（issue 提供了六场景生产方法级回归，fork CI PASS）。；修复 报告者修复：把版本发布移到 resume 之前（publish while paused → resume），fork https://github.com/lindicaphxag-tech/trl/tree/fix/async-dense-policy-publish-before-resume-20261017 含两个 trainer 的生产方法级单测与 fork CI PASS（未合入上游，状态未核实）。
 - **来源**：https://github.com/huggingface/trl/issues/7782（2026-10-17
 - **关联**：var:TRN-0309
+
+### TRN-0316 `grpo_resume_inside_generation_block_shifts_schedule` GRPO 块内 resume 使 prompt 训练计划错位
+
+`故障` · `active` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：RL训练回路 / trl / _step 与 skip 基准分叉
+- **原因行为**：resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader；ckpt 落在 generation 块内时两套计数基准分叉，块边界整体移动。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常
+- **改进措施**：检测 固定 shuffle_dataset=False、逐 optimizer step 记录 prompt id 集合，对比中断/连续 run（repro 脚本 exit 1 on mismatch）；resume 于块边界（checkpoint-2 对照）则完全一致可作判别；修复 待定（issue open 2026-10-18，无评论；报告者含 CPU repro：8 prompts、num_iterations=2、steps_per_generation=1、Qwen2 tiny）
+- **来源**：https://github.com/huggingface/trl/issues/7787
 
 ## 观测/评测
 

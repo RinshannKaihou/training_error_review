@@ -4,17 +4,17 @@ slug: megamoe_sync_count_missing_dsb_barrier
 aliases: []
 title: MegaMoE 同步轮次 count 写后读缺 DSB 屏障致挂起
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 集合通信
+  - subsystem: 算子/内核
     stack: 通用
     component: MegaMoE 同步轮次 count 旁路写
   behavior: 同步轮次旁路 GM 写后无 asc_sync_data_barrier(DSB_DDR)；后续重读同一 sequence 时 MTE3 事件不保证 Scalar 旁路写已完成，维测打点改变时序曾掩盖该依赖。
 effect:
   objects:
   - 可用性/进度
-  detail: 关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 场景停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012（旧值），接收端持续等待、Cube 等待 countReady；无错误值输出但训练/推理图挂起
+  detail: 关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012 旧值，接收端持续等待、Cube 等待 countReady；无报错、无 NaN，图整体挂起。
   visibility: 挂起
 mitigation:
   detect: 复现配置 EP8、每卡 BS72、H5120、I2304、3 路由专家+1 共享、topk6、预量化 A8W4/共享 A8W8；关闭维测编译后观察 count epoch 校验停滞
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 集合通信
+        to: 算子/内核
+    rewritten:
+    - detail

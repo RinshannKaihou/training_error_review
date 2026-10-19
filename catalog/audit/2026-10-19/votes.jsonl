@@ -1,0 +1,80 @@
+{"job": "baseC|TRN-0314|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0313|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0316|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0315|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0313|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0314|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0317|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0316|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0315|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0317|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0319|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0318|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0313|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0313|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0317|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0313|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0319|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0314|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0316|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0318|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseF|TRN-0315|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "八卡 EP 训练图中该同步缺失直接导致图挂起"}}]}
+{"job": "baseF|TRN-0316|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0314|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0314|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0315|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "八卡 EP 训练图中该同步缺失直接导致图挂起"}}]}
+{"job": "baseF|TRN-0317|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "噪声注入、自定义 hook", "evidence": "依赖梯度手术/掩蔽/替换的训练方法（如梯度裁剪定制、对抗训练、调试注入）"}}]}
+{"job": "baseF|TRN-0318|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0319|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0316|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0315|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseF|TRN-0317|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "噪声注入、自定义 hook", "evidence": "依赖梯度手术/掩蔽/替换的训练方法（如梯度裁剪定制、对抗训练、调试注入）"}}]}
+{"job": "baseF|TRN-0319|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0318|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0319|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0318|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "质量退化"}}
+{"job": "baseF|TRN-0314|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "前向与梯度同偏离", "evidence": "其前向与反向梯度系统性偏离 fp32 语义"}}]}
+{"job": "baseF|TRN-0313|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0319|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0318|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0315|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "八卡 EP 训练图中该同步缺失直接导致图挂起"}}]}
+{"job": "baseF|TRN-0316|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0317|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "用户在 backward 后、step 前对梯度做的掩蔽/替换（如梯度手术、噪声注入、自定义 hook）被静默丢弃", "evidence": "在 backward 之后、optimizer.step 之前通过 safe_set_full_grad 修改梯度（掩蔽、置零、替换）"}}]}
+{"job": "panelC|TRN-0314|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0315|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "panelC|TRN-0314|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0316|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0315|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "panelC|TRN-0316|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0315|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "panelF|TRN-0314|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0318|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0314|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0316|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0315|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "panelF|TRN-0315|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "八卡 EP 训练图中该同步缺失直接导致图挂起"}}]}
+{"job": "panelC|TRN-0314|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelC|TRN-0316|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0318|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0318|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0315|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "【训练侧影响】八卡 EP 训练图中该同步缺失直接导致图挂起（可用性故障、延迟暴露）；【行为效应】...图整体挂起。原文仅提及训练图/图整体挂起，未提及推理图挂起"}}]}
+{"job": "panelF|TRN-0314|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "前向与梯度同偏离", "evidence": "【机制】其前向与反向梯度系统性偏离 fp32 语义"}}]}
+{"job": "panelF|TRN-0318|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0318|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0315|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "训练侧影响：MegaMoE 为 MoE 专家并行通信算子，八卡 EP 训练图中该同步缺失直接导致图挂起（可用性故障、延迟暴露）"}}]}
+{"job": "panelF|TRN-0314|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "前向与梯度同偏离", "evidence": "且梯度同样被污染；反向梯度同样偏差"}}]}
+{"job": "panelF|TRN-0316|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader", "evidence": "【机制】trl GRPOTrainer resume 落在 generation 块内（steps_per_generation*num_iterations 微步）时，self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader，两套计数基准不一致使 generation 块边界整体移动。"}, "detail": {"problem": "missing_condition", "quote": "resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常", "evidence": "【行为效应】GRPO 训练从落在 generation 块内的 checkpoint resume 后，无任何报错、loss 正常下降，但每个 optimizer step 训练的 prompt 与不中断 run 不同：前一块的 prompt 被多训一次、最后一块少一次更新（复现中 step 3 起持续错位、首错步 3）。块边界 checkpoint 的 resume 完全正常。"}}]}
+{"job": "panelF|TRN-0318|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0318|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0316|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0315|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "训练/推理图挂起", "evidence": "八卡 EP 训练图中该同步缺失直接导致图挂起"}}]}
+{"job": "panelF|TRN-0318|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "trl vLLM server 模式 Gemma3 图像特征错位被静默忽略", "evidence": "transformers 4.56.2/4.57.1 的 Gemma3 processor 返回 placeholder token，故仅 5.x 中招"}}]}
+{"job": "panelF|TRN-0316|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0314|glm-5.3", "model": "glm-5.3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "overstated", "quote": "HF32 降精度", "evidence": "存在 HF32 类静默降精度：rel 误差 6.0e-4~1.8e-3（≈2^-10.5 量级，mantissa 低位宽特征）"}}]}
+{"job": "panelF|TRN-0316|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "fix|TRN-0315", "model": "qwen3.8-max", "result": {"detail": "关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012 旧值，接收端持续等待、Cube 等待 countReady；无报错、无 NaN，图整体挂起。"}}
+{"job": "fix|TRN-0317", "model": "qwen3.8-max", "result": {"detail": "BF16 训练下，backward 后、optimizer.step 前经 safe_set_full_grad 掩蔽/置零/替换梯度会被静默丢弃，更新用未修改梯度；梯度手术/掩蔽/替换类方法（如梯度裁剪定制、对抗训练、调试注入）失效。开启 immediate 累积且参数跨优化器分区时抛形状错误。"}}
+{"job": "verify|TRN-0317|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0315|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0315|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0317|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

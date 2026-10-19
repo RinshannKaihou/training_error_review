@@ -4,10 +4,10 @@ slug: grpo_resume_inside_generation_block_shifts_schedule
 aliases: []
 title: GRPO 块内 resume 使 prompt 训练计划错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 数据管线
+  - subsystem: RL训练回路
     stack: trl
     component: _step 与 skip 基准分叉
   behavior: resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader；ckpt 落在 generation 块内时两套计数基准分叉，块边界整体移动。
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 数据管线
+        to: RL训练回路

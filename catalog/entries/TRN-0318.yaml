@@ -4,10 +4,10 @@ slug: trl_gemma3_server_mode_image_features_misplaced
 aliases: []
 title: trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 数据管线
+  - subsystem: 调度/服务
     stack: trl
     component: VLLMGeneration 图像特征定位
   behavior: _place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
@@ -47,3 +47,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 数据管线
+        to: 调度/服务

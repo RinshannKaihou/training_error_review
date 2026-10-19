@@ -3,23 +3,23 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 312 条；状态：active 312
+共 319 条；状态：active 312、pending_audit 7
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 25 |
+| 算子/内核 | 27 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
-| 集合通信 | 4 |
+| 集合通信 | 5 |
 | 并行切分 | 21 |
 | 量化 | 8 |
 | 位置编码 | 5 |
 | 分词/模板 | 7 |
-| 模型定义 | 7 |
+| 模型定义 | 8 |
 | 权重/检查点 | 28 |
-| 数据管线 | 29 |
-| 优化器 | 29 |
+| 数据管线 | 31 |
+| 优化器 | 30 |
 | 损失计算 | 18 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 11 |
@@ -414,6 +414,30 @@
 - **改进措施**：检测 调用前自检两个张量列表逐项长度/dtype/shape 一致（框架层）；tiling 层无拦截；修复 修复 MR !12121（open）：共享 validator 新增 ValidateTensorListPair 一次性校验实例个数、逐 tensor dtype 与 storage shape，六个算子 arch35 tiling 接入并补失败/匹配四类单测；本机无昇腾工具链，host UT 未跑（-fsyntax-only 语法检查过），以仓库 CI 为准。https://gitcode.com/cann/ops-nn/merge_requests/12121
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6781；https://gitcode.com/cann/ops-nn/merge_requests/12121
 
+### TRN-0313 `aten_gelu_approximate_attr_ignored_tanh_only` torch_npu ATen gelu 静默走 tanh 近似
+
+`故障` · `pending_audit` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：算子/内核 / pytorch / ATen gelu 分发
+- **原因行为**：ATen gelu 分发到无 approximate 参数的 tanh-only aclnnGelu，未按 'none' 路由到带 attr 的 aclnnGeluV2；正确的 erf 路径已在 CANN 包内存在但未被选用。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：F.gelu(none) 与 F.gelu(tanh) 在 NPU 逐位相同；4096 点 fp32 统计 |NPU(none)−CPU_erf|max=4.735e-4（vs CPU_tanh 仅 2.9e-7 噪声级）；fp16/bf16 同样按 tanh 式计算；无任何告警
+- **改进措施**：检测 对比 F.gelu(x, approximate='none') 与 F.gelu(x, approximate='tanh') 是否逐位相同（相同即中招）；x=2.0 处 erf 期望 1.9544998；修复 用户侧 workaround 已核实：torch_npu.npu_gelu(x, approximate='none') 走正确 erf 路径（vs CPU erf 4.8e-7）；根治=ATen gelu 分发按 approximate 路由到 aclnnGeluV2 TPL_NONE（未实施，闭源二进制分发无法直接落 PR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6841
+- **关联**：cross:INF-1439
+
+### TRN-0314 `op_plugin_conv_family_hf32_silent_precision_loss` op-plugin fp32 conv 全族静默 HF32 降精度且污染梯度
+
+`故障` · `pending_audit` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：算子/内核 / pytorch / conv 族 aclnn 出口精度模式选择
+- **原因行为**：fp32 conv 四算子的 aclnn 出口按 HF32 类低位宽执行，不遵循 high_precision 配置，前向与梯度同偏离；set_option（已废弃）与 jit_compile 均无法绕开。
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：fp32 conv 前向 rel 误差 6.0e-4~1.8e-3（≈2^-10.5 量级），梯度同样被污染；双芯逐位相同（确定性非随机），无告警；fp16 同形态正常；matmul/bmm/einsum 同机达标可排除平台普遍性
+- **改进措施**：检测 同机 matmul/bmm/einsum fp32 对照（逐位或 <2.7e-6 达标）排除平台普遍性；conv 形态矩阵与 CPU 双端逐位比对；修复 待定（issue open：要求 op-plugin 确认 conv 族 aclnn 出口选择是否遵循精度模式配置并文档化；high_precision 选项已废弃不生效）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/593
+- **关联**：cross:INF-1434
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -644,6 +668,17 @@
 - **来源**：https://gitcode.com/cann/hccl/issues/827
 - **关联**：cross:INF-1425
 
+### TRN-0315 `megamoe_sync_count_missing_dsb_barrier` MegaMoE 同步轮次 count 写后读缺 DSB 屏障致挂起
+
+`故障` · `pending_audit` · `infra_off` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：集合通信 / 通用 / MegaMoE 同步轮次 count 旁路写
+- **原因行为**：同步轮次旁路 GM 写后无 asc_sync_data_barrier(DSB_DDR)；后续重读同一 sequence 时 MTE3 事件不保证 Scalar 旁路写已完成，维测打点改变时序曾掩盖该依赖。
+- **影响对象**：可用性/进度（挂起）
+- **影响详情**：关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 场景停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012（旧值），接收端持续等待、Cube 等待 countReady；无错误值输出但训练/推理图挂起
+- **改进措施**：检测 复现配置 EP8、每卡 BS72、H5120、I2304、3 路由专家+1 共享、topk6、预量化 A8W4/共享 A8W8；关闭维测编译后观察 count epoch 校验停滞；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14046 （WIP open，未合入）：IncrementSyncCount 旁路写后补 asc_sync_data_barrier(mem_dsb_t::DSB_DDR)，反汇编确认 ST_DEV.b32 后、跨核通知前增加 DSB #1；八卡 1260 次调用与 30/30 用例通过，但 ON/OFF 数值对照未完成
+- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14046
+
 ## 并行切分
 
 ### TRN-0014 `gtp_wgrad_dtype_breaks_fp32_reduce_contract` GTP 回退 wgrad 以 BF16 归约，破坏 FP32 梯度契约
@@ -821,8 +856,8 @@
 - **原因行为**：SP>1 时 ZeRO-1/2 与 ZeRO-3 连续桶路径除以 world_size/sp，ZeRO-3 非连续路径 __avg_scatter_grads 却除以整个 SP-DP 组；#4530 补 SP 因子时漏了后者。
 - **影响对象**：梯度；训练轨迹（静默错误）
 - **影响详情**：无crash；sp=2时reduce_scatter路径梯度为其余0.5×，ZeRO-3默认走此；contiguous_gradients:true+reduce_scatter:false下超reduce_bucket_size单参数与其余参数除数不同；ALST时ZeRO-1/2步长sp×过量。
-- **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8692
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8854 （2026-10-18 open 未合入）：__avg_scatter_grads 的 averaging_world_size 除以 sequence_parallel_size，与连续桶路径及 ZeRO-1/2 对齐；修复内含非重复查重说明
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8692；https://github.com/deepspeedai/DeepSpeed/pull/8854
 
 ### TRN-0049 `qgz_two_stage_weight_grad_scaled_by_local_ranks` DeepSpeed ZeRO++ qgZ 跨节点权重梯度被放大 L 倍
 
@@ -1190,6 +1225,17 @@
 - **影响详情**：同时开 MLA+MTP+DSA indexer（DeepSeek-V3、GLM5/GLM5.2 同路径，glm5_744b 示例脚本默认开启）时：MTP 层 indexer 层号/共享关系错误、DSA indexer loss 按错误层号记录，无堆栈无报错，训练正常跑但结构语义已错。
 - **改进措施**：检测 核对 MTP 层 indexer 的全局层号与 Compute/Share 分组；开 DSA indexer 训练后检查 indexer loss 按层分布是否与结构一致。；修复 修复 MR !5153（merged）：_with_mtp_self_attention_spec 克隆 spec 注入 is_mtp_layer=True、resolve_dsa_indexer_build_config 把 MTP 深度映射到 decoder 层之后、DualPipeV+MTP 场景改用 dualpipev_mtp_model_provider_wrapper。端到端 DeepSeek-V3 SFT（16×910）跑通验证问题二/三与 layer-spec 路径；问题一（DSA indexer 改动）未被该用例覆盖（用例中 indexer 关闭），仍需开 indexer 的 GLM5 验证。https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5153
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1925；https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5153
+
+### TRN-0319 `mimo_whisper_encoder_attends_padded_mel_tail` MiMo Whisper 冻结塔前向泄漏 padded mel 尾部特征
+
+`故障` · `pending_audit` · `partial` · `sft` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：模型定义 / megatron-lm / hf_whisper_encoder 包装
+- **原因行为**：Wrapper 跑完整 3000 帧 encoder 后才按 seq_lengths 掩码；WhisperEncoder 忽略 attention_mask，各 query 仍 attend 到 pad 尾（0.0 非静默值）。
+- **影响对象**：输入编码；隐状态（静默错误）
+- **影响详情**：掩码后完整前向与未 pad 主体输出不同（CPU tiny encoder 复现）；published AVLM recipe 默认冻结 Whisper 塔取第一 clip，pad 泄漏特征静默进入训练主干，无报错
+- **改进措施**：检测 CPU tiny WhisperEncoder 注入对照：3000 帧（前 13 帧真实前缀+尾垃圾）wrapper 输出 vs 未 pad 主体 vs masked full forward；修复 issue 给出期望实现（未落地）：按行裁剪 input_features[i,:,:mel]（1<=mel<=time）只跑真实帧，S=(mel-1)//2+1 须等于 seq_lengths，不同长度分开 forward 后拼接；issue open（mcore-oncall 已呼叫，无维护者回应）
+- **来源**：https://github.com/NVIDIA/Megatron-LM/issues/8324
 
 ## 权重/检查点
 
@@ -1569,7 +1615,7 @@
 - **影响对象**：训练样本流（静默错误）
 - **影响详情**：有 group 因超过 max_staleness 被丢弃时，ckpt 正常写出、无报错、指标正常；resume 后从被钉住的位置重启，近全量数据被重复训练（复现中 150 行有 147 行训练两次）。
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/huggingface/trl/issues/7274；https://github.com/huggingface/trl/pull/7294
+- **来源**：https://github.com/huggingface/trl/issues/7274；https://github.com/huggingface/trl/pull/7294；https://github.com/huggingface/trl/pull/7786
 - **关联**：var:TRN-0065
 
 ### TRN-0079 `cyclic_sharded_resume_dp_resize_reorder` Megatron cyclic 分片 sampler 换 DP 续训致样本错乱
@@ -1842,6 +1888,28 @@
 - **影响详情**：滑窗逐出 prefix 时 diffusion loss 偏移（4.3688 vs 4.3668）、decoder 可见 cached prefix 从 128 token 变 0，最大参数梯度差 0.146（相对 L2 77%）；384-token 不逐出对照差 2.38e-7。SFT 静默训错。
 - **改进措施**：检测 对照独立编码 prefix 的 loss/梯度（issue 附 CPU 复现脚本）；检查滑窗保留位置与 mask 窗口的覆盖关系。；修复 待定（issue open 5 评论；参考修法=decoder 侧单独编码 sampled prefix、保留完整 encoder pass，示例代码修正未核实合入）
 - **来源**：https://github.com/huggingface/trl/issues/7734
+
+### TRN-0316 `grpo_resume_inside_generation_block_shifts_schedule` GRPO 块内 resume 使 prompt 训练计划错位
+
+`故障` · `pending_audit` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：数据管线 / trl / _step 与 skip 基准分叉
+- **原因行为**：resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader；ckpt 落在 generation 块内时两套计数基准分叉，块边界整体移动。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常
+- **改进措施**：检测 固定 shuffle_dataset=False、逐 optimizer step 记录 prompt id 集合，对比中断/连续 run（repro 脚本 exit 1 on mismatch）；resume 于块边界（checkpoint-2 对照）则完全一致可作判别；修复 待定（issue open 2026-10-18，无评论；报告者含 CPU repro：8 prompts、num_iterations=2、steps_per_generation=1、Qwen2 tiny）
+- **来源**：https://github.com/huggingface/trl/issues/7787
+
+### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
+
+`故障` · `pending_audit` · `config` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：数据管线 / trl / VLLMGeneration 图像特征定位
+- **原因行为**：_place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
+- **影响对象**：输入编码；训练样本流（静默错误）
+- **影响详情**：vLLM 生成完全忽略图像（纯红图+颜色提问→回答『无法判断颜色』而非『Red』）；GRPO/RLOO/Distillation/GOLD/SDFT/SDPO/IW-OPD 所有 server 模式 trainer 中招；无任何报错
+- **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 （以 model config 的 image token 定位特征；merge 状态本轮未核）；issue 另指 PR #6765 为引入点
+- **来源**：https://github.com/huggingface/trl/issues/7772；https://github.com/huggingface/trl/pull/7773
 
 ## 优化器
 
@@ -2175,6 +2243,17 @@
 - **影响详情**：首个反向后首次 GradScaler.unscale_ 抛 RuntimeError(266>250)，训练无法进入首个 optimizer step；910B2 单卡小模型可复现；报错指向 combined_tensor 越界而非 BN 梯度本身。
 - **改进措施**：检测 对每个梯度张量比对 storage().size() 与 torch_npu.get_storage_size()，不一致即预警。；修复 待定（issue 2026-10-17 报于 Ascend/pytorch #5501，open；issue 提到 --bn-format3 强制 BN 参数 format 3 时两种长度一致、不触发，可作规避参考，作者未声称已验证为通用规避）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5501（2026-10-17
+
+### TRN-0317 `deepspeed_bf16_safe_set_full_grad_wrong_buffer` BF16 safe_set_full_grad 写错缓冲致梯度掩蔽失效
+
+`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：优化器 / deepspeed / safe_set_full_grad 分支
+- **原因行为**：safe_set_full_grad() 对 BF16 写 staging param.grad，而 BF16_Optimizer 从独立累加缓冲 step；backward 与 step 之间的梯度掩蔽/替换被静默忽略。
+- **影响对象**：梯度；优化器状态（静默错误）
+- **影响详情**：用户在 backward 后、step 前对梯度做的掩蔽/替换（如梯度手术、噪声注入、自定义 hook）被静默丢弃，BF16 训练继续用未掩蔽梯度更新；无报错、无日志（immediate 模式跨分区参数则 fail-loud 形状错误）
+- **改进措施**：检测 回归含两真实 DP rank、双累加模式、BF16 ZeRO-1 与 ZeRO-2 兄弟路径、矩阵/偏置参数、双累加微批、零/非零替换梯度，检查公开 getter 与 SGD 参数更新；CPU repro 脚本随 PR 附带（无需编译 DeepSpeed ops）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8856 （open 2026-10-18 未合入）：setter 改写既有的完整累加缓冲，匹配 getter 的 BF16 检测；普通梯度与 ZeRO 分片梯度分支不变
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8856
 
 ## 损失计算
 

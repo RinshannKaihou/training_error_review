@@ -41,6 +41,8 @@ original:
   behavior: 昇腾上用 NpuFusedAdamW 训含小通道 BatchNorm 的模型并开 FP16 AMP：第一步反向后第一次 GradScaler.unscale_ 直接抛 RuntimeError storage 越界（266>250），训练无法进入首个 optimizer step。报错信息指向 combined_tensor 越界而非 BN 梯度本身，定位有迷惑性；BN 通道数大（如 64）时不触发，仅小通道（8）的 format2 梯度出现 storage 与描述符长度分叉。
   trigger_surface: Ascend 910B + torch_npu 2.14.0 + CANN 9.2.0；NpuFusedAdamW + FP16 AMP(GradScaler) + allow_internal_format=True + 小通道 BatchNorm(format2 梯度)。
   discovery: 2026-10-18 每日扫描
+  notes:
+  - '2026-10-19 回访 2026-10-19：op-plugin #5501（本条来源）与同日新报 #593（fp32 conv 全族 HF32 降精度、TRN-0314）同出自 A3 精度矩阵扫描，属不同缺陷（BN 梯度 storage 长度失配 vs conv 出口精度模式）；无状态更新。'
 migration:
   method: scan
   scanned: '2026-10-18'
@@ -57,3 +59,7 @@ migration:
         to: 可用性/进度
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - original.notes

@@ -32,7 +32,7 @@ labels:
   discovered: '2026-10-18'
 remarks: ''
 evidence:
-- url: https://github.com/huggingface/trl/issues/7781（2026-10-17
+- url: https://github.com/huggingface/trl/issues/7781
   kind: github_issue
 relations: []
 pattern: PAT-TRN-0047
@@ -49,6 +49,9 @@ migration:
   - date: '2026-10-18'
     fields:
     - pattern
+  - date: '2026-10-19'
+    fields:
+    - evidence
   audit:
     round: daily-audit-2026-10-18
     base:

@@ -32,7 +32,7 @@ labels:
   discovered: '2026-10-18'
 remarks: fail-loud（首步报错）为主，但底层是梯度张量 storage 容量与 NPU 描述符静默不一致（两套长度口径共存、其余梯度一致），随报错暴露；按边界收录为延迟可见的 storage/描述符失配实例，留审计裁量。
 evidence:
-- url: https://gitcode.com/Ascend/pytorch/issues/5501（2026-10-17
+- url: https://gitcode.com/Ascend/pytorch/issues/5501
   kind: gitcode_issue
 relations: []
 original:
@@ -63,3 +63,6 @@ migration:
   - date: '2026-10-19'
     fields:
     - original.notes
+  - date: '2026-10-19'
+    fields:
+    - evidence

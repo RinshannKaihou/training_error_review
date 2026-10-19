@@ -1019,7 +1019,7 @@
 - **影响对象**：数值结果；模型权重（静默错误）
 - **影响详情**：无报错。下游按行读取 scale 时把残留旧字节当成合法 scale 编码消费，量化权重/激活 scale 在奇数 K32 分组的行上来自未定义的旧内存；主机级验证为 padding 槽保留非零哨兵，硬件端到端数值精度未验证。
 - **改进措施**：检测 将 scale 输出缓冲区预填非零哨兵，跑奇数有效 K32 分组宽度（outputN=32/96）检查行尾 padding 槽是否为零。；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14006（open）：HasSwigluMxScalePadding 判定尾块归属，尾 tile 清零 staging 并把写回长度加一字节；主机单测覆盖 outputN=1~1024×tileSize=32/64/128/256，未验证设备数值精度
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6247；https://gitcode.com/cann/ops-transformer/merge_requests/14006（均
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6247；https://gitcode.com/cann/ops-transformer/merge_requests/14006
 
 ## 位置编码
 
@@ -2234,7 +2234,7 @@
 - **影响对象**：可用性/进度；优化器状态（报错）
 - **影响详情**：首个反向后首次 GradScaler.unscale_ 抛 RuntimeError(266>250)，训练无法进入首个 optimizer step；910B2 单卡小模型可复现；报错指向 combined_tensor 越界而非 BN 梯度本身。
 - **改进措施**：检测 对每个梯度张量比对 storage().size() 与 torch_npu.get_storage_size()，不一致即预警。；修复 待定（issue 2026-10-17 报于 Ascend/pytorch #5501，open；issue 提到 --bn-format3 强制 BN 参数 format 3 时两种长度一致、不触发，可作规避参考，作者未声称已验证为通用规避）
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5501（2026-10-17
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5501
 
 ### TRN-0317 `deepspeed_bf16_safe_set_full_grad_wrong_buffer` BF16 safe_set_full_grad 写错缓冲致梯度掩蔽失效
 
@@ -3407,7 +3407,7 @@
 - **影响对象**：训练样本流；训练信号（静默错误）
 - **影响详情**：无报错。provenance 错标；staleness 门把刚生成的全新 rollout 当陈旧丢弃（max_staleness=0 时必丢），非零门限下 batching 与 staleness 观测失真。
 - **改进措施**：检测 对同一 batch 比对样本 model_version 与生成请求 payload 中的模型名版本（两者应恒等）。；修复 报告者已备窄修复 fork（在 HTTP 请求构造边界快照版本、用它选 adapter 并随 token 返回），含确定性 CPU 测试：https://github.com/lindicaphxag-tech/trl/tree/fix/async-opd-pin-rollout-sampling-policy-version-20261017 （未合入上游，状态未核实）。
-- **来源**：https://github.com/huggingface/trl/issues/7781（2026-10-17
+- **来源**：https://github.com/huggingface/trl/issues/7781
 
 ### TRN-0310 `trl_merged_weight_sync_publish_after_resume` trl merged 权重同步先 resume 后发布版本号
 
@@ -3418,7 +3418,7 @@
 - **影响对象**：训练样本流；训练信号（静默错误）
 - **影响详情**：非 LoRA merged/dense 每次同步的 resume 与版本发布间隙训练照常、无报错；vLLM 已用新权重出 token 但样本标旧版本，新样本可被 max_staleness 门当过期丢弃（门限 0 时尤甚），staleness 观测/批次构成偏离。
 - **改进措施**：检测 对版本发布与 resume 的相对顺序做单元断言（issue 提供了六场景生产方法级回归，fork CI PASS）。；修复 报告者修复：把版本发布移到 resume 之前（publish while paused → resume），fork https://github.com/lindicaphxag-tech/trl/tree/fix/async-dense-policy-publish-before-resume-20261017 含两个 trainer 的生产方法级单测与 fork CI PASS（未合入上游，状态未核实）。
-- **来源**：https://github.com/huggingface/trl/issues/7782（2026-10-17
+- **来源**：https://github.com/huggingface/trl/issues/7782
 - **关联**：var:TRN-0309
 
 ### TRN-0316 `grpo_resume_inside_generation_block_shifts_schedule` GRPO 块内 resume 使 prompt 训练计划错位

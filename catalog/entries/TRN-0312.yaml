@@ -34,7 +34,7 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6247
   kind: gitcode_issue
-- url: https://gitcode.com/cann/ops-transformer/merge_requests/14006（均
+- url: https://gitcode.com/cann/ops-transformer/merge_requests/14006
   kind: gitcode_pr
 relations: []
 original:
@@ -50,6 +50,9 @@ migration:
   - date: '2026-10-18'
     fields:
     - mitigation.fix
+  - date: '2026-10-19'
+    fields:
+    - evidence
   audit:
     round: daily-audit-2026-10-18
     base:

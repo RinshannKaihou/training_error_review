@@ -3,16 +3,16 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 319 条；状态：active 319
+共 327 条；状态：active 319、pending_audit 8
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 28 |
+| 算子/内核 | 33 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
 | 集合通信 | 4 |
-| 并行切分 | 21 |
+| 并行切分 | 22 |
 | 调度/服务 | 1 |
 | 量化 | 8 |
 | 位置编码 | 5 |
@@ -20,11 +20,11 @@
 | 模型定义 | 8 |
 | 权重/检查点 | 28 |
 | 数据管线 | 29 |
-| 优化器 | 30 |
+| 优化器 | 31 |
 | 损失计算 | 18 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 11 |
-| RL训练回路 | 62 |
+| RL训练回路 | 63 |
 | 观测/评测 | 15 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -449,6 +449,63 @@
 - **影响详情**：关闭维测（MC2_ENABLE_EXCEPTION_DUMP=0）后八卡 Static 停在 count epoch 校验：预期 0xE9，一个槽仍为 0xE8000012 旧值，接收端持续等待、Cube 等待 countReady；无报错、无 NaN，图整体挂起。
 - **改进措施**：检测 复现配置 EP8、每卡 BS72、H5120、I2304、3 路由专家+1 共享、topk6、预量化 A8W4/共享 A8W8；关闭维测编译后观察 count epoch 校验停滞；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14046 （WIP open，未合入）：IncrementSyncCount 旁路写后补 asc_sync_data_barrier(mem_dsb_t::DSB_DDR)，反汇编确认 ST_DEV.b32 后、跨核通知前增加 DSB #1；八卡 1260 次调用与 30/30 用例通过，但 ON/OFF 数值对照未完成
 - **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14046
+
+### TRN-0320 `op_plugin_cross_entropy_oob_target_silent` op-plugin cross_entropy 越界 target 静默吞掉
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / cross_entropy 入口校验
+- **原因行为**：op-plugin 的 cross_entropy 入口缺主机端 target 边界校验，越界 target 直达设备端：mean 路径静默排除该样本，none 路径槽位读越界内存填垃圾值（疑似 OOB 读），无报错。
+- **影响对象**：训练信号；数值结果（静默错误）
+- **影响详情**：训练 batch 含越界/污染 target 时，NPU 上 loss 静默少算一个样本（mean）或该槽位返回跨芯不一致垃圾值（none：npu:0=0.624 vs npu:1=1.797）；CPU 同代码抛 IndexError。双芯一致复现。
+- **改进措施**：检测 训练前在 host 侧断言 0<=target<C 且 target 无 NaN；或对照 CPU 前几个 batch 的 loss。；修复 待定（issue 2026-10-19 open 建议入口加主机端 target 边界校验对齐 CPU 抛 IndexError；无修复 MR）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/598；https://gitcode.com/Ascend/op-plugin/merge_requests/6055
+- **关联**：cross:INF-1471
+
+### TRN-0321 `op_plugin_embedding_bag_last_offset_double_count` op-plugin embedding_bag 末包重复累加致错值与梯度污染
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / embedding_bag 转换层
+- **原因行为**：embedding_bag 转换层在 2D 输入 + include_last_offset=True 时末包偏移处理错误，最后一个 bag 被重复累计：sum/mean 末包输出=正确值+末包真实和，梯度同污染；max 正确。
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：2D embedding_bag（include_last_offset=True）训练时每个样本最后一个 bag 的 sum/mean 前向输出错值、对应梯度同错；无报错，错值随训练静默传播。max 模式与不含 include_last_offset 的调用不受影响。双芯一致。
+- **改进措施**：检测 对含末包的样本用 CPU embedding_bag 对照 forward/backward；或抽验末 bag 输出是否等于「正确和 + 末包和」的二倍关系。；修复 待定（issue 2026-10-19 open 建议核对 include_last_offset 偏移处理；无修复 MR）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/599
+
+### TRN-0322 `op_plugin_pack_padded_pad_dirty_residual` op-plugin pad_packed_sequence 残留原输入脏数据
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / pad_packed_sequence 转换层
+- **原因行为**：op-plugin 的 pad_packed_sequence 输出转换层对 pad 区域不清零，pack→pad 往返后 pad 填充区残留原输入同位置的旧值（恒等拷贝级错误）；索引面（sorted_indices 等）全对。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：变长序列训练/RNN 路径中 pad 位若参与池化、mask 聚合或 loss 累计，旧值静默混入计算——数值污染随 pad 区域扩散，无报错。双芯一致复现。
+- **改进措施**：检测 pack→pad 往返后断言 pad 区恒为 0；或对往返输出与 CPU 实现逐元素对照。；修复 待定（issue 2026-10-19 open 建议 pad_packed_sequence 输出转换层对 pad 区域清零；无修复 MR）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/604
+
+### TRN-0326 `op_plugin_mul_cpu_scalar_premature_round` op-plugin mul CPU 标量提前舍入 1 ulp 偏差
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / mul 入口标量上卡
+- **原因行为**：mul 入口把 CPU 0-dim 浮点标量按输出 dtype（half/bf16）上卡，H2D 时提前舍入；原生以 float opmath 参与计算，结果差 1 个 bf16 ulp。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：CPU 0-dim 浮点标量 × 卡上 half/bf16 张量的 mul 结果与 GPU 差 1 ulp（实测 0.8476 vs 0.8515 量级偏差），GPU/NPU 精度对齐训练中 dump 逐层比对失败、无告警；卡上张量双卡间结果一致，仅跨设备标量路径触发。
+- **改进措施**：检测 跨设备标量乘法与纯 CPU/GPU 参对照逐元素比对；精度对齐 dump 中 mul 节点单算子复测。；修复 修复 MR https://gitcode.com/Ascend/op-plugin/merge_requests/6062 （open 未合入未发布）：浮点标量且 result_type 为 Half/BFloat16 时改按 Float 上卡；mul(Tensor,Scalar) 与 mul_ 路径不受影响。910B2 + CANN 9.2.0 实测。
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5392；https://gitcode.com/Ascend/op-plugin/merge_requests/6062
+
+### TRN-0327 `op_plugin_masked_scatter_small_src_oob_garbage` op-plugin masked_scatter src 不足静默填越界垃圾
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / masked_scatter 入口校验
+- **原因行为**：masked_scatter 两条入口（opapi 与 aclops 兜底）都不校验 src 容量是否 ≥ mask 真值数，src 不足时静默接受，越界读设备内存垃圾填入结果。
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：src.numel() < mask 真值数时，NPU 上 masked_scatter_ 不报错，超出 len(src) 的槽位填入越界读到的设备内存垃圾（确定性值、非 NaN），垃圾值随前向/反向传播扩散；双芯一致、上下文存活、无告警。
+- **改进措施**：检测 入口断言 src.numel() >= mask.sum()；或与 CPU 实现对照。；修复 修复 MR https://gitcode.com/Ascend/op-plugin/merge_requests/6055 （open 未合入）：两条入口插入 check_source_capacity（快路径 numel 比较零同步、慢路径真值计数 TORCH_CHECK，报错语义与 CPU 对齐）；静态核验通过，真机验证未做（作者无本地 NPU）。
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/602；https://gitcode.com/Ascend/op-plugin/merge_requests/6055
+- **关联**：cross:INF-1470
 
 ## 编译器
 
@@ -916,6 +973,17 @@
 - **改进措施**：检测 grad_norm 恒等于 √(param_group 数)（2 组即 √2）即可判定底层梯度 NaN；或第 2 步起 loss 塌 0。；修复 上游修复 PR #7965 已随 v0.19.0 发布（#8061/#8080 于 v0.19.3 补 torch.compile 多流 producer 场景）；规避：overlap_comm=false 或升级 deepspeed >= 0.19.3。ms-swift install_all.sh 的 "deepspeed<0.19" 约束会精确装进受影响窗口，issue 建议提升约束（open 未合）。https://github.com/deepspeedai/DeepSpeed/pull/7965
 - **来源**：https://github.com/modelscope/ms-swift/issues/10372；https://github.com/deepspeedai/DeepSpeed/pull/7965；https://github.com/deepspeedai/DeepSpeed/pull/7805
 
+### TRN-0324 `megatron_fsdp_v1_grad_acc_fusion_wgrad_overwrite` Megatron-FSDP v1 梯度累积融合覆写未分片 wgrad
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：并行切分 / megatron-lm / FSDP v1 local Linear 反向
+- **原因行为**：ColumnParallelLinear 在 gradient_accumulation_fusion=True 且 FSDP v1 下，FSDP 反向把 wgrad 写入持久未分片缓冲，覆盖此前 microbatch 已累积值。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：多 microbatch 梯度累积下权重梯度只保留最后一个 microbatch 的贡献，前一 microbatch 分量被静默覆盖；无报错、无 NaN，梯度数值看似合理但错。单卡 16x16 Linear 双 microbatch（各贡献 8/96）实测应为 104 实得 96。
+- **改进措施**：检测 对照关闭 gradient_accumulation_fusion 或启用真实分片的运行，比对逐步 wgrad（issue 提供 16x16 单卡确定性 repro，control 全部通过）。；修复 待定（issue 2026-10-19 open，@mcore-oncall，无修复 PR；repro 脚本带 --fix 对照）
+- **来源**：https://github.com/NVIDIA/Megatron-LM/issues/8332
+
 ## 调度/服务
 
 ### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
@@ -926,7 +994,7 @@
 - **原因行为**：_place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
 - **影响对象**：输入编码；训练样本流（静默错误）
 - **影响详情**：vLLM 生成完全忽略图像（纯红图+颜色提问→回答『无法判断颜色』而非『Red』）；GRPO/RLOO/Distillation/GOLD/SDFT/SDPO/IW-OPD 所有 server 模式 trainer 中招；无任何报错
-- **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 （以 model config 的 image token 定位特征；merge 状态本轮未核）；issue 另指 PR #6765 为引入点
+- **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 已于 2026-10-19 closed 且未合入（merged_at=None），缺陷仍在 main；无替代修复。
 - **来源**：https://github.com/huggingface/trl/issues/7772；https://github.com/huggingface/trl/pull/7773
 
 ## 量化
@@ -2247,6 +2315,17 @@
 - **改进措施**：检测 回归含两真实 DP rank、双累加模式、BF16 ZeRO-1 与 ZeRO-2 兄弟路径、矩阵/偏置参数、双累加微批、零/非零替换梯度，检查公开 getter 与 SGD 参数更新；CPU repro 脚本随 PR 附带（无需编译 DeepSpeed ops）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8856 （open 2026-10-18 未合入）：setter 改写既有的完整累加缓冲，匹配 getter 的 BF16 检测；普通梯度与 ZeRO 分片梯度分支不变
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8856
 
+### TRN-0323 `megatron_chained_optim_loss_scale_divergence` Megatron 链式优化器 loss scale 分叉静默错误反缩放
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：优化器 / megatron-lm / 链式 FP16 loss scaler 更新
+- **原因行为**：FP16 链式优化器 backward 用第一个优化器的 scale，但各优化器用各自 overflow 结果独立更新 scaler；只一侧溢出时 scale 分叉，后续 update 按错 scale 反缩放部分模型。
+- **影响对象**：梯度；优化器状态（静默错误）
+- **影响详情**：FP16 MoE 链式优化器训练中，一侧溢出后 dense/expert 的 loss scale 静默分叉，后续步部分参数按错误 scale 反缩放（实测 64 步后 32768 vs 1048576，expert 梯度被多除 32 倍）；无报错。
+- **改进措施**：检测 监控各 scaler 的 scale 值是否始终相等；对 unscale 后梯度与 backward scale 对账。；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/8249 （open，未合入未发布）：推迟 scaler 更新至全部优化器完成梯度检查后按合并 overflow 结果统一更新；嵌套链同理；ckpt 格式不变。含 64 步 EP2 FP16 复现与 AdamW 参考对照（两卡 RTX 5090）。
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8249
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -3431,6 +3510,17 @@
 - **影响详情**：resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常
 - **改进措施**：检测 固定 shuffle_dataset=False、逐 optimizer step 记录 prompt id 集合，对比中断/连续 run（repro 脚本 exit 1 on mismatch）；resume 于块边界（checkpoint-2 对照）则完全一致可作判别；修复 待定（issue open 2026-10-18，无评论；报告者含 CPU repro：8 prompts、num_iterations=2、steps_per_generation=1、Qwen2 tiny）
 - **来源**：https://github.com/huggingface/trl/issues/7787
+
+### TRN-0325 `trl_accuracy_reward_text_unit_false_equation_full_credit` trl accuracy_reward 对否定句与假等式给满分
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：RL训练回路 / trl / accuracy_reward 解析与判定
+- **原因行为**：accuracy_reward 把 box 尾部 \text{...} 当单位剥掉，且 math-verify 接受右边等于 gold 的等式，否定句与假等式拿满奖励。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：以 accuracy_reward 为 reward 的 RLVR 训练中，模型写「R is wrong」或「W = R」即可拿满分：249 行样本否定句全满分、假等式 190 行满分；奖励与真实正确性脱钩、向 reward hack 漂移，无报错。
+- **改进措施**：检测 对 reward=1 的 completion 抽样人工/LLM 复核真实正确率；监控含 \text{} 或等式形态 box 的占比与 reward 曲线的相关性。；修复 待定（issue open 提出两个部分缓解：completion 侧 units=False 或收紧 verify；均引入误杀，见 issue 实测数据；无修复 PR）
+- **来源**：https://github.com/huggingface/trl/issues/7794
 
 ## 观测/评测
 

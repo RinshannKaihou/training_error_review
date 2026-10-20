@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度
-  fix: '修复 PR https://github.com/huggingface/trl/pull/7773 （以 model config 的 image token 定位特征；merge 状态本轮未核）；issue 另指 PR #6765 为引入点'
+  fix: 修复 PR https://github.com/huggingface/trl/pull/7773 已于 2026-10-19 closed 且未合入（merged_at=None），缺陷仍在 main；无替代修复。
 labels:
   family: N/A
   trigger: config
@@ -44,6 +44,8 @@ original:
   behavior: Gemma3 多模态 RL 训练（vllm_mode=server、transformers 5.x）静默忽略全部图像：rollout 生成回答『这是文本提示，无法判断图像颜色』而非『红色』，无任何报错；训练照常进行、reward 照常计算，实际策略在纯文本分布上更新。换 transformers 4.x 或 colocate 模式正常。
   trigger_surface: trl VLLMGeneration server 模式 _place_features；Gemma3 + transformers 5.x；vLLM 0.30.0 server；多模态 GRPO/RLOO/Distillation/GOLD/SDFT/SDPO/IW-OPD
   discovery: 2026-10-19 每日扫描
+  notes:
+  - '2026-10-20 回访 2026-10-20：修复 PR #7773 已 closed（2026-10-19T07:07Z），merged_at=None——未合入即关闭，缺陷仍在 main；条目 fix 状态更正为「PR closed 未合入」。'
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -62,3 +64,8 @@ migration:
       subsystem:
         from: 数据管线
         to: 调度/服务
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - mitigation.fix
+    - original.notes

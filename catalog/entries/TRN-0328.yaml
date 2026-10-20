@@ -4,7 +4,7 @@ slug: mindspeed_llm_sp_grad_reduce_scatter_residual_chunk_bf16
 aliases: []
 title: SP 梯度 reduce-scatter 残块 bf16 归约精度发散
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -54,3 +54,17 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - visibility
+    - behavior

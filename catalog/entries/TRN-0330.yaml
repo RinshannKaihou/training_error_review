@@ -4,7 +4,7 @@ slug: mindspeed_llm_dsa_shareindex_cache_overwritten_in_recompute
 aliases: []
 title: DSA ShareIndex TopK 缓存被后组覆盖，重算错读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 重计算/卸载
@@ -50,3 +50,19 @@ migration:
   - date: '2026-10-20'
     fields:
     - relations
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

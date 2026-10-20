@@ -2,15 +2,15 @@ id: TRN-0331
 legacy_ids: []
 slug: mindspeed_llm_packing_mbs_gt1_precision_collapse
 aliases: []
-title: packing 下 MBS>1 首 loss 翻倍并训成乱码
+title: packing 下 MBS>1 首 loss 偏高并乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
     stack: mindspeed-llm
     component: packing 样本边界与 MBS>1
-  behavior: 数据预处理加 --append-eod 走 packing 时，micro-batch 内多条 packed 样本的边界处理随 MBS 变化，MBS>1 下首 step loss 与单样本基线不符；报告未给出代码级根因。
+  behavior: 开启 --append-eod packing 且 MBS>1 时训练后模型精度异常，MBS=1 不复现；报告未确认代码级根因。
 effect:
   objects:
   - 训练样本流
@@ -44,3 +44,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - title
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

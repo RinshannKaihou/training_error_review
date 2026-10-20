@@ -4,7 +4,7 @@ slug: mindspeed_llm_resume_not_restore_data_order
 aliases: []
 title: 断点续训不恢复数据顺序致精度偏移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -54,3 +54,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - detail

@@ -103,3 +103,201 @@
 {"job": "verify|TRN-0326|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
 {"job": "verify|TRN-0322|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
 {"job": "verify|TRN-0320|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0328|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0329|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0330|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0331|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0332|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0332|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0332|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0333|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0328|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0331|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0329|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0333|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0333|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0330|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0334|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0329|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0330|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseC|TRN-0331|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseC|TRN-0334|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0328|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0336|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0335|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0337|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "优化器状态", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0334|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0338|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0337|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "优化器状态", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0337|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "优化器状态", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0339|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0339|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0340|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0341|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0340|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0340|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0336|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0341|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0339|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0335|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0341|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0328|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0329|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "baseC|TRN-0338|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0328|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0330|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": null}, {"behavior": {"problem": "overstated", "quote": "互相覆盖", "evidence": "存在多个共享组时，后一个 Compute 层会覆盖前一个组的结果"}}]}
+{"job": "baseF|TRN-0329|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "baseF|TRN-0328|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "边界 grad 跨 rank 不齐", "evidence": "结果同一 param 的 grad 在 SP rank 0 与 rank 1 的边界附近出现量级差异"}}]}
+{"job": "baseC|TRN-0338|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0332|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "wgrad 全零", "evidence": "日志里 grad norm 一直为 0.000；issue 正文没有给出重计算路径下 LoRA 梯度丢失的具体代码位置。"}}]}
+{"job": "baseF|TRN-0331|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": true, "component": true, "behavior": true, "detail": false}, {"title": {"problem": "overstated", "quote": "首 loss 翻倍", "evidence": "第一个 step loss 飞到 6 上下（正常 2 上下）"}, "component": {"problem": "unsupported", "quote": "packing 样本边界", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}, "behavior": {"problem": "unsupported", "quote": "micro-batch 内多条 packed 样本的边界处理随 MBS 变化", "evidence": "issue 正文只锁定「MBS>1 才会触发、MBS=1 不复现」这一观测依赖，没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}}]}
+{"job": "baseF|TRN-0333|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "损失逐步变大", "evidence": "loss 与吞吐看起来都正常、不报错；多次恢复后数据偏差累积。"}}]}
+{"job": "baseC|TRN-0336|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0332|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "重算路径下 LoRA 参数拿不到梯度，wgrad 全零", "evidence": "日志里 grad norm 一直为 0.000、lm loss 在 1.224e+01 附近几乎不动、num zeros 0、skipped/nan iterations 均为 0"}}]}
+{"job": "baseF|TRN-0333|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "损失逐步变大", "evidence": "恢复次数越多偏差越大；loss 与吞吐看起来都正常、不报错"}}]}
+{"job": "baseF|TRN-0334|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0330|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0330|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0334|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0335|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "missing_condition", "quote": "致偏好对错位", "evidence": "rejected 列只有一个候选……直接抛 IndexError……rejected 是多元素列表时……生成的偏好对错位"}, "behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选", "evidence": "后果分两类：(1) rejected 列只有一个候选……直接抛 IndexError……(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个……生成的偏好对错位"}}]}
+{"job": "baseC|TRN-0335|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "报错"}}
+{"job": "baseF|TRN-0335|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选", "evidence": "rejected 列只有一个候选（单元素 list 是最常见的偏好数据形态：一条样本 = 一个 chosen + 一个 rejected）时，sample[dataset_attr.rejected][1] 直接抛 IndexError: list index out of range，整个数据处理流程中断；(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个"}}]}
+{"job": "baseF|TRN-0336|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0333|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0332|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0337|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0334|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0329|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "baseF|TRN-0335|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选", "evidence": "sample[dataset_attr.rejected][1] 直接抛 IndexError: list index out of range，整个数据处理流程中断；(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个…生成的偏好对错位"}}]}
+{"job": "baseF|TRN-0336|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0338|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0331|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "overstated", "quote": "首 loss 翻倍", "evidence": "第一个 step 的 lm loss 就从 2 左右变成 6 左右"}, "behavior": {"problem": "unsupported", "quote": "micro-batch 内多条 packed 样本的边界处理随 MBS 变化", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}}]}
+{"job": "baseF|TRN-0340|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0339|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "同一 prompt-response 对的 loss 因而不同", "evidence": "导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同"}, "detail": {"problem": "mixed", "quote": "rank 上 prompt 偏难或偏易时本地 mean/std 偏离全局", "evidence": "某个 rank 的 prompt 恰好偏难或偏易时，本地 mean/std 与全局不一致"}}]}
+{"job": "baseF|TRN-0336|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0337|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0337|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0341|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0331|kimi-k3", "model": "kimi-k3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "overstated", "quote": "翻倍", "evidence": "第一个 step 的 lm loss 就从 2 左右变成 6 左右"}}]}
+{"job": "baseF|TRN-0338|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0341|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0338|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0341|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "reward_dispatch_size 与 n_samples_per_prompt 不一致时，labels 顺序与 rollout 样本不匹配", "evidence": "【触发面】DAPO + 多模态 rule_reward + reward_dispatch_size ≠ n_samples_per_prompt"}}]}
+{"job": "baseF|TRN-0340|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "micro-batch 横跨两个 prompt 组时 reshape 仍成功", "evidence": "一旦某个 micro-batch 横跨两个 prompt 组（或多个组的样本交错），只要总数能被 n 整除，reshape 就不会报错"}}]}
+{"job": "baseF|TRN-0339|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "各 rank 基准不同，同一 prompt-response 对的 loss 因而不同", "evidence": "于是各 rank 的归一化基准不同。GRPO 的 reward 是 per-prompt 算的，某个 rank 的 prompt 恰好偏难或偏易时，本地 mean/std 与全局不一致，导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同。"}, "detail": {"problem": "mixed", "quote": "rank 上 prompt 偏难或偏易时本地 mean/std 偏离全局，同一 pair 在不同 rank 上的 loss 不同", "evidence": "某个 rank 的 prompt 恰好偏难或偏易时，本地 mean/std 与全局不一致，导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同。"}}]}
+{"job": "baseF|TRN-0340|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "micro-batch 横跨两个 prompt 组时 reshape 仍成功", "evidence": "一旦某个 micro-batch 横跨两个 prompt 组（或多个组的样本交错），只要总数能被 n 整除，reshape 就不会报错"}}]}
+{"job": "baseF|TRN-0339|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "同一 prompt-response 对的 loss 因而不同", "evidence": "同一个 prompt-response 对在不同 rank 上算出的 loss 不一致"}, "detail": {"problem": "mixed", "quote": "本地 mean/std 偏离全局", "evidence": "某个 rank 的 prompt 恰好偏难或偏易时，本地 mean/std 与全局不一致"}}]}
+{"job": "panelC|TRN-0328|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0329|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "位置编码", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0331|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|TRN-0331|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0329|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0329|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0328|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0328|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0331|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0330|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0330|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0330|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0332|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|TRN-0333|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0332|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0335|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0332|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0332|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "重计算/卸载", "effect": "梯度", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0333|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0336|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|TRN-0333|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0336|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0338|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0333|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0338|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0335|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0330|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelC|TRN-0339|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|TRN-0335|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0329|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelC|TRN-0336|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0335|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0331|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelC|TRN-0340|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0341|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0340|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0338|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0339|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0338|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0340|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0341|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0339|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0339|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0340|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0341|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0328|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0329|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "panelC|TRN-0341|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0330|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0328|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0328|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "边界 grad 跨 rank 不齐", "evidence": "结果同一 param 的 grad 在 SP rank 0 与 rank 1 的边界附近出现量级差异。"}}]}
+{"job": "panelF|TRN-0331|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "overstated", "quote": "首 loss 翻倍", "evidence": "第一个 step loss 飞到 6 上下（正常 2 上下）"}, "behavior": {"problem": "unsupported", "quote": "micro-batch 内多条 packed 样本的边界处理随 MBS 变化", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}}]}
+{"job": "panelF|TRN-0330|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0329|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "panelF|TRN-0329|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}]}
+{"job": "panelF|TRN-0329|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "两个 CP rank 的 rope cos/sin 都从 position 0 起。", "evidence": "所以 CP=2、TP=1 时两个 rank 的 rope 都从 0 开始"}, "detail": {"problem": "unsupported", "quote": "loss 偏高", "evidence": "训练不报错、不出 NaN，只是精度与单卡/CP=1 对齐不上，长序列位置语义整体错位"}}]}
+{"job": "panelF|TRN-0330|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0330|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0333|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "损失逐步变大", "evidence": "loss 与吞吐看起来都正常、不报错，但最终模型精度比不中断的基线低 0.2% 左右。"}}]}
+{"job": "panelF|TRN-0331|hy3", "model": "hy3", "result": [{"title": true, "component": true, "behavior": true, "detail": false}, {"title": {"problem": "overstated", "quote": "首 loss 翻倍", "evidence": "第一个 step 的 lm loss 就从 2 左右变成 6 左右"}, "component": {"problem": "unsupported", "quote": "packing 样本边界", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}, "behavior": {"problem": "unsupported", "quote": "micro-batch 内多条 packed 样本的边界处理随 MBS 变化", "evidence": "packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认"}}]}
+{"job": "panelC|TRN-0336|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelF|TRN-0332|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "wgrad 全零", "evidence": "grad norm 一直为 0.000…num zeros 0"}}]}
+{"job": "panelF|TRN-0331|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "overstated", "quote": "首 loss 翻倍", "evidence": "第一个 step loss 飞到 6 上下（正常 2 上下）"}, "behavior": {"problem": "overstated", "quote": "边界处理随 MBS 变化", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}}]}
+{"job": "panelF|TRN-0335|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选。", "evidence": "rejected 列只有一个候选（单元素 list 是最常见的偏好数据形态：一条样本 = 一个 chosen + 一个 rejected）时，sample[dataset_attr.rejected][1] 直接抛 IndexError: list index out of range，整个数据处理流程中断；(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个，与 chosen[0] 不对称，生成的偏好对错位。"}}]}
+{"job": "panelF|TRN-0328|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "边界 grad 跨 rank 不齐", "evidence": "结果同一 param 的 grad 在 SP rank 0 与 rank 1 的边界附近出现量级差异"}}]}
+{"job": "panelF|TRN-0333|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "损失逐步变大", "evidence": "【行为效应】训练中断后从 checkpoint 恢复，loss 与吞吐看起来都正常、不报错【机制】长训练任务中断概率高，多次恢复后数据偏差累积。报告给出的量化影响：最终模型精度下降 0.2% 左右。"}}]}
+{"job": "panelF|TRN-0336|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0332|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "wgrad 全零", "evidence": "日志里 grad norm 一直为 0.000；issue 正文没有给出重计算路径下 LoRA 梯度丢失的具体代码位置"}}]}
+{"job": "panelF|TRN-0336|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0333|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "损失逐步变大", "evidence": "loss 与吞吐看起来都正常、不报错"}}]}
+{"job": "panelF|TRN-0332|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0338|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0335|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选", "evidence": "(1) rejected 列只有一个候选（单元素 list 是最常见的偏好数据形态：一条样本 = 一个 chosen + 一个 rejected）时，sample[dataset_attr.rejected][1] 直接抛 IndexError: list index out of range，整个数据处理流程中断；(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个，与 chosen[0] 不对称，生成的偏好对错位。"}}]}
+{"job": "panelF|TRN-0335|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "单元素 rejected 直接越界，多元素时取错候选", "evidence": "后果分两类：(1) rejected 列只有一个候选（单元素 list 是最常见的偏好数据形态：一条样本 = 一个 chosen + 一个 rejected）时，sample[dataset_attr.rejected][1] 直接抛 IndexError: list index out of range，整个数据处理流程中断；(2) rejected 是多元素列表时取的是第 2 个候选而不是第 1 个，与 chosen[0] 不对称，生成的偏好对错位。"}}]}
+{"job": "panelF|TRN-0339|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0336|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0333|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0328|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "边界 grad 跨 rank 不齐", "evidence": "结果同一 param 的 grad 在 SP rank 0 与 rank 1 的边界附近出现量级差异"}}]}
+{"job": "panelF|TRN-0338|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "另 patch 对 mcore 0.16 间接引用未生效。", "evidence": "补充：非 FP8 分支（transformer_engine_basic.py:117）注册的 TERowParallelLinear → RowParallelLinear patch 在 mcore 0.16 中未生效，因为 mcore 0.16 通过 TESpecProvider.row_parallel_linear() 返回值间接引用 Linear 类，而 apply_patch（patch_utils.py:130-133）的 sys.modules + id() 匹配只能覆盖模块级直接引用。"}}]}
+{"job": "panelF|TRN-0338|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0332|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0335|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0340|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0339|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "同一 prompt-response 对的 loss 因而不同。", "evidence": "导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同。"}}]}
+{"job": "panelF|TRN-0338|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0339|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "同一 prompt-response 对的 loss 因而不同", "evidence": "导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同"}, "detail": {"problem": "mixed", "quote": "rank 上 prompt 偏难或偏易时本地 mean/std 偏离全局", "evidence": "某个 rank 的 prompt 恰好偏难或偏易时，本地 mean/std 与全局不一致"}}]}
+{"job": "panelF|TRN-0341|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0340|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "micro-batch 横跨两个 prompt 组时 reshape 仍成功", "evidence": "一旦某个 micro-batch 横跨两个 prompt 组（或多个组的样本交错），只要总数能被 n 整除，reshape 就不会报错；不满足时 reshape(-1, n) 直接抛 shape 错误"}}]}
+{"job": "panelF|TRN-0341|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0336|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0340|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "调用侧异步取数不保证顺序", "evidence": "guarantee_order 在 rl_config.py 中默认 False，此时 get_experience 不传 indexes，取数顺序由队列状态决定。"}, "detail": {"problem": "missing_condition", "quote": "micro-batch 横跨两个 prompt 组时 reshape 仍成功", "evidence": "一旦某个 micro-batch 横跨两个 prompt 组（或多个组的样本交错），只要总数能被 n 整除，reshape 就不会报错"}}]}
+{"job": "panelF|TRN-0341|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0340|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "micro-batch 横跨两个 prompt 组时 reshape 仍成功", "evidence": "一旦某个 micro-batch 横跨两个 prompt 组（或多个组的样本交错），只要总数能被 n 整除，reshape 就不会报错，但归一化的是来自不同 prompt 的 reward"}}]}
+{"job": "panelF|TRN-0341|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0339|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "同一 prompt-response 对的 loss 因而不同", "evidence": "导致 update 时同一个 prompt-response pair 在不同 rank 上算出的 loss 不同"}}]}
+{"job": "panelF|TRN-0331|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "fix|TRN-0333", "model": "qwen3.8-max", "result": {"detail": "断点续训恢复后 loss 与吞吐正常、不报错，但 dataloader 从数据集头部重新取数，造成数据分布偏移；最终模型精度较不中断基线低约 0.2%，数据偏差随恢复次数累积。"}}
+{"job": "fix|TRN-0335", "model": "qwen3.8-max", "result": {"behavior": "ranking=True 且 chosen 列为 list 时，convert_alpaca_to_intermediate 构造 response 时 chosen 取第 0 个元素，rejected 却取第 1 个元素，候选索引不对称。"}}
+{"job": "fix|TRN-0340", "model": "qwen3.8-max", "result": {"detail": "异步 rollout 下样本顺序不保证；micro-batch 横跨 prompt 组或多组交错时，只要总数能被 n 整除，reshape 不报错但归一化不同 prompt 的 reward，组基线失真、静默污染；总数不能被 n 整除则直接抛 shape 错误。"}}
+{"job": "fix|TRN-0339", "model": "qwen3.8-max", "result": {"behavior": "GRPO reward 归一化未先 allgather 所有 rank 的 reward，仅用本 rank 局部 reward 计算 mean/std。"}}
+{"job": "fix|TRN-0329", "model": "qwen3.8-max", "result": {"detail": "CP=2、TP=1 且启用带 RoPE 的 sequence parallel attention 时，两个 rank 的 attention 输出在 CP 切分边界附近对不上；训练不报错、不出 NaN，精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。"}}
+{"job": "fix|TRN-0331", "model": "qwen3.8-max", "result": {"title": "packing 下 MBS>1 首 loss 偏高并乱码", "behavior": "开启 --append-eod packing 且 MBS>1 时训练后模型精度异常，MBS=1 不复现；报告未确认代码级根因。"}}
+{"job": "verify|TRN-0329|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0339|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0335|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0340|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0333|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "dataloader 从数据集头部重新取数", "evidence": "恢复后 dataloader 从数据集头部重新开始加载"}}]}
+{"job": "verify|TRN-0331|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "packing 样本边界", "evidence": "没有给出代码级根因（packing 之后 per-sample attention reset / position id / loss mask 随 MBS 变化的哪一处失效未在原文确认）"}}]}
+{"job": "verify|TRN-0329|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0340|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0335|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0339|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0333|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0331|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

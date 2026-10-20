@@ -4,7 +4,7 @@ slug: mindspeed_rl_dapo_reward_labels_nested_loop_reversed
 aliases: []
 title: DAPO rule_reward labels 两层循环顺序反致奖励错配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

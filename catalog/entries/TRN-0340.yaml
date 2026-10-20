@@ -4,7 +4,7 @@ slug: mindspeed_rl_grpo_group_norm_contiguous_assumption
 aliases: []
 title: GRPO group_norm 依赖同 prompt 连续排布的隐式假设
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -15,7 +15,7 @@ effect:
   objects:
   - 训练信号
   - 训练轨迹
-  detail: 异步 rollout 下同一组样本完成时刻不同，micro-batch 横跨两个 prompt 组时 reshape 仍成功但用错组基线，GRPO 组基线失真、训练信号被静默污染；不出现 NaN，只能靠 reward 曲线交叉排查。
+  detail: 异步 rollout 下样本顺序不保证；micro-batch 横跨 prompt 组或多组交错时，只要总数能被 n 整除，reshape 不报错但归一化不同 prompt 的 reward，组基线失真、静默污染；总数不能被 n 整除则直接抛 shape 错误。
   visibility: 静默错误
 mitigation:
   detect: 给 experience 带 prompt_id，reshape 后校验每组 prompt_id 一致；或在 validate_config 里断言 micro_batch_size % n_samples_per_prompt == 0。
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: mindspeed_llm_lora_uniform_recompute_grad_norm_zero
 aliases: []
 title: LoRA 开 uniform 重计算后 grad norm 恒为 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 重计算/卸载
@@ -44,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - visibility
+    - behavior

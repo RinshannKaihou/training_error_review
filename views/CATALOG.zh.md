@@ -3,27 +3,27 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 341 条；状态：active 327、pending_audit 14
+共 341 条；状态：active 341
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 33 |
+| 算子/内核 | 34 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
 | 集合通信 | 4 |
 | 并行切分 | 25 |
 | 调度/服务 | 1 |
 | 量化 | 8 |
-| 位置编码 | 6 |
+| 位置编码 | 5 |
 | 分词/模板 | 7 |
 | 模型定义 | 8 |
 | 权重/检查点 | 28 |
 | 数据管线 | 32 |
-| 优化器 | 32 |
+| 优化器 | 31 |
 | 损失计算 | 19 |
 | MoE路由 | 13 |
-| 重计算/卸载 | 13 |
+| 重计算/卸载 | 14 |
 | RL训练回路 | 66 |
 | 观测/评测 | 15 |
 | 配置/参数 | 4 |
@@ -507,6 +507,18 @@
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/602；https://gitcode.com/Ascend/op-plugin/merge_requests/6055
 - **关联**：cross:INF-1470
 
+### TRN-0338 `mindspeed_te_rowparallel_noseq_ignores_gaf` 非序列并行 RowParallel 忽略梯度累积融合
+
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / mindspeed / RowParallelNoSeq wgrad
+- **原因行为**：非序列并行分支 RowParallelNoSeq 的 forward 未保存 gaf，backward 恒走分离 matmul；只有序列并行分支才按 gaf 走 fp32 融合累加。
+- **影响对象**：梯度；训练轨迹（静默错误）
+- **影响详情**：gaf=True 时 linear_proj/linear_fc2 的 wgrad 由 aclnnMatmul 产出 bf16 中间张量再累加，与融合路径的 fp32 累加差约 1e-4，经优化器传播后出现可见精度发散；另 patch 对 mcore 0.16 间接引用未生效。
+- **改进措施**：检测 对比 gaf=True/False 两条路径同名参数的 wgrad 范数与差异量级；或检查 TERowParallelLinear patch 是否真的替换了 TESpecProvider 返回的类。；修复 issue 建议 RowParallelNoSeq 对齐 RowParallelSeq：forward 保存 ctx.gradient_accumulation_fusion、backward 增加走 npu_matmul_add_fp32 的分支；issue 已 closed，正文未给出合入 PR（未核实）。
+- **来源**：https://gitcode.com/Ascend/MindSpeed/issues/231
+- **关联**：var:TRN-0118
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -986,7 +998,7 @@
 
 ### TRN-0328 `mindspeed_llm_sp_grad_reduce_scatter_residual_chunk_bf16` SP 梯度 reduce-scatter 残块 bf16 归约精度发散
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / mindspeed-llm / SP 梯度 reduce-scatter 残块归约
 - **原因行为**：grad reduce-scatter 沿序列维切分；seq_len 不整除 SP world_size 时尾部 residual chunk 单独 allreduce，bf16 多一次 cast 损失，边界 grad 跨 rank 不齐。
@@ -996,9 +1008,20 @@
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1598
 - **关联**：var:TRN-0014
 
+### TRN-0329 `mindspeed_llm_cp_rope_position_offset_tp1_zero` CP+TP=1 时 RoPE position offset 恒为 0
+
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：并行切分 / mindspeed-llm / CP 下 RoPE position id 初始化
+- **原因行为**：cp_rank 的序列偏移依赖 tp_size 分支：TP>1 才按 cp_rank*(seq_len//cp_size) 算，TP=1 时置 0，两个 CP rank 的 rope cos/sin 都从 position 0 起。
+- **影响对象**：数值结果；隐状态；训练轨迹（静默错误）
+- **影响详情**：CP=2、TP=1 且启用带 RoPE 的 sequence parallel attention 时，两个 rank 的 attention 输出在 CP 切分边界附近对不上；训练不报错、不出 NaN，精度与单卡/CP=1 对齐不上，长序列位置语义整体错位。
+- **改进措施**：检测 打印各 CP rank 首个 token 的 position id 与 rope cos/sin 头部值，按 cp_rank*(seq_len//cp_size) 对账；或对比 CP=2 与 CP=1 的 token 级 hidden state。；修复 issue 建议把 cp_offset 的计算与 tp_size 解耦，只由 cp_rank 与 cp_size 决定；issue 已 closed，正文未给出对应 PR（未核实）。
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1599
+
 ### TRN-0336 `mindspeed_te_rowparallel_parallel_mode_none_still_comm` parallel_mode 置空后仍做 TP 通信
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / mindspeed / TE RowParallel 通信判定
 - **原因行为**：TERowParallelLinear 未处理 parallel_mode=None：非序列并行仍调 matmul_all_reduce、序列并行仍调 matmul_reduce_scatter，而置 None 的语义是不做 TP 通信。
@@ -1007,18 +1030,6 @@
 - **改进措施**：检测 开 moe_shared_expert_overlap 后比对该层的通信次数与关闭 overlap 的等价配置；对比 TP=1 与 TP>1 的共享专家输出。；修复 issue 建议在 TERowParallelLinear.forward() 中检测 self.parallel_mode is None，切到无 TP 通信的 matmul 路径；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed/issues/209
 - **关联**：cross:INF-0373
-
-### TRN-0338 `mindspeed_te_rowparallel_noseq_ignores_gaf` 非序列并行 RowParallel 忽略梯度累积融合
-
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：并行切分 / mindspeed / RowParallelNoSeq wgrad
-- **原因行为**：非序列并行分支 RowParallelNoSeq 的 forward 未保存 gaf，backward 恒走分离 matmul；只有序列并行分支才按 gaf 走 fp32 融合累加。
-- **影响对象**：梯度；训练轨迹（静默错误）
-- **影响详情**：gaf=True 时 linear_proj/linear_fc2 的 wgrad 由 aclnnMatmul 产出 bf16 中间张量再累加，与融合路径的 fp32 累加差约 1e-4，经优化器传播后出现可见精度发散；另 patch 对 mcore 0.16 间接引用未生效。
-- **改进措施**：检测 对比 gaf=True/False 两条路径同名参数的 wgrad 范数与差异量级；或检查 TERowParallelLinear patch 是否真的替换了 TESpecProvider 返回的类。；修复 issue 建议 RowParallelNoSeq 对齐 RowParallelSeq：forward 保存 ctx.gradient_accumulation_fusion、backward 增加走 npu_matmul_add_fp32 的分支；issue 已 closed，正文未给出合入 PR（未核实）。
-- **来源**：https://gitcode.com/Ascend/MindSpeed/issues/231
-- **关联**：var:TRN-0118
 
 ## 调度/服务
 
@@ -1181,17 +1192,6 @@
 - **影响详情**：官方 gpt-oss-20b recipe 默认即命中，无 crash 无 warning：ckpt 不含该表，随机初始化位置表叠加到每个 token 的 embedding，训练静默降质（幅度未量化）；多占约 236 MB，SP 的 reduce_scatter_embeddings 被静默禁用。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/7900；https://github.com/NVIDIA/Megatron-LM/pull/7850
-
-### TRN-0329 `mindspeed_llm_cp_rope_position_offset_tp1_zero` CP+TP=1 时 RoPE position offset 恒为 0
-
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：位置编码 / mindspeed-llm / CP 下 RoPE position id 初始化
-- **原因行为**：cp_rank 的序列偏移依赖 tp_size 分支：TP>1 才按 cp_rank*(seq_len//cp_size) 算，TP=1 时置 0，两个 CP rank 的 rope cos/sin 都从 position 0 起。
-- **影响对象**：隐状态；训练轨迹（静默错误）
-- **影响详情**：CP=2、TP=1 且开 sequence parallel attention 时，rank1 本应从 position 2048 起算 rope，实际用 0 起的 cos/sin，等效于没有 CP；两 rank 的 attention 输出在切分边界附近对不上，loss 偏高，无报错无 NaN。
-- **改进措施**：检测 打印各 CP rank 首个 token 的 position id 与 rope cos/sin 头部值，按 cp_rank*(seq_len//cp_size) 对账；或对比 CP=2 与 CP=1 的 token 级 hidden state。；修复 issue 建议把 cp_offset 的计算与 tp_size 解耦，只由 cp_rank 与 cp_size 决定；issue 已 closed，正文未给出对应 PR（未核实）。
-- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1599
 
 ## 分词/模板
 
@@ -2018,12 +2018,12 @@
 - **改进措施**：检测 对照独立编码 prefix 的 loss/梯度（issue 附 CPU 复现脚本）；检查滑窗保留位置与 mask 窗口的覆盖关系。；修复 待定（issue open 5 评论；参考修法=decoder 侧单独编码 sampled prefix、保留完整 encoder pass，示例代码修正未核实合入）
 - **来源**：https://github.com/huggingface/trl/issues/7734
 
-### TRN-0331 `mindspeed_llm_packing_mbs_gt1_precision_collapse` packing 下 MBS>1 首 loss 翻倍并训成乱码
+### TRN-0331 `mindspeed_llm_packing_mbs_gt1_precision_collapse` packing 下 MBS>1 首 loss 偏高并乱码
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：数据管线 / mindspeed-llm / packing 样本边界与 MBS>1
-- **原因行为**：数据预处理加 --append-eod 走 packing 时，micro-batch 内多条 packed 样本的边界处理随 MBS 变化，MBS>1 下首 step loss 与单样本基线不符；报告未给出代码级根因。
+- **原因行为**：开启 --append-eod packing 且 MBS>1 时训练后模型精度异常，MBS=1 不复现；报告未确认代码级根因。
 - **影响对象**：训练样本流；训练轨迹（质量退化）
 - **影响详情**：qwen3-8b 预训练 MBS=4/GBS=128/seq 8196/tp8pp1 时首 loss 约 6（正常约 2），一个 epoch 后回答乱码；同数据 MBS=1 首 loss 约 2、回答正常。2.1.0 分支在 MBS>4 复现同类现象。
 - **改进措施**：检测 开 packing 后用同一份数据跑 MBS=1 与 MBS>1 的短程对照，比首 step loss 与样本级 attention reset 结果。；修复 待定（issue 已 closed，正文未给出修复 PR；报告仅给出 MBS=1 规避）
@@ -2031,7 +2031,7 @@
 
 ### TRN-0333 `mindspeed_llm_resume_not_restore_data_order` 断点续训不恢复数据顺序致精度偏移
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：数据管线 / mindspeed-llm / 断点续训的数据加载进度
 - **原因行为**：断点续训只恢复模型参数与优化器状态，不恢复数据加载顺序与消费进度；恢复后从数据集头部重新加载，已训过的部分被跳过或重复。
@@ -2043,10 +2043,10 @@
 
 ### TRN-0335 `mindspeed_llm_alpaca_ranking_rejected_index_asymmetry` alpaca 偏好数据 rejected 取 [1] 致偏好对错位
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：数据管线 / mindspeed-llm / alpaca ranking 分支
-- **原因行为**：ranking 分支中 chosen 为 list 时取第 0 个元素，同一分支里 rejected 却取第 1 个元素；索引不对称，单元素 rejected 直接越界，多元素时取错候选。
+- **原因行为**：ranking=True 且 chosen 列为 list 时，convert_alpaca_to_intermediate 构造 response 时 chosen 取第 0 个元素，rejected 却取第 1 个元素，候选索引不对称。
 - **影响对象**：训练样本流；训练信号（静默错误）
 - **影响详情**：rejected 为单元素 list（偏好数据最常见形态）时必现 IndexError 中断数据处理；多元素时 chosen[0] 与 rejected[1] 配对错位，DPO/SimPO 训练的是错误偏好对，无报错。
 - **改进措施**：检测 处理 ranking 数据后抽查若干样本的 chosen/rejected 内容是否成对；对 rejected 单元素 list 做一次试处理。；修复 issue 给出改法：把 rejected 的 [1] 改为 [0]，并像 sharegpt 分支那样在取索引前对 list 类型做防御性检查；issue 已 closed，正文未给出合入 PR（未核实）。
@@ -2407,17 +2407,6 @@
 - **改进措施**：检测 监控各 scaler 的 scale 值是否始终相等；对 unscale 后梯度与 backward scale 对账。；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/8249 （open，未合入未发布）：推迟 scaler 更新至全部优化器完成梯度检查后按合并 overflow 结果统一更新；嵌套链同理；ckpt 格式不变。含 64 步 EP2 FP16 复现与 AdamW 参考对照（两卡 RTX 5090）。
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8249
 
-### TRN-0337 `mindspeed_fsdp_adamw_swap_no_stream_sync` AdamWSwap 计算流与 D2H 流无同步致动量错
-
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：优化器 / mindspeed / swap_optimizer 流同步
-- **原因行为**：swap_optimizer 在用 _fused_adamw_ 更新参数后立刻 swap_tensors_to_host，计算流与 D2H 通信流之间没有同步或 wait，通信流可能在计算完成前就把未更新的一二阶动量搬到 CPU。
-- **影响对象**：优化器状态；训练轨迹（不可复现）
-- **影响详情**：fsdp 后端用 AdamWSwap、关 shuffle 并开确定性计算时，同一配置多次运行精度结果不一致，且与 adamw 的结果有差；加流同步后多次运行与 adamw 完全一致，无报错。
-- **改进措施**：检测 关 shuffle + 确定性计算下同一配置重复运行，比对最终 loss/权重；或把 swap 关掉与 adamw 对照。；修复 报告者验证加 torch.accelerator.synchronize() 或计算流 wait 后精度完全一致；issue 已 closed，正文未给出合入 PR（未核实）。
-- **来源**：https://gitcode.com/Ascend/MindSpeed/issues/210
-
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -2628,7 +2617,7 @@
 
 ### TRN-0334 `mindspeed_llm_dsv4_indexer_loss_coeff_microbatch_scale` DSv4 indexer 梯度漏乘 coeff 与 mbs 缩放
 
-`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：损失计算 / mindspeed-llm / fused DSv4 indexer 梯度缩放
 - **原因行为**：fused indexer loss 路径把 loss_coeff 只用于日志、未作用于反向梯度缩放，且未消费 MCore schedule 的 micro-batch loss scale，默认梯度缩放恒为 1.0。
@@ -2912,7 +2901,7 @@
 
 ### TRN-0330 `mindspeed_llm_dsa_shareindex_cache_overwritten_in_recompute` DSA ShareIndex TopK 缓存被后组覆盖，重算错读
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：重计算/卸载 / mindspeed-llm / DSA ShareIndex TopK 缓存
 - **原因行为**：ShareIndex 的 TopK 只存在进程级全局变量里、仅保留最近一次写入，未与当前 forward/microbatch 及 source layer 绑定；开启 full recomputation 后多个共享组互相覆盖。
@@ -2924,7 +2913,7 @@
 
 ### TRN-0332 `mindspeed_llm_lora_uniform_recompute_grad_norm_zero` LoRA 开 uniform 重计算后 grad norm 恒为 0
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：重计算/卸载 / mindspeed-llm / LoRA 与 uniform full 重计算
 - **原因行为**：LoRA 目标层与 --recompute-method uniform 的整层重计算组合时，重算路径下 LoRA 参数拿不到梯度，wgrad 全零；报告只定位到重计算开关，未给出代码级根因。
@@ -2932,6 +2921,17 @@
 - **影响详情**：qwen3-14b-64k LoRA、CP=8、full+uniform 重计算时 grad norm 恒 0.000、loss 停在 12.2 附近 2000 iter；去掉重计算参数即正常，裁到 10 层不加载权重同样复现。
 - **改进措施**：检测 LoRA 训练看 grad norm 是否恒 0（而非仅看 loss 曲线）；或对比开/关重计算同名 LoRA 参数的 grad 范数。；修复 待定（issue 已 closed，正文未给出修复 PR；报告给出「关掉 recompute」的规避方式）
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1437
+
+### TRN-0337 `mindspeed_fsdp_adamw_swap_no_stream_sync` AdamWSwap 计算流与 D2H 流无同步致动量错
+
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：重计算/卸载 / mindspeed / swap_optimizer 流同步
+- **原因行为**：swap_optimizer 在用 _fused_adamw_ 更新参数后立刻 swap_tensors_to_host，计算流与 D2H 通信流之间没有同步或 wait，通信流可能在计算完成前就把未更新的一二阶动量搬到 CPU。
+- **影响对象**：优化器状态；训练轨迹（不可复现）
+- **影响详情**：fsdp 后端用 AdamWSwap、关 shuffle 并开确定性计算时，同一配置多次运行精度结果不一致，且与 adamw 的结果有差；加流同步后多次运行与 adamw 完全一致，无报错。
+- **改进措施**：检测 关 shuffle + 确定性计算下同一配置重复运行，比对最终 loss/权重；或把 swap 关掉与 adamw 对照。；修复 报告者验证加 torch.accelerator.synchronize() 或计算流 wait 后精度完全一致；issue 已 closed，正文未给出合入 PR（未核实）。
+- **来源**：https://gitcode.com/Ascend/MindSpeed/issues/210
 
 ## RL训练回路
 
@@ -3651,10 +3651,10 @@
 
 ### TRN-0339 `mindspeed_rl_grpo_reward_norm_no_cross_rank_sync` GRPO reward 归一化未跨 rank 同步致 advantage 不一致
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：RL训练回路 / mindspeed-rl / GRPO reward 归一化的跨 rank 同步
-- **原因行为**：GRPO 的 reward 归一化只用本 rank 局部 reward 算 mean/std，没有先 allgather 全局 reward；各 rank 基准不同，同一 prompt-response 对的 loss 因而不同。
+- **原因行为**：GRPO reward 归一化未先 allgather 所有 rank 的 reward，仅用本 rank 局部 reward 计算 mean/std。
 - **影响对象**：训练信号；训练轨迹（静默错误）
 - **影响详情**：TP=2+DP=4 双机 GRPO 时同一 step 各 rank loss 差距最大 15%；rank 上 prompt 偏难或偏易时本地 mean/std 偏离全局，同一 pair 在不同 rank 上的 loss 不同，方向被拉偏但无报错。
 - **改进措施**：检测 同一 step 打印各 rank 的 reward mean/std 与 advantage 均值做跨 rank 比对；或让单 rank 与全局归一化的 advantage 对照。；修复 issue 建议先 all_gather(rewards) 得到 [dp_size*batch] 再算全局 mean/std（veRL/OpenRLHF 参考实现如此）；issue 已 closed，正文未给出合入 PR（未核实）。
@@ -3662,18 +3662,18 @@
 
 ### TRN-0340 `mindspeed_rl_grpo_group_norm_contiguous_assumption` GRPO group_norm 依赖同 prompt 连续排布的隐式假设
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：RL训练回路 / mindspeed-rl / group_norm 组对齐
 - **原因行为**：组内归一化直接按行序 reshape(-1, n)，隐含假设连续 n 行同属一个 prompt；调用侧异步取数不保证顺序，也不校验 micro_batch_size 为 n 的整数倍。
 - **影响对象**：训练信号；训练轨迹（静默错误）
-- **影响详情**：异步 rollout 下同一组样本完成时刻不同，micro-batch 横跨两个 prompt 组时 reshape 仍成功但用错组基线，GRPO 组基线失真、训练信号被静默污染；不出现 NaN，只能靠 reward 曲线交叉排查。
+- **影响详情**：异步 rollout 下样本顺序不保证；micro-batch 横跨 prompt 组或多组交错时，只要总数能被 n 整除，reshape 不报错但归一化不同 prompt 的 reward，组基线失真、静默污染；总数不能被 n 整除则直接抛 shape 错误。
 - **改进措施**：检测 给 experience 带 prompt_id，reshape 后校验每组 prompt_id 一致；或在 validate_config 里断言 micro_batch_size % n_samples_per_prompt == 0。；修复 issue 建议两条：compute_advantage 中显式校验组对齐（prompt_id 一致），或把优势计算改为完整 global batch 收齐后做、不再依赖 micro-batch 取数顺序；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed-RL/issues/166
 
 ### TRN-0341 `mindspeed_rl_dapo_reward_labels_nested_loop_reversed` DAPO rule_reward labels 两层循环顺序反致奖励错配
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：RL训练回路 / mindspeed-rl / rule_reward labels 展开
 - **原因行为**：rule_reward.py 展开 labels 时把两层循环写反（外层 n_samples_per_prompt、内层 batch_data['labels']），得到的是按样本优先的顺序，而下游按样本内 n 次重复消费。

@@ -4,10 +4,10 @@ slug: mindspeed_fsdp_adamw_swap_no_stream_sync
 aliases: []
 title: AdamWSwap 计算流与 D2H 流无同步致动量错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 重计算/卸载
     stack: mindspeed
     component: swap_optimizer 流同步
   behavior: swap_optimizer 在用 _fused_adamw_ 更新参数后立刻 swap_tensors_to_host，计算流与 D2H 通信流之间没有同步或 wait，通信流可能在计算完成前就把未更新的一二阶动量搬到 CPU。
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 重计算/卸载

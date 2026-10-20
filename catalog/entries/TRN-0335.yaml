@@ -4,13 +4,13 @@ slug: mindspeed_llm_alpaca_ranking_rejected_index_asymmetry
 aliases: []
 title: alpaca 偏好数据 rejected 取 [1] 致偏好对错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
     stack: mindspeed-llm
     component: alpaca ranking 分支
-  behavior: ranking 分支中 chosen 为 list 时取第 0 个元素，同一分支里 rejected 却取第 1 个元素；索引不对称，单元素 rejected 直接越界，多元素时取错候选。
+  behavior: ranking=True 且 chosen 列为 list 时，convert_alpaca_to_intermediate 构造 response 时 chosen 取第 0 个元素，rejected 却取第 1 个元素，候选索引不对称。
 effect:
   objects:
   - 训练样本流
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

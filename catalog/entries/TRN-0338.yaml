@@ -4,10 +4,10 @@ slug: mindspeed_te_rowparallel_noseq_ignores_gaf
 aliases: []
 title: 非序列并行 RowParallel 忽略梯度累积融合
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 并行切分
+  - subsystem: 算子/内核
     stack: mindspeed
     component: RowParallelNoSeq wgrad
   behavior: 非序列并行分支 RowParallelNoSeq 的 forward 未保存 gaf，backward 恒走分离 matmul；只有序列并行分支才按 gaf 走 fp32 融合累加。
@@ -54,3 +54,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 并行切分
+        to: 算子/内核

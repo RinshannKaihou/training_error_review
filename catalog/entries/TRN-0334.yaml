@@ -4,7 +4,7 @@ slug: mindspeed_llm_dsv4_indexer_loss_coeff_microbatch_scale
 aliases: []
 title: DSv4 indexer 梯度漏乘 coeff 与 mbs 缩放
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 损失计算
@@ -57,3 +57,10 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

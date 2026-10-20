@@ -4,13 +4,13 @@ slug: mindspeed_rl_grpo_reward_norm_no_cross_rank_sync
 aliases: []
 title: GRPO reward 归一化未跨 rank 同步致 advantage 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
     stack: mindspeed-rl
     component: GRPO reward 归一化的跨 rank 同步
-  behavior: GRPO 的 reward 归一化只用本 rank 局部 reward 算 mean/std，没有先 allgather 全局 reward；各 rank 基准不同，同一 prompt-response 对的 loss 因而不同。
+  behavior: GRPO reward 归一化未先 allgather 所有 rank 的 reward，仅用本 rank 局部 reward 计算 mean/std。
 effect:
   objects:
   - 训练信号
@@ -44,3 +44,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility
+    - detail

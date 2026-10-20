@@ -3721,7 +3721,7 @@
 
 `故障` · `active` · `pretrain` · `verified` · `NEW` · 发现 2026-08-17 · 旧号 OBS.01
 
-- **原因对象**：观测/评测 / opensource_training_megatron / stability monitor 启用开关
+- **原因对象**：观测/评测 / megatron-lm / stability monitor 启用开关
 - **原因行为**：监控靠 export STABILITY_MONITOR_ENABLED=1 开启，该变量经 torchrun 子进程丢失，_is_enabled() 读到空值即跳过初始化且不报错。
 - **影响对象**：指标/日志（静默错误）
 - **影响详情**：监控目录里有 JSONL 文件但为 0 字节，排障者以为没有故障；以 export 环境变量经 torchrun 启动即触发。

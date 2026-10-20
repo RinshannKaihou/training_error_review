@@ -4,7 +4,7 @@ slug: megatron_fsdp_v1_grad_acc_fusion_wgrad_overwrite
 aliases: []
 title: Megatron-FSDP v1 梯度累积融合覆写未分片 wgrad
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

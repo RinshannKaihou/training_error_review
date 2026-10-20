@@ -4,7 +4,7 @@ slug: op_plugin_pack_padded_pad_dirty_residual
 aliases: []
 title: op-plugin pad_packed_sequence 残留原输入脏数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 跨请求/跨样本数据
-  detail: 变长序列训练/RNN 路径中 pad 位若参与池化、mask 聚合或 loss 累计，旧值静默混入计算——数值污染随 pad 区域扩散，无报错。双芯一致复现。
+  detail: 变长序列训练/RNN 路径中，pad 位若参与池化或 loss 累计，pad 区旧值会静默污染训练数值，无报错。双芯一致复现。
   visibility: 静默错误
 mitigation:
   detect: pack→pad 往返后断言 pad 区恒为 0；或对往返输出与 CPU 实现逐元素对照。
@@ -44,3 +44,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

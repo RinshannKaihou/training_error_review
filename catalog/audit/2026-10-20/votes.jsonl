@@ -1,0 +1,105 @@
+{"job": "baseC|TRN-0321|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0323|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0322|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0323|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0320|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0322|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0321|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0324|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0325|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0323|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0321|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0326|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0327|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0326|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0326|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0327|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0322|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0325|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0325|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0321|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0327|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0320|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "疑似 OOB 读", "evidence": "reduction=none 时越界槽位为真实越界读"}}]}
+{"job": "baseC|TRN-0324|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0322|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "pad 位若参与池化、mask 聚合或 loss 累计，旧值静默混入计算——数值污染随 pad 区域扩散", "evidence": "pad 位脏值在池化/loss 累计路径静默污染训练；变长训练里 pad 位参与池化或 loss 时，训练数值被静默污染、无报错"}}]}
+{"job": "baseC|TRN-0320|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0323|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0322|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "mask 聚合", "evidence": "pad 位脏值在池化/loss 累计路径静默污染训练"}}]}
+{"job": "baseC|TRN-0324|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0324|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0321|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0321|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "sum/mean 末包输出=正确值+末包真实和，梯度同污染；max 正确", "evidence": "sum/mean 输出实测 NPU = CPU 正确值 + 该末包的真实和；backward 梯度对照确认同污染；max 模式正确"}}]}
+{"job": "baseC|TRN-0320|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0325|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0324|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0322|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "mask 聚合", "evidence": "pad 位脏值在池化/loss 累计路径静默污染训练；变长训练里 pad 位参与池化或 loss 时"}}]}
+{"job": "baseF|TRN-0324|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0326|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "【行为效应】CPU 上的 0 维浮点标量与卡上 half/bfloat16 张量相乘时，mul 结果与 GPU 差 1 个 bf16 ulp"}, "detail": {"problem": "contradicts", "quote": "卡上张量双卡间结果一致", "evidence": "双卡上（NPU/GPU）各内部一致但彼此不同"}}]}
+{"job": "baseF|TRN-0327|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0320|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "疑似 OOB 读", "evidence": "reduction=none 时越界槽位为真实越界读"}}]}
+{"job": "baseF|TRN-0325|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0327|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0325|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "否定句与假等式拿满奖励", "evidence": "都能拿满 reward"}}]}
+{"job": "baseF|TRN-0323|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0320|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "疑似 OOB 读", "evidence": "真实越界读"}}]}
+{"job": "baseF|TRN-0323|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0326|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "mul 结果与 GPU 差 1 个 bf16 ulp"}, "detail": {"problem": "contradicts", "quote": "卡上张量双卡间结果一致", "evidence": "双卡上（NPU/GPU）各内部一致但彼此不同"}}]}
+{"job": "baseF|TRN-0327|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "超出 len(src) 的槽位填入越界读到的设备内存垃圾", "evidence": "src 元素数少于 mask 命中位置数时，不报错地返回结果，多余槽位填的是越界读到的设备内存垃圾"}}]}
+{"job": "baseF|TRN-0326|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "【行为效应】mul 结果与 GPU 差 1 个 bf16 ulp（实测同一元素 0.8476 vs 0.8515）——此为后果，detail 已重复"}}]}
+{"job": "panelC|TRN-0321|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0321|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|TRN-0324|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0320|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0324|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0325|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0321|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0321|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0326|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0325|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0326|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0325|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0326|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0327|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0326|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0325|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0327|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0320|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0327|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0327|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0321|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0324|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0320|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0324|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0320|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "（疑似 OOB 读）", "evidence": "reduction=none 时越界槽位为真实越界读"}}]}
+{"job": "panelF|TRN-0320|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0321|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0324|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0321|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0324|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0325|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0320|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0320|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "疑似 OOB 读", "evidence": "reduction=none 时越界槽位为真实越界读"}}]}
+{"job": "panelF|TRN-0321|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "sum/mean 末包输出=正确值+末包真实和，梯度同污染；max 正确。", "evidence": "sum/mean 输出实测 NPU = CPU 正确值 + 该末包的真实和；backward 梯度对照确认同污染；max 模式正确"}}]}
+{"job": "panelF|TRN-0325|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "否定句与假等式拿满奖励", "evidence": "【机制】两效应叠加：\\boxed{R \\text{ is wrong}} 剥掉否定文本后按 R 判对；\\boxed{W = R} 按等式右边判对。实测（trl-lib/DeepMath-103K 前 300 行、249 行 gold 可解析）：R \\text{ is wrong} 249/249 全满分、W = R 190/209 满分；【行为效应】用 trl accuracy_reward（默认 NormalizationConfig(units=True)）做 RLVR reward 时，模型在 \\boxed{} 里写「正确答案 is wrong」或「错误值 = 正确值」都能拿满 rewa"}}]}
+{"job": "panelF|TRN-0327|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0324|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0326|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "卡上张量双卡间结果一致", "evidence": "双卡上（NPU/GPU）各内部一致但彼此不同"}}]}
+{"job": "panelF|TRN-0326|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "GPU/NPU 混合精度精度对齐训练中，CPU 上的 0 维浮点标量与卡上 half/bfloat16 张量相乘时，mul 结果与 GPU 差 1 个 bf16 ulp（实测同一元素 0.8476 vs 0.8515）"}}]}
+{"job": "panelF|TRN-0320|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "疑似 OOB 读", "evidence": "reduction=none 时越界槽位为真实越界读"}}]}
+{"job": "panelF|TRN-0325|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0324|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0327|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0327|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "越界读设备内存垃圾填入结果", "evidence": "越界读设备内存垃圾填入结果"}}]}
+{"job": "panelF|TRN-0327|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0326|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "mul 结果与 GPU 差 1 个 bf16 ulp（实测同一元素 0.8476 vs 0.8515）"}, "detail": {"problem": "contradicts", "quote": "卡上张量双卡间结果一致", "evidence": "双卡上（NPU/GPU）各内部一致但彼此不同"}}]}
+{"job": "panelF|TRN-0325|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "否定句与假等式拿满奖励", "evidence": "模型在 \\boxed{} 里写「正确答案 is wrong」或「错误值 = 正确值」都能拿满 reward"}}]}
+{"job": "panelF|TRN-0326|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "结果差 1 个 bf16 ulp", "evidence": "mul 结果与 GPU 差 1 个 bf16 ulp（实测同一元素 0.8476 vs 0.8515）"}, "detail": {"problem": "contradicts", "quote": "卡上张量双卡间结果一致", "evidence": "双卡上（NPU/GPU）各内部一致但彼此不同"}}]}
+{"job": "fix|TRN-0322", "model": "qwen3.8-max", "result": {"detail": "变长序列训练/RNN 路径中，pad 位若参与池化或 loss 累计，pad 区旧值会静默污染训练数值，无报错。双芯一致复现。"}}
+{"job": "fix|TRN-0320", "model": "qwen3.8-max", "result": {"behavior": "cross_entropy NPU 入口缺少主机端 target 边界校验，越界值直接下发设备端；reduction=mean 时越界样本被静默排除，reduction=none 时越界槽位为真实越界读。"}}
+{"job": "fix|TRN-0326", "model": "qwen3.8-max", "result": {"behavior": "mul/mul_out 在 result_type 为 half/bfloat16 时，将 CPU 0-dim 浮点标量按输出 dtype 上卡，H2D 时被提前舍入到 half/bf16。", "detail": "GPU/NPU 混合精度精度对齐训练中，CPU 0-dim 浮点标量乘卡上 half/bfloat16 张量时，mul 结果与 GPU 差 1 个 bf16 ulp（0.8476 vs 0.8515）；无报错、无 NaN，逐层 dump 比对暴露。"}}
+{"job": "verify|TRN-0322|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0320|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0326|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0326|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0322|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0320|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 327 条；状态：active 319、pending_audit 8
+共 327 条；状态：active 327
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -452,10 +452,10 @@
 
 ### TRN-0320 `op_plugin_cross_entropy_oob_target_silent` op-plugin cross_entropy 越界 target 静默吞掉
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / cross_entropy 入口校验
-- **原因行为**：op-plugin 的 cross_entropy 入口缺主机端 target 边界校验，越界 target 直达设备端：mean 路径静默排除该样本，none 路径槽位读越界内存填垃圾值（疑似 OOB 读），无报错。
+- **原因行为**：cross_entropy NPU 入口缺少主机端 target 边界校验，越界值直接下发设备端；reduction=mean 时越界样本被静默排除，reduction=none 时越界槽位为真实越界读。
 - **影响对象**：训练信号；数值结果（静默错误）
 - **影响详情**：训练 batch 含越界/污染 target 时，NPU 上 loss 静默少算一个样本（mean）或该槽位返回跨芯不一致垃圾值（none：npu:0=0.624 vs npu:1=1.797）；CPU 同代码抛 IndexError。双芯一致复现。
 - **改进措施**：检测 训练前在 host 侧断言 0<=target<C 且 target 无 NaN；或对照 CPU 前几个 batch 的 loss。；修复 待定（issue 2026-10-19 open 建议入口加主机端 target 边界校验对齐 CPU 抛 IndexError；无修复 MR）
@@ -464,7 +464,7 @@
 
 ### TRN-0321 `op_plugin_embedding_bag_last_offset_double_count` op-plugin embedding_bag 末包重复累加致错值与梯度污染
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / embedding_bag 转换层
 - **原因行为**：embedding_bag 转换层在 2D 输入 + include_last_offset=True 时末包偏移处理错误，最后一个 bag 被重复累计：sum/mean 末包输出=正确值+末包真实和，梯度同污染；max 正确。
@@ -475,29 +475,29 @@
 
 ### TRN-0322 `op_plugin_pack_padded_pad_dirty_residual` op-plugin pad_packed_sequence 残留原输入脏数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / pad_packed_sequence 转换层
 - **原因行为**：op-plugin 的 pad_packed_sequence 输出转换层对 pad 区域不清零，pack→pad 往返后 pad 填充区残留原输入同位置的旧值（恒等拷贝级错误）；索引面（sorted_indices 等）全对。
 - **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
-- **影响详情**：变长序列训练/RNN 路径中 pad 位若参与池化、mask 聚合或 loss 累计，旧值静默混入计算——数值污染随 pad 区域扩散，无报错。双芯一致复现。
+- **影响详情**：变长序列训练/RNN 路径中，pad 位若参与池化或 loss 累计，pad 区旧值会静默污染训练数值，无报错。双芯一致复现。
 - **改进措施**：检测 pack→pad 往返后断言 pad 区恒为 0；或对往返输出与 CPU 实现逐元素对照。；修复 待定（issue 2026-10-19 open 建议 pad_packed_sequence 输出转换层对 pad 区域清零；无修复 MR）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/604
 
 ### TRN-0326 `op_plugin_mul_cpu_scalar_premature_round` op-plugin mul CPU 标量提前舍入 1 ulp 偏差
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / mul 入口标量上卡
-- **原因行为**：mul 入口把 CPU 0-dim 浮点标量按输出 dtype（half/bf16）上卡，H2D 时提前舍入；原生以 float opmath 参与计算，结果差 1 个 bf16 ulp。
+- **原因行为**：mul/mul_out 在 result_type 为 half/bfloat16 时，将 CPU 0-dim 浮点标量按输出 dtype 上卡，H2D 时被提前舍入到 half/bf16。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：CPU 0-dim 浮点标量 × 卡上 half/bf16 张量的 mul 结果与 GPU 差 1 ulp（实测 0.8476 vs 0.8515 量级偏差），GPU/NPU 精度对齐训练中 dump 逐层比对失败、无告警；卡上张量双卡间结果一致，仅跨设备标量路径触发。
+- **影响详情**：GPU/NPU 混合精度精度对齐训练中，CPU 0-dim 浮点标量乘卡上 half/bfloat16 张量时，mul 结果与 GPU 差 1 个 bf16 ulp（0.8476 vs 0.8515）；无报错、无 NaN，逐层 dump 比对暴露。
 - **改进措施**：检测 跨设备标量乘法与纯 CPU/GPU 参对照逐元素比对；精度对齐 dump 中 mul 节点单算子复测。；修复 修复 MR https://gitcode.com/Ascend/op-plugin/merge_requests/6062 （open 未合入未发布）：浮点标量且 result_type 为 Half/BFloat16 时改按 Float 上卡；mul(Tensor,Scalar) 与 mul_ 路径不受影响。910B2 + CANN 9.2.0 实测。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5392；https://gitcode.com/Ascend/op-plugin/merge_requests/6062
 
 ### TRN-0327 `op_plugin_masked_scatter_small_src_oob_garbage` op-plugin masked_scatter src 不足静默填越界垃圾
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / masked_scatter 入口校验
 - **原因行为**：masked_scatter 两条入口（opapi 与 aclops 兜底）都不校验 src 容量是否 ≥ mask 真值数，src 不足时静默接受，越界读设备内存垃圾填入结果。
@@ -975,7 +975,7 @@
 
 ### TRN-0324 `megatron_fsdp_v1_grad_acc_fusion_wgrad_overwrite` Megatron-FSDP v1 梯度累积融合覆写未分片 wgrad
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / megatron-lm / FSDP v1 local Linear 反向
 - **原因行为**：ColumnParallelLinear 在 gradient_accumulation_fusion=True 且 FSDP v1 下，FSDP 反向把 wgrad 写入持久未分片缓冲，覆盖此前 microbatch 已累积值。
@@ -2317,7 +2317,7 @@
 
 ### TRN-0323 `megatron_chained_optim_loss_scale_divergence` Megatron 链式优化器 loss scale 分叉静默错误反缩放
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：优化器 / megatron-lm / 链式 FP16 loss scaler 更新
 - **原因行为**：FP16 链式优化器 backward 用第一个优化器的 scale，但各优化器用各自 overflow 结果独立更新 scaler；只一侧溢出时 scale 分叉，后续 update 按错 scale 反缩放部分模型。
@@ -3513,7 +3513,7 @@
 
 ### TRN-0325 `trl_accuracy_reward_text_unit_false_equation_full_credit` trl accuracy_reward 对否定句与假等式给满分
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：RL训练回路 / trl / accuracy_reward 解析与判定
 - **原因行为**：accuracy_reward 把 box 尾部 \text{...} 当单位剥掉，且 math-verify 接受右边等于 gold 的等式，否定句与假等式拿满奖励。

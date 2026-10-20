@@ -4,13 +4,13 @@ slug: op_plugin_cross_entropy_oob_target_silent
 aliases: []
 title: op-plugin cross_entropy 越界 target 静默吞掉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: cross_entropy 入口校验
-  behavior: op-plugin 的 cross_entropy 入口缺主机端 target 边界校验，越界 target 直达设备端：mean 路径静默排除该样本，none 路径槽位读越界内存填垃圾值（疑似 OOB 读），无报错。
+  behavior: cross_entropy NPU 入口缺少主机端 target 边界校验，越界值直接下发设备端；reduction=mean 时越界样本被静默排除，reduction=none 时越界槽位为真实越界读。
 effect:
   objects:
   - 训练信号
@@ -57,3 +57,19 @@ migration:
   - date: '2026-10-20'
     fields:
     - original.notes
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - subsystem
+    - effect

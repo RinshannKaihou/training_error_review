@@ -4,17 +4,17 @@ slug: op_plugin_mul_cpu_scalar_premature_round
 aliases: []
 title: op-plugin mul CPU 标量提前舍入 1 ulp 偏差
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: mul 入口标量上卡
-  behavior: mul 入口把 CPU 0-dim 浮点标量按输出 dtype（half/bf16）上卡，H2D 时提前舍入；原生以 float opmath 参与计算，结果差 1 个 bf16 ulp。
+  behavior: mul/mul_out 在 result_type 为 half/bfloat16 时，将 CPU 0-dim 浮点标量按输出 dtype 上卡，H2D 时被提前舍入到 half/bf16。
 effect:
   objects:
   - 数值结果
-  detail: CPU 0-dim 浮点标量 × 卡上 half/bf16 张量的 mul 结果与 GPU 差 1 ulp（实测 0.8476 vs 0.8515 量级偏差），GPU/NPU 精度对齐训练中 dump 逐层比对失败、无告警；卡上张量双卡间结果一致，仅跨设备标量路径触发。
+  detail: GPU/NPU 混合精度精度对齐训练中，CPU 0-dim 浮点标量乘卡上 half/bfloat16 张量时，mul 结果与 GPU 差 1 个 bf16 ulp（0.8476 vs 0.8515）；无报错、无 NaN，逐层 dump 比对暴露。
   visibility: 静默错误
 mitigation:
   detect: 跨设备标量乘法与纯 CPU/GPU 参对照逐元素比对；精度对齐 dump 中 mul 节点单算子复测。
@@ -45,3 +45,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail

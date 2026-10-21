@@ -4,7 +4,7 @@ slug: msllm_ms_ckpt_missing_qkv_bias_strict_false
 aliases: []
 title: MindSpore 加载 ckpt 缺键被 strict=False 吞掉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -16,7 +16,7 @@ effect:
   - 模型权重
   - 训练轨迹
   detail: 按官方 weight convert 与 quick_start 转换后训练起不来；改 strict=False 能跑，但这些层用随机初始化参与训练，loss 曲线看不出异常，最终权重与上游 HF 不等价。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 加载后逐层比对 missing/unexpected 清单，必须为空才继续；对 qkv bias 与 fc1 layernorm 参数做加载前后指纹比对
   fix: 'issue #1337 只给出把 strict 改 False 的规避（closed，无修复 PR，未核实）；正解是让权重转换补齐或映射这两个键，不要用 strict=False 掩盖'
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错
+    issue_unfixed:
+    - detail

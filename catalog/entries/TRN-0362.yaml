@@ -4,7 +4,7 @@ slug: msllm_dualpipev_permute_fusion_capacity_conflict
 aliases: []
 title: DualPipeV 强绑 permute 融合与专家容量互斥
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -43,3 +43,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem

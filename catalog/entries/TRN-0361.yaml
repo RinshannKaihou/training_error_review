@@ -4,13 +4,13 @@ slug: msllm_batch_p2o_comm_hccl_group_unbalanced
 aliases: []
 title: 开 batch_p2o_comm 后 HcclGroupEnd 未配对
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
     stack: mindspeed-llm
     component: optimize_p2p_comm 批量下发
-  behavior: 把 PP 的 P2P 收发折进 HCCL group 批量下发的开关打开后，各 rank 进入 group 的次数或分支不一致，出现只有 HcclGroupEnd 而没有对应 HcclGroupStart 的调用。
+  behavior: 推断批量下发路径与 PP 调度实际收发次数/分支不一致，导致 HCCL group 调用不成对，HcclGroupEnd 缺少 HcclGroupStart。
 effect:
   objects:
   - 可用性/进度
@@ -43,3 +43,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

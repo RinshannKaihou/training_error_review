@@ -4,7 +4,7 @@ slug: msllm_packed_prefix_double_suffix_glob
 aliases: []
 title: DATA_PATH 带 _packed 后 glob 双后缀取空数据集
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -13,8 +13,8 @@ cause:
   behavior: 预处理固定输出 {prefix}_packed_*_document*，训练侧又给 data_prefix 追加 _packed 再 glob，用户按输出名填 DATA_PATH 就变成 _packed_packed，匹配不到文件。
 effect:
   objects:
-  - 训练样本流
   - 可用性/进度
+  - 训练样本流
   detail: 'glob 结果为空字典，decoder_packed_mtf_dataset.py:82 对 values()[0] 取长度抛 IndexError: list index out of range，报错完全不提路径或 _packed 后缀。'
   visibility: 报错
 mitigation:
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 训练样本流
+        to: 可用性/进度

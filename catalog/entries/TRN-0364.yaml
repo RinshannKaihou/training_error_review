@@ -4,10 +4,10 @@ slug: msllm_low_precision_opt_duplicate_router_bias_patch
 aliases: []
 title: 低精度优化器重复打 router bias 补丁致导入失败
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 量化
     stack: mindspeed-llm
     component: 低精度优化器 patch 注册
   behavior: MoE 特性已给 _update_router_expert_bias 打过补丁，低精度优化器在 register_patches 里再打一次，MindSpeed 的 patch 校验发现重复就抛错。
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - 优化器状态
-  detail: '脚本只要带 --quant-states 或 --quant-grads，import megatron_adaptor 阶段就 RuntimeError: the patch of _update_router_expert_bias exist，量化优化器特性完全不可用。'
+  detail: 'MoE（已打 router bias 补丁）模型下启用--quant-states/--quant-grads，import阶段即报RuntimeError: the patch of _update_router_expert_bias exist，低精度优化器与MoE组合完全不可用。'
   visibility: 报错
 mitigation:
   detect: apply_features_patches 前打印已注册 patch 列表；对同一 orig_func 的重复注册做去重与告警
@@ -44,3 +44,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 量化
+    rewritten:
+    - detail

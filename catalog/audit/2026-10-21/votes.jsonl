@@ -44,3 +44,26 @@
 {"job": "panelF|TRN-0343|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
 {"job": "panelF|TRN-0345|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "把已按全局 token 归一的窗口归一化损失再除以块数", "evidence": "加权平均把 loss/梯度缩放 n_c/N，k 个等大块时结果是无分块 loss 的 1/k"}, "detail": {"problem": "missing_condition", "quote": "损失缩为 1/k", "evidence": "k 个等大块时结果是无分块 loss 的 1/k"}}]}
 {"job": "panelF|TRN-0345|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "baseC|TRN-0349|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0350|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|TRN-0348|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0347|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0348|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0347|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0348|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0352|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0349|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0351|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0351|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0352|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0349|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0353|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "指标/日志", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0353|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "观测/评测", "effect": "指标/日志", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0355|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0355|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0347|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0350|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|TRN-0354|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "优化器", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0354|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0350|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|TRN-0352|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}

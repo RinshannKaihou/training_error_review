@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 346 条；状态：active 346
+共 355 条；状态：active 346、pending_audit 9
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -11,19 +11,19 @@
 | 算子/内核 | 36 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
-| 集合通信 | 4 |
-| 并行切分 | 25 |
+| 集合通信 | 5 |
+| 并行切分 | 26 |
 | KV缓存 | 1 |
 | 调度/服务 | 1 |
-| 量化 | 8 |
+| 量化 | 9 |
 | 位置编码 | 6 |
 | 分词/模板 | 7 |
 | 模型定义 | 8 |
-| 权重/检查点 | 28 |
-| 数据管线 | 32 |
-| 优化器 | 31 |
-| 损失计算 | 19 |
-| MoE路由 | 13 |
+| 权重/检查点 | 29 |
+| 数据管线 | 33 |
+| 优化器 | 33 |
+| 损失计算 | 20 |
+| MoE路由 | 14 |
 | 重计算/卸载 | 14 |
 | RL训练回路 | 67 |
 | 观测/评测 | 15 |
@@ -773,6 +773,17 @@
 - **来源**：https://gitcode.com/cann/hccl/issues/827
 - **关联**：cross:INF-1425
 
+### TRN-0351 `msllm_mc2_allgather_base_mm_nan` MC2 融合 all-gather 输出 NaN 污染 loss
+
+`故障` · `pending_audit` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：集合通信 / mindspeed / npu_all_gather_base_mm
+- **原因行为**：开 --use-ascend-mc2 后，MC2 列并行线性层里 npu_all_gather_base_mm 的输出整体为 NaN，通信与矩阵乘融合这条路径把中间结果污染成 NaN。
+- **影响对象**：训练信号；数值结果（数值异常）
+- **影响详情**：qwen3-32b 32k LoRA 训练 loss 变 NaN，改并行度与超参均复现；msprobe 溢出检测首个 NaN 为该算子输出（4096×75968 bf16）；关闭 use-ascend-mc2 后精度正常。
+- **改进措施**：检测 msprobe 溢出检测看 npu_all_gather_base_mm 输出；或 A/B 开关 use-ascend-mc2；修复 issue #1393（closed）只给规避：关闭 use-ascend-mc2；未给修复 PR
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1393
+
 ## 并行切分
 
 ### TRN-0014 `gtp_wgrad_dtype_breaks_fp32_reduce_contract` GTP 回退 wgrad 以 BF16 归约，破坏 FP32 梯度契约
@@ -1055,6 +1066,17 @@
 - **来源**：https://gitcode.com/Ascend/MindSpeed/issues/209
 - **关联**：cross:INF-0373
 
+### TRN-0355 `msllm_tnd_cp_empty_rank_collective_desync` TND+CP 空 rank 跳过 indexer 反传致挂起
+
+`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：并行切分 / mindspeed-llm / DSv4 CSA indexer CP 分支
+- **原因行为**：CP 下某 rank 的 KV 段全短于 compress_ratio 就跳过 indexer/compressor 与索引 loss 反传，非空 rank 仍发 CP all_gather，两边梯度 bucket 不一致。
+- **影响对象**：可用性/进度；梯度（挂起）
+- **影响详情**：空 rank 场景下 backward collective 顺序不一致直接 hang；空 rank 还缺 indexer/compressor 的 grad hook 与 bucket，用 dummy KV 硬闯会 shape 校验失败或非法索引。
+- **改进措施**：检测 统计各 rank 的 compressed KV 段数，空 rank 与非空 rank 的 loss tracker key、grad bucket 顺序比对；修复 issue #1895（closed）给出方案：_ZeroGradientAnchor 造显式零梯度、_EmptyIndexerLossCommunicationAnchor 让空 rank 参与 CP collective、gather_tnd_local_num() 统一 dtype/shape/process group
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1895
+
 ## KV缓存
 
 ### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
@@ -1172,6 +1194,17 @@
 - **影响详情**：无报错。下游按行读取 scale 时把残留旧字节当成合法 scale 编码消费，量化权重/激活 scale 在奇数 K32 分组的行上来自未定义的旧内存；主机级验证为 padding 槽保留非零哨兵，硬件端到端数值精度未验证。
 - **改进措施**：检测 将 scale 输出缓冲区预填非零哨兵，跑奇数有效 K32 分组宽度（outputN=32/96）检查行尾 padding 槽是否为零。；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14006（open）：HasSwigluMxScalePadding 判定尾块归属，尾 tile 清零 staging 并把写回长度加一字节；主机单测覆盖 outputN=1~1024×tileSize=32/64/128/256，未验证设备数值精度
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6247；https://gitcode.com/cann/ops-transformer/merge_requests/14006
+
+### TRN-0350 `msllm_fsdp2_mxfp8_quantizeconfig_field_mismatch` FSDP2 mxfp8 配置字段名不匹配致量化静默跳过
+
+`故障` · `pending_audit` · `config` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：量化 / mindspeed-llm / QuantizeConfig 字段映射
+- **原因行为**：本地 QuantizeConfig 传给 FSDPTurbo 的 build_model_converter，recipe_name 对不上 quant_recipe 使量化门控恒 None，converters 字段也不匹配。
+- **影响对象**：模型权重；性能/资源（静默错误）
+- **影响详情**：mxfp8 训练要么在 ModelConvertersContainer 初始化就崩，要么门控提前返回、整条 mxfp8 量化路径没生效而训练照常跑完；quant_format/block_size/fsdp_world_size 缺失时 get_mxfp8linear_config 报错。
+- **改进措施**：检测 训练启动后确认 build_model_converter 真正产出了 mxfp8 converter，而不是门控返回 None；修复 MR !4962（open，未发布）：把 QuantizeConfig 字段名适配到 FSDPTurbo 的 mxfp8 定义
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1783；https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/4962
 
 ## 位置编码
 
@@ -1734,6 +1767,17 @@
 - **改进措施**：检测 发布后 readlink 校验目标等于自身 checkpoint 名；并发保存时对链接做轮询比对；修复 待定（issue open：给出确定性双线程 barrier 复现与修复方向——每次更新用唯一暂存名（如 mkstemp 风格/pid 后缀）；swift 侧修复 PR 未见）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10336
 
+### TRN-0352 `msllm_mg2hf_grouped_qkv_plain_unpack` MCore→HF 拆 grouped QKV 错位致导出模型乱码
+
+`故障` · `pending_audit` · `yes` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：权重/检查点 / mindspeed-llm / convert_mg2hf QKV unpack
+- **原因行为**：convert_mg2hf 的 unpack 分支按 [Q,K,V] 顺序切 fused linear_qkv，而 GQA 模型在 MCore 里存的是 [Q 组,K,V] 交错布局，切完 q/k/v_proj 全错位。
+- **影响对象**：模型权重；输出内容（静默错误）
+- **影响详情**：无训练 round-trip 后 q/k/v_proj 全部错位（q_proj mean_abs≈0.029、rel_mean≈1.23），embed_tokens/lm_head/norm/o_proj 逐位一致；用该 HF 权重生成出现 aseña/Glish/ature 重复碎片。
+- **改进措施**：检测 转换后逐 tensor 对比原始 HF ckpt，重点看 q/k/v_proj 的 mean_abs 是否非零；修复 issue #1532 建议新增 _split_grouped_qkv_weight，按 num_attention_heads/num_query_groups 分组拆分（issue closed，正文未附修复 PR，未核实）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1532
+
 ## 数据管线
 
 ### TRN-0057 `epoch_boundary_resume_silent_skip` verl SFT 在 epoch 边界 resume 静默跳过下一 epoch
@@ -2100,6 +2144,17 @@
 - **改进措施**：检测 处理 ranking 数据后抽查若干样本的 chosen/rejected 内容是否成对；对 rejected 单元素 list 做一次试处理。；修复 issue 给出改法：把 rejected 的 [1] 改为 [0]，并像 sharegpt 分支那样在取索引前对 list 类型做防御性检查；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1718
 
+### TRN-0347 `mindspeed_cp_pad_data_negative_seq_len` CP 长序列 pad_data 把 -1 填充算进序列长度
+
+`故障` · `pending_audit` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：数据管线 / mindspeed / context_parallel pad_data
+- **原因行为**：pad_data 对含 -1 占位的 actual_seq_len 直接 torch.diff，算出 -166 这类负段长，再用它构造 arange(start,end) 时上下界与 step 符号矛盾。
+- **影响对象**：训练样本流；可用性/进度（报错）
+- **影响详情**：长序列 + CP=4 的 SFT 取 batch 时崩：actual_seq_len=[19,165,-1,...] 使 per_seq_lens 出现 -166，start=192/end=26，抛 upper bound 与 step 符号矛盾。
+- **改进措施**：检测 在 pad_data 打印 per_seq_lens，检查是否出现负段长（actual_seq_len 尾部 -1 占位）；修复 issue #165（open）未给修复；须在 torch.diff 前剔除 -1 padding 项
+- **来源**：https://gitcode.com/Ascend/MindSpeed/issues/165
+
 ## 优化器
 
 ### TRN-0013 `loss_scaler_swallows_overflow` 动态 loss scaler 把 SDC 引起的 inf 当普通溢出跳过
@@ -2455,6 +2510,28 @@
 - **改进措施**：检测 监控各 scaler 的 scale 值是否始终相等；对 unscale 后梯度与 backward scale 对账。；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/8249 （open，未合入未发布）：推迟 scaler 更新至全部优化器完成梯度检查后按合并 overflow 结果统一更新；嵌套链同理；ckpt 格式不变。含 64 步 EP2 FP16 复现与 AdamW 参考对照（两卡 RTX 5090）。
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8249
 
+### TRN-0349 `msllm_fsdp2_epochs_lr_total_steps_default` 只填 num_train_epochs 时 LR 调度按 100000 步算
+
+`故障` · `pending_audit` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：优化器 / mindspeed-llm / FSDP2 lr scheduler
+- **原因行为**：只配置 num_train_epochs、不配 max_steps 时，cosine scheduler 用默认 100000 当 total_steps，而 dataloader 按样本量实际只排 609 步。
+- **影响对象**：训练轨迹；训练信号（静默错误）
+- **影响详情**：同一次启动里 scheduler 打印 total_steps=100000、训练器打印 609 步；cosine 只走 0.6%，lr 从 2.000000E-05 到 1.999993E-05，等效恒定学习率跑完 3 个 epoch。
+- **改进措施**：检测 启动后比对 scheduler 打印的 total_steps 与 Total optimization steps 是否一致；修复 issue #1294（closed）未给修复 PR；规避是显式配置 max_steps
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1294
+
+### TRN-0354 `msllm_reuse_fp32_param_fp16_convert_nan` reuse-fp32-param 的 fp32→fp16 转换溢出成 NaN
+
+`故障` · `pending_audit` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：优化器 / mindspeed / reuse_param fp32→fp16 转换
+- **原因行为**：reuse-fp32-param 的 fp32→fp16 转换在 optimizer step 里做 view(-1,2).transpose(1,0).reshape，第一环就出 NaN。
+- **影响对象**：模型权重；训练信号（数值异常）
+- **影响详情**：qwen3-4b 32k LoRA 在 CP=4 下精度溢出（ulysses 与 megatron CP 都溢出，CP4→TP4 不溢出）；msprobe 首个 NaN 在该 transpose 输入，关掉 reuse-fp32-param 即正常。
+- **改进措施**：检测 msprobe 精度溢出 dump 定位首个 NaN 算子，或直接对比开/关 reuse-fp32-param 的 loss；修复 issue #1404（closed）只给规避：关闭 reuse-fp32-param；未给修复 PR
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1404
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -2675,6 +2752,17 @@
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1818；https://gitcode.com/Ascend/MindSpeed-LLM/pull/4993
 - **关联**：var:TRN-0164
 
+### TRN-0353 `msllm_mtp_loss_num_tokens_zero_nan` MTP num_tokens 为 0 致 mtp_1 loss 成 NaN
+
+`故障` · `pending_audit` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：损失计算 / mindspeed-llm / MTP loss tracker
+- **原因行为**：multi_token_prediction.py 用 sum(mtp_loss)/num_tokens 存 loss tracker，num_tokens 为 0 时结果成 NaN 被静默写进 tracker。
+- **影响对象**：指标/日志；训练信号（静默错误）
+- **影响详情**：glm5.2 SFT 开 --mtp-num-layers 1 后日志只剩 lm loss 与 global_load_balancing_loss，mtp_1 loss 字段整个消失（值为 NaN）；主 loss 看起来正常，MTP 层是否在学无法从日志判断。
+- **改进措施**：检测 检查日志是否打印 mtp_1 loss；或直接在 MTPLossLoggingHelper.save_loss_to_tracker 入口断言 num_tokens>0；修复 issue #1841（closed）只指出 num_tokens=0 这一处，正文未附修复 PR，未核实
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1841
+
 ## MoE路由
 
 ### TRN-0017 `bf16_token_count_rounding_flips_bias_sign` BF16 token 计数舍入翻转 MoE 路由 bias 更新方向
@@ -2821,6 +2909,17 @@
 - **影响详情**：映射数异常时 token 被路由到错误专家（读到他人映射项），无报错；重叠输出视图下输出语义不确定。MoE 训练中专家分布与路由结果静默错乱。
 - **改进措施**：检测 对 topk 输出 indices 与 expert mapping 做越界/一致性抽检；避免零步长广播视图作输出。；修复 修复已合入：master PR #13819/#13848（mappingNum 按有符号读取、非正按 0、钳位到表宽 tableDim_ 后再取模；host 新增 CheckOutputLayout 按 stride/gcd 拒绝重叠视图返回 161002，合法转置/带间隔布局放行），并回迁 9.2.0 分支 MR !13857（含 UT/ST 回归）。issue #6151 closed。https://gitcode.com/cann/ops-transformer/pull/13819
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6151；https://gitcode.com/cann/ops-transformer/pull/13819；https://gitcode.com/cann/ops-transformer/merge_requests/13857
+
+### TRN-0348 `msllm_capacity_auxloss_drop_denominator_nan` 专家容量 drop 与 aux_loss 并存致负载均衡 loss NaN
+
+`故障` · `pending_audit` · `config` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：MoE路由 / mindspeed / capacity drop + aux_loss
+- **原因行为**：同时开 capacity factor 与 aux_loss 时 drop 与 dropless 策略互斥：drop 把超容 token 排除在 aux_loss 外使分母异常，dropless 重路由后又按实际分布算。
+- **影响对象**：训练信号；模型权重（数值异常）
+- **影响详情**：910C 上训练中途 loss 变 NaN；验证阶段 capacity padding/截断后的 hidden size reshape 也对不齐，报 shape 不匹配。
+- **改进措施**：检测 分别只开 capacity 或只开 aux_loss 做 A/B；打印 aux_loss 的分母 token 计数；修复 issue #1399（closed）给出方案：drop 下 aux_loss 只算未 drop 的 token、dropless 下 aux_loss 按 pre-capacity 原始路由分布算；或对参数组合直接报冲突
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1399
 
 ## 重计算/卸载
 

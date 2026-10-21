@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 355 条；状态：active 355
+共 364 条；状态：active 355、pending_audit 9
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -11,19 +11,19 @@
 | 算子/内核 | 36 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
-| 集合通信 | 5 |
-| 并行切分 | 27 |
+| 集合通信 | 6 |
+| 并行切分 | 28 |
 | KV缓存 | 1 |
 | 调度/服务 | 1 |
 | 量化 | 9 |
 | 位置编码 | 6 |
 | 分词/模板 | 7 |
-| 模型定义 | 8 |
-| 权重/检查点 | 29 |
-| 数据管线 | 32 |
-| 优化器 | 33 |
+| 模型定义 | 9 |
+| 权重/检查点 | 31 |
+| 数据管线 | 34 |
+| 优化器 | 34 |
 | 损失计算 | 20 |
-| MoE路由 | 14 |
+| MoE路由 | 15 |
 | 重计算/卸载 | 14 |
 | RL训练回路 | 67 |
 | 观测/评测 | 15 |
@@ -784,6 +784,17 @@
 - **改进措施**：检测 msprobe 溢出检测看 npu_all_gather_base_mm 输出；或 A/B 开关 use-ascend-mc2；修复 issue #1393（closed）只给规避：关闭 use-ascend-mc2；未给修复 PR
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1393
 
+### TRN-0361 `msllm_batch_p2o_comm_hccl_group_unbalanced` 开 batch_p2o_comm 后 HcclGroupEnd 未配对
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：集合通信 / mindspeed-llm / optimize_p2p_comm 批量下发
+- **原因行为**：把 PP 的 P2P 收发折进 HCCL group 批量下发的开关打开后，各 rank 进入 group 的次数或分支不一致，出现只有 HcclGroupEnd 而没有对应 HcclGroupStart 的调用。
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：DSv4 整网训练在 recv_forward 的同步点抛 Inner error，PLOG 记 HcclGroupEnd: not in a group call，进程直接退出；关掉该开关即恢复。
+- **改进措施**：检测 打开前后对比各 rank 的 HcclGroupStart/End 计数与 P2P 收发次数；PLOG 里筛 hccl_group.cc 的 group 配对告警；修复 issue 只提交复现与 PLOG 定位（closed，未附修复 PR，未核实）；规避是不开 config.batch_p2o_comm
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1525
+
 ## 并行切分
 
 ### TRN-0014 `gtp_wgrad_dtype_breaks_fp32_reduce_contract` GTP 回退 wgrad 以 BF16 归约，破坏 FP32 梯度契约
@@ -1087,6 +1098,17 @@
 - **影响详情**：空 rank 场景下 backward collective 顺序不一致直接 hang；空 rank 还缺 indexer/compressor 的 grad hook 与 bucket，用 dummy KV 硬闯会 shape 校验失败或非法索引。
 - **改进措施**：检测 统计各 rank 的 compressed KV 段数，空 rank 与非空 rank 的 loss tracker key、grad bucket 顺序比对；修复 issue #1895（closed）给出方案：_ZeroGradientAnchor 造显式零梯度、_EmptyIndexerLossCommunicationAnchor 让空 rank 参与 CP collective、gather_tnd_local_num() 统一 dtype/shape/process group
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1895
+
+### TRN-0360 `msllm_li_cp_kvallgather_double_transpose` CP 融合 LI 算子重复转置致 S/B 互换
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：并行切分 / mindspeed-llm / fused LI CP KV 包装
+- **原因行为**：CP 的 compress+KV-allgather 分支先把 q/k/weights 从 SBND 转成 BSND 再调 npu_lightning_indexer，而该算子本身收 SBND 并在内部转 BSND，S 与 B 因此互换。
+- **影响对象**：可用性/进度；数值结果（报错）
+- **影响详情**：mbs=1、CP=2、S=4096 时 sub-chunk [1024,1,N,D] 被算子读成 B=1024，metadata 校验 batch_size 与 cmp_residual_k 的 1 不符即刻失败；CP=1 不走该分支故正常。
+- **改进措施**：检测 开融合 LI 前先做 CP=1/CP=2 精度对齐；对传入 npu_lightning_indexer 的 q/k/weights 打印 shape 与 layout，确认上层没有再转置；修复 issue 标题即修复动作：去掉上层预转置、直接把 SBND 传入并让算子内部 rearrange（closed，正文为修复的根因说明，未附 MR 链接，未核实合入版本）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1564
 
 ## KV缓存
 
@@ -1458,6 +1480,17 @@
 - **改进措施**：检测 CPU tiny WhisperEncoder 注入对照：3000 帧（前 13 帧真实前缀+尾垃圾）wrapper 输出 vs 未 pad 主体 vs masked full forward；修复 issue 给出期望实现（未落地）：按行裁剪 input_features[i,:,:mel]（1<=mel<=time）只跑真实帧，S=(mel-1)//2+1 须等于 seq_lengths，不同长度分开 forward 后拼接；issue open（mcore-oncall 已呼叫，无维护者回应）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/8324
 
+### TRN-0357 `msllm_mamba3_scratch_loss_zero_init` Mamba3 从零训练 loss 与 grad norm 骤降为 0
+
+`故障` · `pending_audit` · `ambiguous` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：模型定义 / mindspeed-llm / Mamba3 in/out_proj 初始化
+- **原因行为**：Mamba3 demo 未对 in_proj/out_proj 做 Kaiming 初始化，默认 initializer_range=0.1 下随机初始化即数值异常；调小到 0.02 只推迟现象，约 150 step 后 loss 仍归零。
+- **影响对象**：训练信号；训练轨迹（静默错误）
+- **影响详情**：iteration 154 起 grad norm 先变 0.000，155 起 lm loss 恒为 0.000000E+00 并持续下去，训练不报错不退出，看起来像已经收敛到底。
+- **改进措施**：检测 监控 lm loss 与 grad norm 是否同时恒为 0；对 SSM 分支参数记录初始化 std 与是否全零；修复 issue 里 initializer_range 改 0.02 只恢复前 150 step；正文建议给 Mamba3 in_proj/out_proj 补 Kaiming 初始化并做长步数稳定性验证（closed，未附修复 PR，未核实）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1836
+
 ## 权重/检查点
 
 ### TRN-0046 `named_children_dedup_drops_shared_submodule_params` DeepSpeed ZeRO ckpt 重建缺别名子模块参数
@@ -1788,6 +1821,28 @@
 - **影响详情**：Qwen3-0.6B（TP=PP=EP=1）无训练 round-trip 后 311/311 键齐全，但仅 q_proj/k_proj/v_proj 有差（max_abs 0.42~0.67），其余为 0；生成 aseña/Glish/ature 类重复碎片，原 HF 权重同脚本正常。
 - **改进措施**：检测 转换后逐 tensor 对比原始 HF ckpt，重点看 q/k/v_proj 的 mean_abs 是否非零；修复 issue #1532 建议新增 _split_grouped_qkv_weight，按 num_attention_heads/num_query_groups 分组拆分（issue closed，正文未附修复 PR，未核实）
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1532
+
+### TRN-0356 `msllm_ms_ckpt_missing_qkv_bias_strict_false` MindSpore 加载 ckpt 缺键被 strict=False 吞掉
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：权重/检查点 / mindspore / MindSpore load_state_dict
+- **原因行为**：MindSpore 路径转换出的 ckpt 缺 linear_qkv.bias 与 linear_fc1.layer_norm_weight，加载报 Missing key；改 strict=False 后缺键被跳过、参数保持随机初始化。
+- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响详情**：按官方 weight convert 与 quick_start 转换后训练起不来；改 strict=False 能跑，但这些层用随机初始化参与训练，loss 曲线看不出异常，最终权重与上游 HF 不等价。
+- **改进措施**：检测 加载后逐层比对 missing/unexpected 清单，必须为空才继续；对 qkv bias 与 fc1 layernorm 参数做加载前后指纹比对；修复 issue #1337 只给出把 strict 改 False 的规避（closed，无修复 PR，未核实）；正解是让权重转换补齐或映射这两个键，不要用 strict=False 掩盖
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1337
+
+### TRN-0359 `msllm_hf2mg_convert_ckpt_path_mismatch` hf2mg 自动转换与切分策略不对齐致加载失败
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：权重/检查点 / mindspeed-llm / hf2mg convert + VPP 切分
+- **原因行为**：示例脚本默认带 --enable-hf2mg-convert，会就地把 CKPT_LOAD_DIR 的 HF 权重转成 mg；README 却让人先转换再传转换后目录，且转换脚本未给 VPP 而预训练脚本给了。
+- **影响对象**：可用性/进度；模型权重（报错）
+- **影响详情**：按 README 填转换后路径启动，报 AssertionError: cannot find safetensor, please check load dir；对齐转换与 VPP 后仍可能以 KeyError: model0 退出，预训练拉不起来。
+- **改进措施**：检测 启动前断言 CKPT_LOAD_DIR 内是否含 HF safetensors 与 --enable-hf2mg-convert 是否同时成立；核对转换脚本与训练脚本的 tp/pp/ep/vpp；修复 issue 建议文档提醒：带 --enable-hf2mg-convert 时不要先做转换；并在切分脚本补 VPP 参数或从预训练脚本移除 VPP（closed，未附修复 PR，未核实）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1299
 
 ## 数据管线
 
@@ -2154,6 +2209,28 @@
 - **影响详情**：rejected 为单元素 list（偏好数据最常见形态）时必现 IndexError 中断数据处理；多元素时 chosen[0] 与 rejected[1] 配对错位，DPO/SimPO 训练的是错误偏好对，无报错。
 - **改进措施**：检测 处理 ranking 数据后抽查若干样本的 chosen/rejected 内容是否成对；对 rejected 单元素 list 做一次试处理。；修复 issue 给出改法：把 rejected 的 [1] 改为 [0]，并像 sharegpt 分支那样在取索引前对 list 类型做防御性检查；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1718
+
+### TRN-0358 `msllm_tft_rollback_dataloader_worker_loss` TFT 回滚重建 DataLoader 时丢 worker
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：数据管线 / mindspeed-llm / TFT 回滚 DataLoader 重建
+- **原因行为**：TFT 高可用回滚时无条件重建 DataLoader 与迭代器，num_workers>0 下新旧 worker 生命周期切换，worker 异常退出后父进程只在 gc.collect 处报错。
+- **影响对象**：可用性/进度；训练样本流（不可复现）
+- **影响详情**：num_workers=2 时约十余次回滚出现一次 DataLoader worker exited unexpectedly(exit code 1)，父进程在 gc.collect 里抛 RuntimeError 退出；num_workers=0 未复现，worker stderr 丢失。
+- **改进措施**：检测 回滚前后记录 worker pid 与 consumed_train_samples，对 single/cyclic sampler 状态做一致性断言；修复 issue 给出方案：仅在开高可用时对标准 map-style DataLoader 启用 persistent_workers，回滚时重置 single/cyclic 采样器并复用现有 worker（closed，未核实是否已合入）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1911
+
+### TRN-0363 `msllm_packed_prefix_double_suffix_glob` DATA_PATH 带 _packed 后 glob 双后缀取空数据集
+
+`故障` · `pending_audit` · `infra_off` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：数据管线 / mindspeed-llm / packed 数据集 glob 拼接
+- **原因行为**：预处理固定输出 {prefix}_packed_*_document*，训练侧又给 data_prefix 追加 _packed 再 glob，用户按输出名填 DATA_PATH 就变成 _packed_packed，匹配不到文件。
+- **影响对象**：训练样本流；可用性/进度（报错）
+- **影响详情**：glob 结果为空字典，decoder_packed_mtf_dataset.py:82 对 values()[0] 取长度抛 IndexError: list index out of range，报错完全不提路径或 _packed 后缀。
+- **改进措施**：检测 启动时断言 packed_indexed_dataset 非空并打印实际 glob 模式；预处理后核对输出文件名与 DATA_PATH 是否一致；修复 issue 建议：文档写明 DATA_PATH 取 --output-prefix 原值、空数据集抛带 glob 模式的 ValueError、检测到 _packed 结尾自动去后缀并告警（open，未核实修复）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1792
 
 ## 优化器
 
@@ -2531,6 +2608,17 @@
 - **影响详情**：qwen3-4b 32k LoRA 在 CP=4 下精度溢出（ulysses 与 megatron CP 都溢出，CP4→TP4 不溢出）；msprobe 首个 NaN 在该 transpose 输入，关掉 reuse-fp32-param 即正常。
 - **改进措施**：检测 msprobe 精度溢出 dump 定位首个 NaN 算子，或直接对比开/关 reuse-fp32-param 的 loss；修复 issue #1404（closed）只给规避：关闭 reuse-fp32-param；未给修复 PR
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1404
+
+### TRN-0364 `msllm_low_precision_opt_duplicate_router_bias_patch` 低精度优化器重复打 router bias 补丁致导入失败
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：优化器 / mindspeed-llm / 低精度优化器 patch 注册
+- **原因行为**：MoE 特性已给 _update_router_expert_bias 打过补丁，低精度优化器在 register_patches 里再打一次，MindSpeed 的 patch 校验发现重复就抛错。
+- **影响对象**：可用性/进度；优化器状态（报错）
+- **影响详情**：脚本只要带 --quant-states 或 --quant-grads，import megatron_adaptor 阶段就 RuntimeError: the patch of _update_router_expert_bias exist，量化优化器特性完全不可用。
+- **改进措施**：检测 apply_features_patches 前打印已注册 patch 列表；对同一 orig_func 的重复注册做去重与告警；修复 issue 已提修复 PR https://gitcode.com/Ascend/MindSpeed-LLM/pull/4473，做法是去掉重复注册的那次补丁（PR 状态未核实）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1371
 
 ## 损失计算
 
@@ -2920,6 +3008,17 @@
 - **影响详情**：910C 上训练中途 loss 变 NaN；验证阶段 capacity padding/截断后的 hidden size reshape 也对不齐，报 shape 不匹配。
 - **改进措施**：检测 分别只开 capacity 或只开 aux_loss 做 A/B；打印 aux_loss 的分母 token 计数；修复 issue #1399（closed）给出方案：drop 下 aux_loss 只算未 drop 的 token、dropless 下 aux_loss 按 pre-capacity 原始路由分布算；或对参数组合直接报冲突
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1399
+
+### TRN-0362 `msllm_dualpipev_permute_fusion_capacity_conflict` DualPipeV 强绑 permute 融合与专家容量互斥
+
+`故障` · `pending_audit` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：MoE路由 / mindspeed-llm / fused_moe_permute 参数校验
+- **原因行为**：DualPipeV 依赖 moe-permute-fusion 而自动开启它，capacity 又要按 token 截断/重路由、改变 permute 语义与输入 shape，参数校验直接把两者判为互斥。
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：同时开 DualPipeV 与 --moe-expert-capacity-factor，训练在 initialize_megatron 的 validate_args 阶段就 AssertionError 退出，流水 overlap 与容量限制无法共存。
+- **改进措施**：检测 启动参数校验里列出 DualPipeV 自动打开的 feature 集，与 capacity/pad 类参数做交叉检查；修复 issue 给两档：短期改报错文案、直接说明 DualPipeV 与 capacity 冲突并建议用 aux_loss；长期解耦调度与 permute 融合，capacity 开启时自动降级为非融合 permute（closed，未附 MR，未核实）
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1401
 
 ## 重计算/卸载
 

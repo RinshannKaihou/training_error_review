@@ -67,3 +67,99 @@
 {"job": "baseC|TRN-0354|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
 {"job": "baseC|TRN-0350|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
 {"job": "baseC|TRN-0352|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0348|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0349|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0348|glm-5.3-flash", "model": "glm-5.3-flash", "result": null}
+{"job": "baseC|TRN-0348|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0347|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0347|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0352|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0347|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|TRN-0350|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|TRN-0349|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "优化器状态", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0351|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0352|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0349|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0353|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "指标/日志", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0351|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0350|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|TRN-0355|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0352|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0355|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0353|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "指标/日志", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0350|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseF|TRN-0347|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0353|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "指标/日志", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0354|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseF|TRN-0348|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0355|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "可用性/进度", "visibility": "挂起"}}
+{"job": "baseC|TRN-0354|glm-5.3-flash", "model": "glm-5.3-flash", "result": null}
+{"job": "baseF|TRN-0349|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0347|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0354|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0351|glm-5.3-flash", "model": "glm-5.3-flash", "result": null}
+{"job": "baseF|TRN-0350|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0350|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "训练照常跑完", "evidence": "另一种是训练能跑，但量化根本没打上，模型还是按原精度在训"}}]}
+{"job": "baseF|TRN-0349|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0350|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "训练照常跑完", "evidence": "另一种是训练能跑，但量化根本没打上，模型还是按原精度在训"}}]}
+{"job": "baseF|TRN-0351|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "输出整体为 NaN", "evidence": "Max/Min/Mean/Norm 全为 NaN"}}]}
+{"job": "baseF|TRN-0353|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0352|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rel_mean≈1.23", "evidence": "把该张量与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699，与 grouped 布局比对得 mean_abs 0.0/max 0.0"}}]}
+{"job": "baseF|TRN-0348|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "dropless 重路由后又按实际分布算。", "evidence": "dropless 策略下 token 被重路由后，aux_loss 用的路由分布与实际专家计算分布不一致，梯度异常。"}}]}
+{"job": "baseF|TRN-0354|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0349|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "而 dataloader 按样本量实际只排 609 步。", "evidence": "随后 Running training (FSDP2) 打印 Num examples = 52044 / Num Epochs = 3.0 / Total Batch Size = 256 / Total optimization steps = 609.0。即 scheduler 侧没有按 epoch×样本数/global batch 推出 609"}}]}
+{"job": "baseF|TRN-0351|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0354|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0353|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0353|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0355|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0347|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0351|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "输出整体为 NaN", "evidence": "NPU.npu_all_gather_base_mm.0.forward 的输出 shape [4096, 75968]、dtype bf16、Max/Min/Mean/Norm 全为 NaN"}}]}
+{"job": "baseF|TRN-0348|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "dropless 重路由后又按实际分布算", "evidence": "dropless 策略下 token 被重路由后，aux_loss 用的路由分布与实际专家计算分布不一致，梯度异常"}}]}
+{"job": "baseF|TRN-0355|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0354|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "第一环就出 NaN", "evidence": "dump 出来的第一个 NaN 出现在 fp32 权重转 fp16 的 transpose 上"}}]}
+{"job": "baseF|TRN-0352|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rel_mean≈1.23", "evidence": "与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699，与 grouped 布局比对得 mean_abs 0.0/max 0.0"}}]}
+{"job": "baseF|TRN-0352|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "q_proj mean_abs≈0.029、rel_mean≈1.23", "evidence": "原文仅有：『把该张量与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699』（这是 linear_qkv 整体与 plain 布局的对比，非 q_proj 单独均值），以及『只有 q_proj/k_proj/v_proj 三组权重有差（max_abs 0.42~0.67）』；原文中不存在 rel_mean≈1.23 这一数值，也未给出 q_proj 单独的 mean_abs。"}}]}
+{"job": "baseF|TRN-0355|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0348|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0350|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "panelC|TRN-0349|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0352|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0348|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0349|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0348|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "训练信号", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0351|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0352|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0350|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "panelC|TRN-0354|qwen3.8-max", "model": "qwen3.8-max", "result": null}
+{"job": "panelC|TRN-0351|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0352|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "质量退化"}}
+{"job": "panelC|TRN-0351|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0350|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "性能/资源", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0349|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "训练轨迹", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0348|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "dropless 重路由后又按实际分布算", "evidence": "dropless 策略下 token 被重路由后，aux_loss 用的路由分布与实际专家计算分布不一致，梯度异常"}}]}
+{"job": "panelF|TRN-0349|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0350|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0351|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0349|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0351|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0352|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rel_mean≈1.23", "evidence": "把该张量与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699，与 grouped 布局比对得 mean_abs 0.0/max 0.0"}}]}
+{"job": "panelC|TRN-0354|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0354|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "panelF|TRN-0350|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0349|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0354|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0350|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0351|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0352|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rel_mean≈1.23", "evidence": "与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699…只有 q_proj/k_proj/v_proj 三组权重有差（max_abs 0.42~0.67），其余全为 0（原文无 rel_mean 指标）"}}]}
+{"job": "panelF|TRN-0354|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0354|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0348|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "dropless 重路由后又按实际分布算", "evidence": "dropless 策略下 token 被重路由后，aux_loss 用的路由分布与实际专家计算分布不一致，梯度异常"}}]}
+{"job": "panelF|TRN-0352|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rel_mean≈1.23", "evidence": "原文只给出“把该张量与 HF plain 布局比对得 mean_abs 0.0297/max 0.6699”“与 grouped 布局比对得 mean_abs 0.0/max 0.0”以及“只有 q_proj/k_proj/v_proj 三组权重有差（max_abs 0.42~0.67）”，全文没有任何 rel_mean 数值；且 0.0297 是整个 fused linear_qkv 与 plain 布局比对的均值，并非 q_proj 单独的 mean_abs"}}]}
+{"job": "panelF|TRN-0348|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "dropless 重路由后又按实际分布算。", "evidence": "dropless 策略下 token 被重路由后，aux_loss 用的路由分布与实际专家计算分布不一致，梯度异常。"}}]}
+{"job": "fix|TRN-0352", "model": "qwen3.8-max", "result": {"detail": "Qwen3-0.6B（TP=PP=EP=1）无训练 round-trip 后 311/311 键齐全，但仅 q_proj/k_proj/v_proj 有差（max_abs 0.42~0.67），其余为 0；生成 aseña/Glish/ature 类重复碎片，原 HF 权重同脚本正常。"}}
+{"job": "fix|TRN-0348", "model": "qwen3.8-max", "result": {"behavior": "drop与dropless策略在路由和aux_loss计算路径上互斥：drop下被丢token不计入aux_loss，分母偏小甚至为零；dropless下重路由后aux_loss的路由分布与实际专家计算分布不一致，梯度异常。"}}
+{"job": "verify|TRN-0348|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0352|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0352|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0348|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

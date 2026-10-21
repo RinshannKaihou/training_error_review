@@ -4,7 +4,7 @@ slug: msllm_fsdp2_mxfp8_quantizeconfig_field_mismatch
 aliases: []
 title: FSDP2 mxfp8 配置字段名不匹配致量化静默跳过
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,10 +13,10 @@ cause:
   behavior: 本地 QuantizeConfig 传给 FSDPTurbo 的 build_model_converter，recipe_name 对不上 quant_recipe 使量化门控恒 None，converters 字段也不匹配。
 effect:
   objects:
-  - 模型权重
   - 性能/资源
+  - 模型权重
   detail: mxfp8 训练要么在 ModelConvertersContainer 初始化就崩，要么门控提前返回、整条 mxfp8 量化路径没生效而训练照常跑完；quant_format/block_size/fsdp_world_size 缺失时 get_mxfp8linear_config 报错。
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 训练启动后确认 build_model_converter 真正产出了 mxfp8 converter，而不是门控返回 None
   fix: MR !4962（open，未发布）：把 QuantizeConfig 字段名适配到 FSDPTurbo 的 mxfp8 定义
@@ -44,3 +44,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 模型权重
+        to: 性能/资源
+      visibility:
+        from: 静默错误
+        to: 性能退化

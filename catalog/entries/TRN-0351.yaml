@@ -4,7 +4,7 @@ slug: msllm_mc2_allgather_base_mm_nan
 aliases: []
 title: MC2 融合 all-gather 输出 NaN 污染 loss
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -13,8 +13,8 @@ cause:
   behavior: 开 --use-ascend-mc2 后，MC2 列并行线性层里 npu_all_gather_base_mm 的输出整体为 NaN，通信与矩阵乘融合这条路径把中间结果污染成 NaN。
 effect:
   objects:
-  - 训练信号
   - 数值结果
+  - 训练信号
   detail: qwen3-32b 32k LoRA 训练 loss 变 NaN，改并行度与超参均复现；msprobe 溢出检测首个 NaN 为该算子输出（4096×75968 bf16）；关闭 use-ascend-mc2 后精度正常。
   visibility: 数值异常
 mitigation:
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 训练信号
+        to: 数值结果
+    uncertain:
+    - subsystem

@@ -4,17 +4,17 @@ slug: mindspeed_cp_pad_data_negative_seq_len
 aliases: []
 title: CP 长序列 pad_data 把 -1 填充算进序列长度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 数据管线
+  - subsystem: 并行切分
     stack: mindspeed
     component: context_parallel pad_data
   behavior: pad_data 对含 -1 占位的 actual_seq_len 直接 torch.diff，算出 -166 这类负段长，再用它构造 arange(start,end) 时上下界与 step 符号矛盾。
 effect:
   objects:
-  - 训练样本流
   - 可用性/进度
+  - 训练样本流
   detail: 长序列 + CP=4 的 SFT 取 batch 时崩：actual_seq_len=[19,165,-1,...] 使 per_seq_lens 出现 -166，start=192/end=26，抛 upper bound 与 step 符号矛盾。
   visibility: 报错
 mitigation:
@@ -41,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 数据管线
+        to: 并行切分
+      effect:
+        from: 训练样本流
+        to: 可用性/进度

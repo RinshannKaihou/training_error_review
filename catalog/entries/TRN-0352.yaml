@@ -4,7 +4,7 @@ slug: msllm_mg2hf_grouped_qkv_plain_unpack
 aliases: []
 title: MCore→HF 拆 grouped QKV 错位致导出模型乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -15,7 +15,7 @@ effect:
   objects:
   - 模型权重
   - 输出内容
-  detail: 无训练 round-trip 后 q/k/v_proj 全部错位（q_proj mean_abs≈0.029、rel_mean≈1.23），embed_tokens/lm_head/norm/o_proj 逐位一致；用该 HF 权重生成出现 aseña/Glish/ature 重复碎片。
+  detail: Qwen3-0.6B（TP=PP=EP=1）无训练 round-trip 后 311/311 键齐全，但仅 q_proj/k_proj/v_proj 有差（max_abs 0.42~0.67），其余为 0；生成 aseña/Glish/ature 类重复碎片，原 HF 权重同脚本正常。
   visibility: 静默错误
 mitigation:
   detect: 转换后逐 tensor 对比原始 HF ckpt，重点看 q/k/v_proj 的 mean_abs 是否非零
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

@@ -15,7 +15,7 @@ effect:
   objects:
   - 模型权重
   - 训练轨迹
-  detail: 按官方 weight convert 与 quick_start 转换后训练起不来；改 strict=False 能跑，但这些层用随机初始化参与训练，loss 曲线看不出异常，最终权重与上游 HF 不等价。
+  detail: 按 install_guide 与 quick_start 做完权重转换后训练起不来（load_state_dict 报 missing key）；改 strict=False 能跑，但缺失键对应参数保持初始化值、等于部分随机初始化继续训练，对结果影响未知
   visibility: 报错
 mitigation:
   detect: 加载后逐层比对 missing/unexpected 清单，必须为空才继续；对 qkv bias 与 fc1 layernorm 参数做加载前后指纹比对
@@ -41,6 +41,8 @@ original:
   behavior: '照着 MindSpore 安装指导与 quick start 做完权重转换和数据处理，执行 examples/mindspore/qwen25/pretrain_qwen25_7b_32k_ms.sh 直接报 RuntimeError: Error(s) in loading state_dict for GPTModel，Missing key 列出每层 linear_qkv.bias 与 linear_fc1.layer_norm_weight；改成 strict=False 后训练能起来，用户因此追问会不会影响训练结果和精度。'
   trigger_surface: MindSpore(msadapter) 后端 + examples/mindspore/qwen25 预训练脚本 + 按文档转换的 ckpt
   discovery: 2026-10-21 每日扫描
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（loss无异常与权重不等价原文未提）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -57,3 +59,8 @@ migration:
         to: 报错
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

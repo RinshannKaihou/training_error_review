@@ -1840,7 +1840,7 @@
 - **原因对象**：权重/检查点 / mindspore / MindSpore load_state_dict
 - **原因行为**：MindSpore 路径转换出的 ckpt 缺 linear_qkv.bias 与 linear_fc1.layer_norm_weight，加载报 Missing key；改 strict=False 后缺键被跳过、参数保持随机初始化。
 - **影响对象**：模型权重；训练轨迹（报错）
-- **影响详情**：按官方 weight convert 与 quick_start 转换后训练起不来；改 strict=False 能跑，但这些层用随机初始化参与训练，loss 曲线看不出异常，最终权重与上游 HF 不等价。
+- **影响详情**：按 install_guide 与 quick_start 做完权重转换后训练起不来（load_state_dict 报 missing key）；改 strict=False 能跑，但缺失键对应参数保持初始化值、等于部分随机初始化继续训练，对结果影响未知
 - **改进措施**：检测 加载后逐层比对 missing/unexpected 清单，必须为空才继续；对 qkv bias 与 fc1 layernorm 参数做加载前后指纹比对；修复 issue #1337 只给出把 strict 改 False 的规避（closed，无修复 PR，未核实）；正解是让权重转换补齐或映射这两个键，不要用 strict=False 掩盖
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1337
 

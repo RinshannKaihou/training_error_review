@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 346 条；状态：active 341、pending_audit 5
+共 346 条；状态：active 346
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -13,12 +13,13 @@
 | 运行时/执行 | 8 |
 | 集合通信 | 4 |
 | 并行切分 | 25 |
+| KV缓存 | 1 |
 | 调度/服务 | 1 |
 | 量化 | 8 |
 | 位置编码 | 6 |
 | 分词/模板 | 7 |
 | 模型定义 | 8 |
-| 权重/检查点 | 29 |
+| 权重/检查点 | 28 |
 | 数据管线 | 32 |
 | 优化器 | 31 |
 | 损失计算 | 19 |
@@ -269,6 +270,7 @@
 - **影响详情**：pad 系反向/UnfoldGrad 的 gradInput、Multinomial 的 out、MedianDim 输出、DynamicQuant 的 scaleOut 残留未初始化内存（实测哨兵/NaN），接口返回成功无报错。
 - **改进措施**：检测 出参预填哨兵值做 round-trip 校验；PyTorch 参考语义为空 grad_output 回全零，可对账。；修复 待定：同机理先例 ops-math #3360（aclnnCdistBackward）已闭环；本批 #3553/#3560/#6582/#6605 暂未见已合入修复（各 issue 关联 MR 状态未逐一核实）。
 - **来源**：https://gitcode.com/cann/ops-math/issues/3553；https://gitcode.com/cann/ops-math/issues/3560；https://gitcode.com/cann/ops-nn/issues/6582；https://gitcode.com/cann/ops-nn/issues/6605；https://gitcode.com/cann/ops-math/merge_requests/6366
+- **关联**：cross:INF-1794
 
 ### TRN-0276 `add_rms_norm_gamma_mul_order_overflow` Ascend 950 AddRmsNorm 先乘 gamma 致 FP32 溢出
 
@@ -521,18 +523,18 @@
 
 ### TRN-0343 `opsnn_bn_grad_kahan_inf_nan_accumulator` BN 梯度 Kahan 补偿位 Inf-Inf 成 NaN 毒化累加器
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / KahanAdd/KahanAddReg 累加路径
 - **原因行为**：部分和为 ±Inf 时 Kahan 补偿位 c=(t-sum)-y 算得 Inf-Inf=NaN，y=src-c 变 NaN 并跨调用毒化累加器；无 NaN lane 防护。
-- **影响对象**：数值结果；梯度（数值异常）
+- **影响对象**：梯度；数值结果（数值异常）
 - **影响详情**：含 ±Inf 极值的 BN 反向梯度输入下，NPU 输出 NaN 而 golden/GPU 输出 ±Inf；该算子是 BN 训练梯度路径，输出 NaN 传播进反向梯度。
 - **改进措施**：检测 三方校验 cross_check 对含 Inf 用例比对（golden/GPU ±Inf vs NPU NaN）。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12373（open）：c!=c 自比检出 NaN lane 并 Select 清零，非有限路径退化为 IEEE 普通加法（对齐 golden/torch.sum）；有限路径行为不变。
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12373
 
 ### TRN-0344 `opsnn_gns_twopass_cross_call_x_buffer_race` GroupNormSwish 大 shape 跨调用 x 缓冲竞态输出不定
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / TWOPASS_PERF 模板 V_MTE2 握手
 - **原因行为**：每核多次调用 CalNormalize 时 chunk 复用同一 x ping/pong UB 缓冲，但 V_MTE2 事件握手只在单次调用内配对，下一次调用的 MTE2 覆写与上一调用尾部 V 读并发。
@@ -1053,6 +1055,19 @@
 - **来源**：https://gitcode.com/Ascend/MindSpeed/issues/209
 - **关联**：cross:INF-0373
 
+## KV缓存
+
+### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
+
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：KV缓存 / mindspeed-llm / Float16Module 与 wkv/wgate
+- **原因行为**：开 --kv-compress 时 Float16Module.__init__ 对整个模块递归 cast 到 bf16，把按 fp32 构造的 compressor wkv/wgate 一并降精（设计计算保持 fp32）。
+- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响详情**：--kv-compress 训练 DeepSeek-V4 时 compressor 的 wkv/wgate 以 bf16 参与计算，与设计的 fp32 计算路径偏离，精度静默损失；无报错。
+- **改进措施**：检测 训练初始化后打印 compressor wkv/wgate dtype（应为 fp32）。；修复 修复 MR https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176（open）：新增 compressor2fp32_fp16module_init_wrapper，在 Float16Module.__init__ 后把 compressor wkv/wgate 重新 cast 回 fp32，经 CSAFeature.register_patches 按 --kv-compress 门控注册（沿用 dsa_indexer/mhc fp32-init wrapper 同款机制）；验证 py_compile + patch 叠加，NPU 端到端未运行。
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176
+
 ## 调度/服务
 
 ### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
@@ -1217,7 +1232,7 @@
 
 ### TRN-0342 `mindspeed_mla_yarn_original_max_pos_misforwarded` MindSpeed MLA YaRN 原始长度参数传错致长序列退化
 
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：位置编码 / mindspeed / MLA YaRN 初始化
 - **原因行为**：构造 YarnRotaryEmbedding 时把扩展后的 max_position_embeddings 当作 original_max_position_embeddings 传入，YaRN 缩放范围按错误的原始长度计算。
@@ -1718,17 +1733,6 @@
 - **影响详情**：并发 checkpoint 保存（如多进程训练各自更新 last-checkpoint，或保存与导出重叠）时，训练完成后 last-checkpoint 链接可能指向另一个（旧的或别人的）checkpoint 目录，且一个调用方收到成功返回；按该链接恢复训练会静默加载错检查点，无任何报错。
 - **改进措施**：检测 发布后 readlink 校验目标等于自身 checkpoint 名；并发保存时对链接做轮询比对；修复 待定（issue open：给出确定性双线程 barrier 复现与修复方向——每次更新用唯一暂存名（如 mkstemp 风格/pid 后缀）；swift 侧修复 PR 未见）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10336
-
-### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
-
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
-
-- **原因对象**：权重/检查点 / mindspeed-llm / Float16Module 与 wkv/wgate
-- **原因行为**：开 --kv-compress 时 Float16Module.__init__ 对整个模块递归 cast 到 bf16，把按 fp32 构造的 compressor wkv/wgate 一并降精（设计计算保持 fp32）。
-- **影响对象**：模型权重；训练轨迹（静默错误）
-- **影响详情**：--kv-compress 训练 DeepSeek-V4 时 compressor 的 wkv/wgate 以 bf16 参与计算，与设计的 fp32 计算路径偏离，精度静默损失；无报错。
-- **改进措施**：检测 训练初始化后打印 compressor wkv/wgate dtype（应为 fp32）。；修复 修复 MR https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176（open）：新增 compressor2fp32_fp16module_init_wrapper，在 Float16Module.__init__ 后把 compressor wkv/wgate 重新 cast 回 fp32，经 CSAFeature.register_patches 按 --kv-compress 门控注册（沿用 dsa_indexer/mhc fp32-init wrapper 同款机制）；验证 py_compile + patch 叠加，NPU 端到端未运行。
-- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176
 
 ## 数据管线
 
@@ -3728,7 +3732,7 @@
 
 ### TRN-0345 `mswift_dynamic_num_samples_gdpo_ignored_chunk_rescale` ms-swift 动态 GRPO 丢 gdpo 归一化且分块重缩放 loss
 
-`故障` · `pending_audit` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：RL训练回路 / ms-swift / 动态 advantage/分块 loss
 - **原因行为**：动态路径的 advantage 函数未实现 gdpo 分支而静默退化为无缩放；分块 loss 按样本数加权平均，把已按全局 token 归一的窗口归一化损失再除以块数，梯度被静默缩小。

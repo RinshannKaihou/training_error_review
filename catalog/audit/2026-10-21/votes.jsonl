@@ -1,0 +1,46 @@
+{"job": "baseC|TRN-0343|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0344|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0343|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0345|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|TRN-0345|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0344|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0342|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "位置编码", "effect": "隐状态", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0345|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0342|qwen3.8-max", "model": "qwen3.8-max", "result": null}
+{"job": "baseC|TRN-0346|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0342|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0342|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0343|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0344|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0343|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0343|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0342|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "位置编码", "effect": "隐状态", "visibility": "质量退化"}}
+{"job": "baseF|TRN-0344|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0346|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0344|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|TRN-0346|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0346|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0342|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0345|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0346|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0345|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0346|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0344|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0343|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0345|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "再除以块数", "evidence": "加权平均把 loss/梯度缩放 n_c/N，k 个等大块时结果是无分块 loss 的 1/k"}, "detail": {"problem": "missing_condition", "quote": "损失缩为 1/k", "evidence": "k 个等大块时结果是无分块 loss 的 1/k"}}]}
+{"job": "panelC|TRN-0343|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0345|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0343|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0343|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0345|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0343|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0345|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|TRN-0343|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "panelF|TRN-0343|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "输出 NaN 传播进反向梯度", "evidence": "该算子位于 BN 训练反向梯度计算路径（bn_training_update_grad），其输出直接进入参数梯度。NaN 随后毒化优化器状态与权重"}}]}
+{"job": "panelC|TRN-0345|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0345|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0345|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "再除以块数", "evidence": "k 个等大块时结果是无分块 loss 的 1/k"}, "detail": {"problem": "missing_condition", "quote": "dapo/cispo/fipo 损失缩为 1/k", "evidence": "dapo/cispo/fipo 类损失被静默缩小（等分 k 块时缩为 1/k）"}}]}
+{"job": "panelF|TRN-0343|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0343|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0345|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "把已按全局 token 归一的窗口归一化损失再除以块数", "evidence": "加权平均把 loss/梯度缩放 n_c/N，k 个等大块时结果是无分块 loss 的 1/k"}, "detail": {"problem": "missing_condition", "quote": "损失缩为 1/k", "evidence": "k 个等大块时结果是无分块 loss 的 1/k"}}]}
+{"job": "panelF|TRN-0345|MiniMax-M3", "model": "MiniMax-M3", "result": null}

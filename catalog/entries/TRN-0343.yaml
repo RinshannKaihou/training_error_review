@@ -4,7 +4,7 @@ slug: opsnn_bn_grad_kahan_inf_nan_accumulator
 aliases: []
 title: BN 梯度 Kahan 补偿位 Inf-Inf 成 NaN 毒化累加器
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: 部分和为 ±Inf 时 Kahan 补偿位 c=(t-sum)-y 算得 Inf-Inf=NaN，y=src-c 变 NaN 并跨调用毒化累加器；无 NaN lane 防护。
 effect:
   objects:
-  - 数值结果
   - 梯度
+  - 数值结果
   detail: 含 ±Inf 极值的 BN 反向梯度输入下，NPU 输出 NaN 而 golden/GPU 输出 ±Inf；该算子是 BN 训练梯度路径，输出 NaN 传播进反向梯度。
   visibility: 数值异常
 mitigation:
@@ -41,3 +41,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度

@@ -4,10 +4,10 @@ slug: msllm_kvcompress_fp32_compressor_recursed_cast
 aliases: []
 title: MindSpeed-LLM kv-compress 误压 fp32 权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: KV缓存
     stack: mindspeed-llm
     component: Float16Module 与 wkv/wgate
   behavior: 开 --kv-compress 时 Float16Module.__init__ 对整个模块递归 cast 到 bf16，把按 fp32 构造的 compressor wkv/wgate 一并降精（设计计算保持 fp32）。
@@ -41,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: KV缓存

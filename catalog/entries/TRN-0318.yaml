@@ -46,6 +46,7 @@ original:
   discovery: 2026-10-19 每日扫描
   notes:
   - '2026-10-20 回访 2026-10-20：修复 PR #7773 已 closed（2026-10-19T07:07Z），merged_at=None——未合入即关闭，缺陷仍在 main；条目 fix 状态更正为「PR closed 未合入」。'
+  - '2026-10-21 2026-10-21 回访：修复 PR #7773 经 pulls 端点核实 merged_at=2026-10-19T07:07:54Z（昨日按 closed+merged_at=None 判为未合入有误——同一 API 字段今日返回已合并时间戳；issue #7772 批次快照 open）。fix 状态：PR 已合入（发布版本待核）。'
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -68,4 +69,7 @@ migration:
   - date: '2026-10-20'
     fields:
     - mitigation.fix
+    - original.notes
+  - date: '2026-10-21'
+    fields:
     - original.notes

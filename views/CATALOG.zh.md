@@ -3,28 +3,28 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 341 条；状态：active 341
+共 346 条；状态：active 341、pending_audit 5
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 34 |
+| 算子/内核 | 36 |
 | 编译器 | 8 |
 | 运行时/执行 | 8 |
 | 集合通信 | 4 |
 | 并行切分 | 25 |
 | 调度/服务 | 1 |
 | 量化 | 8 |
-| 位置编码 | 5 |
+| 位置编码 | 6 |
 | 分词/模板 | 7 |
 | 模型定义 | 8 |
-| 权重/检查点 | 28 |
+| 权重/检查点 | 29 |
 | 数据管线 | 32 |
 | 优化器 | 31 |
 | 损失计算 | 19 |
 | MoE路由 | 13 |
 | 重计算/卸载 | 14 |
-| RL训练回路 | 66 |
+| RL训练回路 | 67 |
 | 观测/评测 | 15 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -518,6 +518,28 @@
 - **改进措施**：检测 对比 gaf=True/False 两条路径同名参数的 wgrad 范数与差异量级；或检查 TERowParallelLinear patch 是否真的替换了 TESpecProvider 返回的类。；修复 issue 建议 RowParallelNoSeq 对齐 RowParallelSeq：forward 保存 ctx.gradient_accumulation_fusion、backward 增加走 npu_matmul_add_fp32 的分支；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed/issues/231
 - **关联**：var:TRN-0118
+
+### TRN-0343 `opsnn_bn_grad_kahan_inf_nan_accumulator` BN 梯度 Kahan 补偿位 Inf-Inf 成 NaN 毒化累加器
+
+`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：算子/内核 / cann / KahanAdd/KahanAddReg 累加路径
+- **原因行为**：部分和为 ±Inf 时 Kahan 补偿位 c=(t-sum)-y 算得 Inf-Inf=NaN，y=src-c 变 NaN 并跨调用毒化累加器；无 NaN lane 防护。
+- **影响对象**：数值结果；梯度（数值异常）
+- **影响详情**：含 ±Inf 极值的 BN 反向梯度输入下，NPU 输出 NaN 而 golden/GPU 输出 ±Inf；该算子是 BN 训练梯度路径，输出 NaN 传播进反向梯度。
+- **改进措施**：检测 三方校验 cross_check 对含 Inf 用例比对（golden/GPU ±Inf vs NPU NaN）。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12373（open）：c!=c 自比检出 NaN lane 并 Select 清零，非有限路径退化为 IEEE 普通加法（对齐 golden/torch.sum）；有限路径行为不变。
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12373
+
+### TRN-0344 `opsnn_gns_twopass_cross_call_x_buffer_race` GroupNormSwish 大 shape 跨调用 x 缓冲竞态输出不定
+
+`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：算子/内核 / cann / TWOPASS_PERF 模板 V_MTE2 握手
+- **原因行为**：每核多次调用 CalNormalize 时 chunk 复用同一 x ping/pong UB 缓冲，但 V_MTE2 事件握手只在单次调用内配对，下一次调用的 MTE2 覆写与上一调用尾部 V 读并发。
+- **影响对象**：数值结果；隐状态（不可复现）
+- **影响详情**：N×G>114688 的大 shape（触发每核多次 CalNormalize）下 y 输出不确定：同输入多次执行二进制不一致，对 golden matched_ratio 约 98.99%（max_abs_err 5.74）；mean/rstd 不受影响。
+- **改进措施**：检测 固定 seed 多次执行比对输出 MD5（修复前 5 次全不同）；TTK 逐位比对。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12395（open）：新增 isFirstNormalizeCall/isLastNormalizeCall 使跨调用 V_MTE2 握手配对（Wait 侧与 SetFlag 侧成对修改）；修复后 5 次 MD5 全同、精度 PASS 100%（max_abs_err 0.00195），小 shape 零影响。
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12395
 
 ## 编译器
 
@@ -1193,6 +1215,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/7900；https://github.com/NVIDIA/Megatron-LM/pull/7850
 
+### TRN-0342 `mindspeed_mla_yarn_original_max_pos_misforwarded` MindSpeed MLA YaRN 原始长度参数传错致长序列退化
+
+`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：位置编码 / mindspeed / MLA YaRN 初始化
+- **原因行为**：构造 YarnRotaryEmbedding 时把扩展后的 max_position_embeddings 当作 original_max_position_embeddings 传入，YaRN 缩放范围按错误的原始长度计算。
+- **影响对象**：隐状态；训练轨迹（质量退化）
+- **影响详情**：长上下文模型（如 Kimi-k2.5：original 4096 / 扩展 128000）启用 MLA+YaRN 时缩放区间错位，长序列前向精度静默退化；两值相等的模型不受影响。
+- **改进措施**：检测 对 YarnRotaryEmbedding 收到的 original_max_position_embeddings 断言等于 config.original_max_position_embeddings（PR 已加该单测）。；修复 修复 MR https://gitcode.com/Ascend/MindSpeed/merge_requests/4103（open）：改传 config.original_max_position_embeddings，新增单测断言转发值（4096 vs 128000 用例）；端到端 Kimi-k2.5 长序列验证需 NPU 环境未本地运行。Fixes #185（issue 正文批次内无缓存，机制以 PR 为准）。
+- **来源**：https://gitcode.com/Ascend/MindSpeed/merge_requests/4103
+
 ## 分词/模板
 
 ### TRN-0086 `tokenizer_train_infer_id_mismatch` tokenizer 前后不一致或 vocab 填充错，embedding 行错位
@@ -1685,6 +1718,17 @@
 - **影响详情**：并发 checkpoint 保存（如多进程训练各自更新 last-checkpoint，或保存与导出重叠）时，训练完成后 last-checkpoint 链接可能指向另一个（旧的或别人的）checkpoint 目录，且一个调用方收到成功返回；按该链接恢复训练会静默加载错检查点，无任何报错。
 - **改进措施**：检测 发布后 readlink 校验目标等于自身 checkpoint 名；并发保存时对链接做轮询比对；修复 待定（issue open：给出确定性双线程 barrier 复现与修复方向——每次更新用唯一暂存名（如 mkstemp 风格/pid 后缀）；swift 侧修复 PR 未见）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10336
+
+### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
+
+`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：权重/检查点 / mindspeed-llm / Float16Module 与 wkv/wgate
+- **原因行为**：开 --kv-compress 时 Float16Module.__init__ 对整个模块递归 cast 到 bf16，把按 fp32 构造的 compressor wkv/wgate 一并降精（设计计算保持 fp32）。
+- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响详情**：--kv-compress 训练 DeepSeek-V4 时 compressor 的 wkv/wgate 以 bf16 参与计算，与设计的 fp32 计算路径偏离，精度静默损失；无报错。
+- **改进措施**：检测 训练初始化后打印 compressor wkv/wgate dtype（应为 fp32）。；修复 修复 MR https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176（open）：新增 compressor2fp32_fp16module_init_wrapper，在 Float16Module.__init__ 后把 compressor wkv/wgate 重新 cast 回 fp32，经 CSAFeature.register_patches 按 --kv-compress 门控注册（沿用 dsa_indexer/mhc fp32-init wrapper 同款机制）；验证 py_compile + patch 叠加，NPU 端到端未运行。
+- **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/merge_requests/5176
 
 ## 数据管线
 
@@ -3681,6 +3725,17 @@
 - **影响详情**：reward_dispatch_size 与 n_samples_per_prompt 不一致时，labels 顺序与 rollout 样本不匹配，同一 prompt 的多次采样拿到别条样本的 label，reward/advantage 错配；无报错无 NaN。
 - **改进措施**：检测 构造 batch 内 label 可区分的小样例跑一遍 rule_reward，检查展开后 labels 与样本的对应关系；或断言 len(labels) 与 reward 数一致且逐项对齐。；修复 issue 给出改法：外层改为 for label in batch_data['labels']、内层 for _ in range(self.n_samples_per_prompt)；issue 已 closed，正文未给出合入 PR（未核实）。
 - **来源**：https://gitcode.com/Ascend/MindSpeed-RL/issues/83
+
+### TRN-0345 `mswift_dynamic_num_samples_gdpo_ignored_chunk_rescale` ms-swift 动态 GRPO 丢 gdpo 归一化且分块重缩放 loss
+
+`故障` · `pending_audit` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：RL训练回路 / ms-swift / 动态 advantage/分块 loss
+- **原因行为**：动态路径的 advantage 函数未实现 gdpo 分支而静默退化为无缩放；分块 loss 按样本数加权平均，把已按全局 token 归一的窗口归一化损失再除以块数，梯度被静默缩小。
+- **影响对象**：训练信号；梯度（静默错误）
+- **影响详情**：dynamic_num_samples=True 时 gdpo advantage 与静态路径不一致（实测 -1.895 vs -2.786）；本地 batch 触发分块时 dapo/cispo/fipo 损失缩为 1/k，等效学习率静默下降，无报错。
+- **改进措施**：检测 对同一批数据并行跑 compute_advantages 与 compute_advantages_dynamic 比对（gdpo 分支应一致）；分块前后 loss 数值比对（窗口归一化类应相等而非 /k）。；修复 待定（issue 建议支持 gdpo 或拒绝该组合；分块对窗口归一化类求和、bnpo 按 token 数加权；该路径已计划移除）
+- **来源**：https://github.com/modelscope/ms-swift/issues/10405
 
 ## 观测/评测
 

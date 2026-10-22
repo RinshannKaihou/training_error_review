@@ -1,0 +1,42 @@
+id: TRN-0366
+legacy_ids: []
+slug: opsnn_cegrad_weight_dtype_reinterpret
+aliases: []
+title: CELossGrad weight dtype 未校验按 fp32 重解释
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 算子/内核
+    stack: cann
+    component: CELossGrad weight 读取
+  behavior: weightOptional 非法 dtype 不被 161002 拦截，kernel 固定按 float* 解释缓冲并按 C 个 float 读取，越界读且字节重解释成错值。
+effect:
+  objects:
+  - 梯度
+  detail: weight 传 fp16/bf16/int32 时 CE 反向梯度静默错到另一量级（-0.269→-8.2e-06），rc=0 无日志。
+  visibility: 静默错误
+mitigation:
+  detect: 对 weight dtype 做 fp32 断言或调用前自查；比对同输入 CPU 参考梯度量级。
+  fix: 待定（issue open，期望 dtype 白名单返回 161002）
+labels:
+  stage:
+  - shared
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-10-22'
+  family: N/A
+  trigger: config
+remarks: ''
+evidence:
+- url: https://gitcode.com/cann/ops-nn/issues/7134
+  kind: gitcode_issue
+relations: []
+original:
+  mechanism: cann ops-nn aclnnCrossEntropyLossGrad：资料声明 weightOptional 仅 FLOAT（161002 覆盖 dtype），但 aclnn 层无 dtype 白名单校验；op_kernel/cross_entropy_loss_grad_base.h:150 weightGm.SetGlobalBuffer((__gm__ float*)weight) 固定按 float* 解释，:88 weightGm.GetValue(target) 与 dtype 无关。实测（A2 910B2、CANN 9.2.0）：weight=[1.0,0.5] 传 fp16 时，4 字节按 float32 解释为 3.0573457e-05，输出 -8.22247e-06（fp32 对照 -0.268941）；maxabs(实测, 按float32重解释期望)=1.5e-12、maxabs(实测, 按fp16正确读期望)=0.91，证明重解释机制；同时按 C 个 float 读 C*sizeof(dtype) 字节缓冲属越界读。
+  source: https://gitcode.com/cann/ops-nn/issues/7134（2026-10-21，open；含自包含 C 复现）
+  behavior: 训练脚本把 CE 的 class weight 存成半精度（fp16/bf16 很常见）再传给 NPU 算子时，损失梯度静默缩小 4~5 个量级，loss 仍会下降但收敛明显变慢/失效，全程无报错无日志；fp32 weight 路径正常，问题只在 dtype 传错时触发且无任何拦截。
+  discovery: 2026-10-22 每日扫描
+migration:
+  method: scan
+  scanned: '2026-10-22'

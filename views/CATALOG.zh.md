@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 371 条；状态：active 364、pending_audit 7
+共 371 条；状态：active 371
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -556,29 +556,29 @@
 
 ### TRN-0365 `opsnn_cegrad_label_smoothing_uninit_out` CELossGrad label_smoothing 非 0 返回未初始化内存
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad 写回路径
 - **原因行为**：kernel 在 labelSmoothing!=0 时无任何输出写回与拒绝路径，外层 CopyOutLog 把未初始化 UB 数据当结果写出；tiling/aclnn 层均未校验该取值。
-- **影响对象**：梯度（静默错误）
+- **影响对象**：梯度（不可复现）
 - **影响详情**：labelSmoothing!=0 的 CE 反向输出为随机字节，同输入多次调用结果互不相同；直接污染训练梯度。
 - **改进措施**：检测 出参预填哨兵值（如 12345）重跑比对；同输入连续 3 次调用比对原始字节是否一致。；修复 待定（issue open，期望非 0 时返回 161002 或实现 smoothing 项）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7135
 
 ### TRN-0366 `opsnn_cegrad_weight_dtype_reinterpret` CELossGrad weight dtype 未校验按 fp32 重解释
 
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad weight 读取
 - **原因行为**：weightOptional 非法 dtype 不被 161002 拦截，kernel 固定按 float* 解释缓冲并按 C 个 float 读取，越界读且字节重解释成错值。
 - **影响对象**：梯度（静默错误）
-- **影响详情**：weight 传 fp16/bf16/int32 时 CE 反向梯度静默错到另一量级（-0.269→-8.2e-06），rc=0 无日志。
+- **影响详情**：weight 传半精度（实测 fp16，bf16 常见）时梯度静默缩小 4~5 个量级（-0.268941→-8.22247e-06），loss 仍下降但收敛变慢或失效，无报错无日志；fp32 路径正常，仅 dtype 传错时触发且无拦截。
 - **改进措施**：检测 对 weight dtype 做 fp32 断言或调用前自查；比对同输入 CPU 参考梯度量级。；修复 待定（issue open，期望 dtype 白名单返回 161002）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7134
 
 ### TRN-0367 `opsnn_cegrad_target_oob_weight_oobread` CELossGrad target 越界静默错值并越界读 weight
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad target 处理
 - **原因行为**：target 越界/负值仅处理「负且等于 ignoreIndex」，其余直接当下标做 one-hot 减法，weight 路径 weightGm.GetValue(target) 越界读 GM。
@@ -589,7 +589,7 @@
 
 ### TRN-0368 `opsnn_bcegrad_target_weight_broadcast_missing` BCE 反向 target/weight 广播未生效越界读错值
 
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BCEBackward 广播处理
 - **原因行为**：aclnn CheckShape 只校验可广播性不 expand，下游 TBE 动态内核只 broadcast grad_output，target/weight 按元素总数读取越界。
@@ -600,7 +600,7 @@
 
 ### TRN-0369 `opsnn_flceg_maskedtarget_oob_gm_rw` 融合CE梯度 maskedTarget 越界 GM 读写静默错值
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / FusedLinearCEGrad 下标
 - **原因行为**：高性能分支直接用 maskedTarget 值算目标下标，op_api 只校验长度不校验取值；-1 等越界值在 softmaxOptional 缓冲区外 4 字节非法读写。
@@ -611,7 +611,7 @@
 
 ### TRN-0370 `opsnn_bn_backward_saveinvstd_as_variance` BN 反向把 saveInvstd 当方差致梯度静默偏差
 
-`故障` · `pending_audit` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BNBackward saveInvstd
 - **原因行为**：kernel 把入参 saveInvstd 直接当方差参与梯度公式，与资料/参数名定义的 1/sqrt(Var+eps) 口径相反；无校验。
@@ -622,7 +622,7 @@
 
 ### TRN-0371 `opsnn_bnelemtgrad_counter_reducesum_divisor` None
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BNElemtBackward 除数
 - **原因行为**：MeanByCounter() 对 counter 先全轴 ReduceSum 再作除数，把资料公式的逐元素除法改成按总和除，多元素 counter 时除数放大 C 倍。

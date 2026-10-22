@@ -4,7 +4,7 @@ slug: opsnn_cegrad_weight_dtype_reinterpret
 aliases: []
 title: CELossGrad weight dtype 未校验按 fp32 重解释
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 梯度
-  detail: weight 传 fp16/bf16/int32 时 CE 反向梯度静默错到另一量级（-0.269→-8.2e-06），rc=0 无日志。
+  detail: weight 传半精度（实测 fp16，bf16 常见）时梯度静默缩小 4~5 个量级（-0.268941→-8.22247e-06），loss 仍下降但收敛变慢或失效，无报错无日志；fp32 路径正常，仅 dtype 传错时触发且无拦截。
   visibility: 静默错误
 mitigation:
   detect: 对 weight dtype 做 fp32 断言或调用前自查；比对同输入 CPU 参考梯度量级。
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: opsnn_cegrad_label_smoothing_uninit_out
 aliases: []
 title: CELossGrad label_smoothing 非 0 返回未初始化内存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   detail: labelSmoothing!=0 的 CE 反向输出为随机字节，同输入多次调用结果互不相同；直接污染训练梯度。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 出参预填哨兵值（如 12345）重跑比对；同输入连续 3 次调用比对原始字节是否一致。
   fix: 待定（issue open，期望非 0 时返回 161002 或实现 smoothing 项）
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    uncertain:
+    - subsystem

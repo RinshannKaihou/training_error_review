@@ -3,19 +3,20 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 387 条；状态：active 371、pending_audit 16
+共 387 条；状态：active 387
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
 | 算子/内核 | 53 |
 | 编译器 | 9 |
-| 运行时/执行 | 9 |
-| 集合通信 | 8 |
+| 运行时/执行 | 8 |
+| 集合通信 | 7 |
 | 并行切分 | 27 |
 | KV缓存 | 1 |
 | 调度/服务 | 1 |
-| 量化 | 10 |
+| 解码/采样 | 1 |
+| 量化 | 11 |
 | 位置编码 | 6 |
 | 分词/模板 | 7 |
 | 模型定义 | 9 |
@@ -633,19 +634,19 @@
 
 ### TRN-0372 `opsnn_gns_grad_tiling_init_dropped_fp16bf16` GroupNormSwishGrad tiling 失败被丢弃梯度未写
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `var` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `var` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / GroupNormSwishGrad tiling
 - **原因行为**：GetDataTypeSize 对 fp16/bf16 按 6 字节虚增 3 倍，UB 预算算错使 tiling Init 返回 GRAPH_FAILED，但返回值被丢弃仍下发半初始化 tiling 并报成功，kernel 空转
-- **影响对象**：梯度；训练信号（静默错误）
-- **影响详情**：C/G 接近资料上限 4000 且输入 fp16/bf16 时 dx 大部分元素不写（实测 11360/12000 保持 0）、dgamma/dbeta 出现 NaN，aclnn 两段均返回 0 无告警；C=256000/G=64 时升级为 vector core 异常 507035 崩溃
+- **影响对象**：梯度；训练信号（数值异常）
+- **影响详情**：C/G=4000（3999 亦命中）、HxW=1 且 fp16/bf16 时，dx 11360/12000 未写、dgamma/dbeta 出现 NaN，返回码仍为 0；host 日志有告警但未传到返回码；C=256000、G=64 时触发 507035 vector core 异常进程退出。
 - **改进措施**：检测 训练侧对 GroupNorm+Swish 反向输出做 NaN/零占比抽检（dgamma NaN 计数、dx 零元素占比）；fp32 路径正常可作对照；修复 待定（issue 给出修复建议：检查 Init() 返回值失败即 GRAPH_FAILED；GetDataTypeSize 对 fp16/bf16 返回 2；无修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7081
 - **关联**：var:TRN-0344
 
 ### TRN-0373 `opsnn_ctc_loss_backward_blank_nonzero_grad_misplaced` CtcLossBackward blank!=0 修正项错写 c=0 梯度错
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / CtcLossBackward kernel
 - **原因行为**：blank 属性非 0 时 kernel 把 blank 修正项写到 c=0 而非 c=blank，相当于把 blank 当 0 使用，梯度分布整体错位
@@ -656,7 +657,7 @@
 
 ### TRN-0374 `opsnn_logit_grad_double_eps_narrowed_fp32` LogitGrad double eps 被窄化 float32 边界判错
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / LogitGrad 入口与 tiling 链路
 - **原因行为**：原型声明 double eps 但实现链路按 float32 承载（static_cast<float>(eps)），eps 与 x 的边界比较在比较前被舍入到 float32，次正规 eps 下溢为 0
@@ -667,10 +668,10 @@
 
 ### TRN-0375 `opsnn_thnn_fused_lstm_cell_global_state_mt_race` ThnnFusedLstmCell 全局状态多线程竞态错果崩进程
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / ThnnFusedLstmCell 全局状态
-- **原因行为**：aclnn 入口的 AclnnParams/AclnnInfo/BaseOpOutputs 与 tiling 的 info/tilingData 均为文件作用域全局对象被辅助函数隐式共享，并发调用互相覆盖
+- **原因行为**：aclnn 入口 AclnnParams/AclnnInfo/BaseOpOutputs 与 tiling 的 info/TilingData 均为文件作用域全局对象、被隐式共享，host 侧并发不安全；根因未钉死为串写
 - **影响对象**：数值结果；可用性/进度（不可复现）
 - **影响详情**：8 线程×60 次并发调用（含同 shape 对照）出现 hy 输出失配 max_diff≈0.937、第一段 561103 共 61 次、段错误 rc=139；单线程 160 次全正常
 - **改进措施**：检测 并发压测同算子（交替 shape + 同 shape 对照）；DoOpTiling 首尾加 atomic 计数 peak>1 即证重入；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12590（open，2026-10-22）：全局对象改栈上 context/局部 tiling，辅助函数显式传参；MR 自述未附并发测试，需按 #7007 脚本验证
@@ -678,7 +679,7 @@
 
 ### TRN-0376 `opsnn_kldiv_target_backward_overflow_empty_unwritten` KlDivTargetBackward 中间量溢出 inf 且空输入不写输出
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / KlDivTargetBackward
 - **原因行为**：公式改写为 g*log t - g*s + (g*t)/t，(g*t) 在 fp32 下先溢出再除回；空输入分支两段返回 0 但完全不去写 gradTarget 输出
@@ -689,7 +690,7 @@
 
 ### TRN-0377 `opstransformer_sparse_flash_mla_grad_oob_write_legal_input` SparseFlashMlaGrad 合法输入 GM 越界写 1060 处
 
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / SparseFlashMlaGrad arch22
 - **原因行为**：A2 的 post.h 与 sfag_basic.h/smlag_basic.h 里 DataCopyPad 目标地址按 tile 步进直接计算，尾块/对齐无越界保护，写越界落在已映射内存时静默、落在未映射内存时 AI Core 异常
@@ -700,38 +701,37 @@
 
 ### TRN-0380 `triton_ascend_gather_rows_ep_rank_device_fault` Triton gather_rows EP 前向 rank1 设备越界静默楔死
 
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / triton / gather_rows kernel
-- **原因行为**：AutoEP 用 Triton gather_rows 做 token 重排，2-rank 时 rank1 的 kernel MTE 访问 DDR 越界（多核同 PC），单进程同 shape 不复现，依赖 2-rank 上下文
+- **原因行为**：Triton gather_rows 做 AutoEP token 重排，2-rank 下 rank1 两形态故障：多为前向静默楔死（3/3 复现），偶发 host 同步报 MTE 访问 DDR 越界（多核同 PC）；单进程不复现
 - **影响对象**：可用性/进度；数值结果（挂起）
 - **影响详情**：多数形态（3/3）为 rank1 流静默楔死、rank0 在下一个 collective 挂起约 600s 后 ACL ERR00100 超时；少数形态 host 同步直接报设备异常 dump。切回 torch fallback 同负载 29.87s 全通过
 - **改进措施**：检测 EP 前向加 per-rank 心跳/进度探针区分静默楔死；设备异常 dump 的同 PC 多核特征；修复 规避：DeepSpeed permute 路径切回 torch fallback（issue 已验证因果对照）；上游修复待定（open，0 评论）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2648
 
+### TRN-0383 `opstransformer_mrs_v2_attrs_silently_ignored` MatmulReduceScatterV2 非法 reduceOp 静默按sum
+
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+
+- **原因对象**：算子/内核 / cann / MatmulReduceScatterV2 校验
+- **原因行为**：V1 有 reduceOp/commTurn 校验（非法值返回 561002），V2 缺失：reduceOp=max 或 commTurn=1 两段返回 0、执行成功，输出与 sum/0 逐元素一致——两个属性被静默忽略
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：同一输入 V1 返回 561002、V2 返回 0；max 与 sum 输出不同元素数 0/2048。资料规定 reduceOp 仅支持 sum、commTurn 仅支持 0
+- **改进措施**：检测 V2 调用前在框架层显式断言 reduceOp=sum/commTurn=0；对拍 V1 行为；修复 待定
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6524
+
 ### TRN-0386 `opsnn_clipped_swiglu_group_rows_uninit_training` ClippedSwiglu 组外输出行未初始化显存残影
 
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / ClippedSwiglu 适配层
 - **原因行为**：传 group_index 且 sum(gi)<batch 时 kernel 只写 min(sum(gi),batch) 行，适配层用 at::empty 分配输出——范围外行是显存池残影，同一输入有时全 0 有时脏值
-- **影响对象**：数值结果；梯度（静默错误）
+- **影响对象**：数值结果；梯度（不可复现）
 - **影响详情**：MoE group 场景 batch=8、sum(gi)=5 时行 5-7 输出 32/32 非零残影（e-12~e-7 量级）；需先污染显存池才复现，干净环境碰巧全 0——随机复现的未定义行为
 - **改进措施**：检测 预热污染显存池后对 group 场景输出范围外行做非零断言（仓内 golden 语义：范围外应为 0）；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12603（open，2026-10-22）：has_group 时 at::zeros 初始化输出，非 group 路径保持 at::empty 零开销；12 项金标准对拍 PASS，group 场景修复后范围外行恒 0
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7223；https://gitcode.com/cann/ops-nn/merge_requests/12603
 - **关联**：cross:INF-2136
-
-### TRN-0387 `opsnn_dequant_swiglu_quant_no_group_mode0_training` DequantSwigluQuant 无 group 变体模式静默按 mode0
-
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
-
-- **原因对象**：算子/内核 / cann / DequantSwigluQuant tiling
-- **原因行为**：变体 SwiGLU 适配只覆盖 Dsk 路径（group 场景），无 group 时路由至通用 tiling 链路，该链路无 mode/clamp_limit/glu_alpha/glu_bias 参数管道、内核硬编码标准 SwiGLU
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：A2(910B) 不传 group_index 时 swiglu_mode 1/2/3 静默按 mode0：clamp_limit/glu_alpha/glu_bias 全丢失，int8 与 golden 一致率 24%/44%/56%，mode2 输出与 mode0 100% 相同，无报错
-- **改进措施**：检测 no-group 调用后对拍文档公式 golden（clamp 语义丢失误配立即显形）；或带 group_index=[T] 对照；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12598（open，2026-10-22）：no-group+mode≠0+int32/bf16 路由至 Dsk Base kernel；连带修复 shape 未初始化（blockDim=0）、mode1 gather 偏移表未建 UB 越界、bf16 WITHOUT_GROUP 分支缺失；fp16 x + mode≠0 改显式拒绝（原静默错算）；33 用例 910B3 实测全过
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7225；https://gitcode.com/cann/ops-nn/merge_requests/12598
-- **关联**：cross:INF-2138
 
 ## 编译器
 
@@ -827,12 +827,12 @@
 
 ### TRN-0385 `torchair_cache_compile_pass_state_digest_collision` torchair cache_compile 忽略自定义 pass 状态复用旧图
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：编译器 / torch_npu / cache_compile code digest
 - **原因行为**：_get_code_digest 只哈希反汇编指令：捕获值/默认参/partial 绑定不同的 pass 产生相同 digest（partial 可 dis 为空、全部变体折叠成空文本 MD5），改 pass 行为后命中旧缓存图
 - **影响对象**：数值结果；隐状态（静默错误）
-- **影响详情**：捕获值 1/2 的两个闭包 digest 相同（CPU 探针 closure_same=True）、partial(increment=1/2) 相同（partial_same=True）；首个 pass 编译缓存后，改 pass 行为复用旧编译图而非应用新 pass，静默产出过时/错误图
+- **影响详情**：NPU 上用 torch.compile + cache_compile 缓存编译自定义 post-grad pass 时，改 pass 行为（如调整捕获的偏移量）后重新编译不报错，实际复用先前编译的图而非应用新 pass，训练图静默用旧逻辑；只有清缓存或改函数体指令才恢复，改绑定状态无效。
 - **改进措施**：检测 改 pass 绑定状态后断言 cache miss；对关键 pass 输出做图 hash 抽查；修复 修复 MR https://gitcode.com/Ascend/torchair/merge_requests/3886（open，2026-10-22）：digest 纳入闭包 cells、defaults、partial 绑定、实例状态；探针红转绿，回归覆盖 closure/default/partial/callable；NPU 端到端编译未跑
 - **来源**：https://gitcode.com/Ascend/torchair/issues/890；https://gitcode.com/Ascend/torchair/merge_requests/3886
 
@@ -926,17 +926,6 @@
 - **改进措施**：检测 大 HBM 卡上出现无法解释的内存类型相关错值时，检查各内存类型用量是否越过 62/126GB 旧区间边界。；修复 修复 MR !5414（open 未合入）：按 256GB 步长重划逻辑基址（Host FM 256GB、Host SVM 512GB、var 768GB），var 判定宽度优先用 OM 记录值，新增 HBM 区间上界断言；UT 39/39 等通过、需真机 CI 验证。https://gitcode.com/cann/ge/merge_requests/5414
 - **来源**：https://gitcode.com/cann/ge/merge_requests/5414
 
-### TRN-0379 `vllm_ascend_rl_sampler_q_premature_reuse` RL 采样 q 显存异步除完成前被复用训推不一致
-
-`故障` · `pending_audit` · `partial` · `rl` · `documented` · `NEW` · 发现 2026-10-23
-
-- **原因对象**：运行时/执行 / vllm / sampler probs.div_(q)
-- **原因行为**：异步原地除 probs.div_(q) 完成前 q 的 NPU memory 被提前复用/再分配，采样分布与训练侧重算 logprob 的输入分叉
-- **影响对象**：训练信号；输出分布（静默错误）
-- **影响详情**：DeepSeek v4 Flash RL post-training 观察到训练与推理不一致；未记录 stream 的 q 在除法窗口内被 allocator 复用，采样概率错值
-- **改进措施**：检测 RL 回路内对 rollout 采样 logprob 与训练侧重算做 KL/比例抽检；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19461（open，2026-10-22，release/v0.23.0 backport）：对 q 记录当前 stream 防止提前再分配；作者自述 DeepSeek v4 Flash RL 端到端验证修复、sampler UT 通过
-- **来源**：https://github.com/vllm-project/vllm-ascend/pull/19461；https://github.com/vllm-project/vllm-ascend/pull/13394
-
 ## 集合通信
 
 ### TRN-0030 `allreduce_silent_wrong_value` all-reduce 完成但 payload 已错的静默集合通信错误
@@ -1007,24 +996,13 @@
 - **改进措施**：检测 打开前后对比各 rank 的 HcclGroupStart/End 计数与 P2P 收发次数；PLOG 里筛 hccl_group.cc 的 group 配对告警；修复 issue 只提交复现与 PLOG 定位（closed，未附修复 PR，未核实）；规避是不开 config.batch_p2o_comm
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1525
 
-### TRN-0383 `opstransformer_mrs_v2_attrs_silently_ignored` MatmulReduceScatterV2 非法 reduceOp 静默按sum
-
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
-
-- **原因对象**：集合通信 / cann / MatmulReduceScatterV2 校验
-- **原因行为**：V1 有 reduceOp/commTurn 校验（非法值返回 561002），V2 缺失：reduceOp=max 或 commTurn=1 两段返回 0、执行成功，输出与 sum/0 逐元素一致——两个属性被静默忽略
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：同一输入 V1 返回 561002、V2 返回 0；max 与 sum 输出不同元素数 0/2048。资料规定 reduceOp 仅支持 sum、commTurn 仅支持 0
-- **改进措施**：检测 V2 调用前在框架层显式断言 reduceOp=sum/commTurn=0；对拍 V1 行为；修复 待定
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6524
-
 ### TRN-0384 `hccl_nhr_broadcast_uint32_slice_index_underflow` HCCL NHR Broadcast 切片索引 uint32 下溢收发错位
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：集合通信 / cann / NHR Broadcast 切片索引
 - **原因行为**：接收切片索引 (rankIdx - deltaRank + N) % N 在 rankIdx < deltaRank 时 uint32 减法先下溢再提升，非 2 次幂 NHR 组接收切片编号算错，Tx 与 Rx slice 不一致
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：可用性/进度；数值结果（挂起）
 - **影响详情**：一端跳过发送、另一端持续等待造成 Notify/CQ 超时；提交者已全量核对该模板内同型下溢风险（未给实机数值对照，无关联 issue）
 - **改进措施**：检测 非 2 次幂 rank 数的 broadcast allgather 回归测试（hccl_test rdv）；修复 修复 MR https://gitcode.com/cann/hccl/merge_requests/3724（open，2026-10-22）：调整为 (rankIdx + tempRankSize_ - deltaRank) % tempRankSize_ 先加后减避免下溢；测试 hccl_test rdv
 - **来源**：https://gitcode.com/cann/hccl/merge_requests/3724
@@ -1359,6 +1337,19 @@
 - **改进措施**：检测 固定纯色图 +『What color』提示 + 贪心解码，检查 rollout completion 是否描述图像；对比 model.config.image_token_id（262144）与 processor.image_token_id（255999）的 run 长度；修复 修复 PR https://github.com/huggingface/trl/pull/7773 已于 2026-10-19 closed 且未合入（merged_at=None），缺陷仍在 main；无替代修复。
 - **来源**：https://github.com/huggingface/trl/issues/7772；https://github.com/huggingface/trl/pull/7773
 
+## 解码/采样
+
+### TRN-0379 `vllm_ascend_rl_sampler_q_premature_reuse` RL 采样 q 显存异步除完成前被复用训推不一致
+
+`故障` · `active` · `partial` · `rl` · `documented` · `NEW` · 发现 2026-10-23
+
+- **原因对象**：解码/采样 / vllm / sampler probs.div_(q)
+- **原因行为**：异步原地除 probs.div_(q) 完成前 q 的 NPU memory 被提前复用/再分配，采样分布与训练侧重算 logprob 的输入分叉
+- **影响对象**：输出分布；训练信号（静默错误）
+- **影响详情**：DeepSeek v4 Flash RL post-training（NPU、rollout 与训练同进程/同卡池）中，rollout 采样与训练侧重算的 logprob/分布不一致，重要性比值漂移、策略更新方向异常，reward 不涨或策略慢慢跑偏；无报错无 NaN、单测都绿，修复前难定位。
+- **改进措施**：检测 RL 回路内对 rollout 采样 logprob 与训练侧重算做 KL/比例抽检；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19461（open，2026-10-22，release/v0.23.0 backport）：对 q 记录当前 stream 防止提前再分配；作者自述 DeepSeek v4 Flash RL 端到端验证修复、sampler UT 通过
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/19461；https://github.com/vllm-project/vllm-ascend/pull/13394
+
 ## 量化
 
 ### TRN-0010 `fp8_bias_invariant_martingale_divergence` FP8 训练乘法噪声打破全 1 方向抵消致鞅式发散
@@ -1472,6 +1463,18 @@
 - **影响详情**：MoE（已打 router bias 补丁）模型下启用--quant-states/--quant-grads，import阶段即报RuntimeError: the patch of _update_router_expert_bias exist，低精度优化器与MoE组合完全不可用。
 - **改进措施**：检测 apply_features_patches 前打印已注册 patch 列表；对同一 orig_func 的重复注册做去重与告警；修复 issue 已提修复 PR https://gitcode.com/Ascend/MindSpeed-LLM/pull/4473，做法是去掉重复注册的那次补丁（PR 状态未核实）
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1371
+
+### TRN-0387 `opsnn_dequant_swiglu_quant_no_group_mode0_training` DequantSwigluQuant 无 group 变体模式静默按 mode0
+
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+
+- **原因对象**：量化 / cann / DequantSwigluQuant tiling
+- **原因行为**：变体 SwiGLU 适配只覆盖 Dsk 路径（group 场景），无 group 时路由至通用 tiling 链路，该链路无 mode/clamp_limit/glu_alpha/glu_bias 参数管道、内核硬编码标准 SwiGLU
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：A2(910B) 不传 group_index 时 swiglu_mode 1/2/3 静默按 mode0：clamp_limit/glu_alpha/glu_bias 全丢失，int8 与 golden 一致率 24%/44%/56%，mode2 输出与 mode0 100% 相同，无报错
+- **改进措施**：检测 no-group 调用后对拍文档公式 golden（clamp 语义丢失误配立即显形）；或带 group_index=[T] 对照；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12598（open，2026-10-22）：no-group+mode≠0+int32/bf16 路由至 Dsk Base kernel；连带修复 shape 未初始化（blockDim=0）、mode1 gather 偏移表未建 UB 越界、bf16 WITHOUT_GROUP 分支缺失；fp16 x + mode≠0 改显式拒绝（原静默错算）；33 用例 910B3 实测全过
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7225；https://gitcode.com/cann/ops-nn/merge_requests/12598
+- **关联**：cross:INF-2138
 
 ## 位置编码
 
@@ -2845,12 +2848,12 @@
 
 ### TRN-0382 `msformers_muon_ns_schedule_spectral_divergence_nan` mindformers Muon 分段 NS 谱爆炸写 NaN 入参数
 
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：优化器 / mindformers / Muon Newton-Schulz 分段系数
-- **原因行为**：8 步分段 NS 系数的中段负二次项在归一化输入过冲谱区（σ≈1.3~1.97）进入交替放大，σ 按 ~5 次方速率爆炸至 inf，inf-inf=NaN 直接写入参数，下一步前向全 NaN
-- **影响对象**：优化器状态；训练轨迹（数值异常）
-- **影响详情**：随机高斯输入 6/8 种近方阵形状（128×128~512×512、64×2048 等）原版输出 NaN/Inf，扁长矩阵（384×7168、7168×1536）不触发；12B 生产任务 step 37342 稳定复现参数 NaN→前向全 NaN
+- **原因行为**：8 步分段 NS 系数下，归一化输入（谱≤1）经首步过冲至 σ≈1.3~1.97，中段负二次项交替放大，谱轨迹 1→1.30→1.97→4.52→588→2.4e13→inf，inf 参与后续迭代得 inf-inf=NaN 写入参数
+- **影响对象**：模型权重；优化器状态；训练轨迹（数值异常）
+- **影响详情**：形状选择性：8 组形状中 6 个近方阵形状触发、扁长矩阵不触发，与生产任务「仅特定层参数爆炸」吻合；12B 生产任务 step 37342 稳定复现参数 NaN→下一步前向全 NaN，重跑同位置复现，日志仅见 NaN、无 optimizer 内部异常
 - **改进措施**：检测 监控 Muon update 谱半径/有限性（NS 迭代中间量 σ）；参数 NaN 告警前置到 optimizer step 后；修复 修复 MR https://atomgit.com/mindspore/mindformers/merge_requests/8882（open，2026-10-22）：双层防护——非有限输入清洗为零 + NS 输出非有限回退归一化输入；对收敛迭代 bitwise 恒等；8×910B3 deterministic 40 步端到端 loss/grad_norm 逐步 bitwise 一致
 - **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8882
 
@@ -3256,7 +3259,7 @@
 
 ### TRN-0378 `opstransformer_moe_finalize_routing_v3_a2_range_ignored` MoeFinalizeRoutingV3 A2 忽略特殊专家区间静默按普通专家
 
-`故障` · `pending_audit` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：MoE路由 / cann / MoeFinalizeRoutingV2/V3
 - **原因行为**：zero/copy/constant 三类特殊专家区间实现只存在于 950 arch35 路径，A2 绑定的 membase tiling 与 kernel 完全不读这三个属性、也不校验，接口已暴露但实现缺失
@@ -4356,11 +4359,11 @@
 
 ### TRN-0381 `pytorch_npu_flight_recorder_hccl_matcher_false_matched` Flight Recorder HCCL 匹配器把不匹配集体通信报全匹配
 
-`故障` · `pending_audit` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：观测/评测 / torch_npu / Flight Recorder matcher
 - **原因行为**：匹配器读首个栈帧名当 HCCL 操作而非 profiling_name，比较内置 type 而非 self.type，dtypes 与自身比——不同 size/dtype 的 collective 判 FULLY_MATCHED，端点不解析
-- **影响对象**：指标/日志；测试判定（静默错误）
+- **影响对象**：测试判定；指标/日志（静默错误）
 - **影响详情**：构造 input_sizes=(2,) 与 (3,) 的两个 Op 返回 FULLY_MATCHED；Float 与 Half 同样；hccl:send 0->1 事件 src=dst=-1。排障分布式训练挂起的开发者拿到假阴性干净结果
 - **改进措施**：检测 用已知 size/dtype 不同的两个 collective 事件构造单测断言必须 mismatch；修复 修复 MR https://gitcode.com/Ascend/pytorch/merge_requests/48400（open，2026-10-22）：用 profiling_name 识别 HCCL 操作、解析 P2P 端点、比较两个操作的 size/dtype，不一致报 mismatch（关联 issue 自带 CPU-only 复现探针）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5616；https://gitcode.com/Ascend/pytorch/merge_requests/48400

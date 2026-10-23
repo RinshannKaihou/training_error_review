@@ -4,15 +4,16 @@ slug: opstransformer_mrs_v2_attrs_silently_ignored
 aliases: []
 title: MatmulReduceScatterV2 非法 reduceOp 静默按sum
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 集合通信
+  - subsystem: 算子/内核
     stack: cann
     component: MatmulReduceScatterV2 校验
   behavior: V1 有 reduceOp/commTurn 校验（非法值返回 561002），V2 缺失：reduceOp=max 或 commTurn=1 两段返回 0、执行成功，输出与 sum/0 逐元素一致——两个属性被静默忽略
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: 同一输入 V1 返回 561002、V2 返回 0；max 与 sum 输出不同元素数 0/2048。资料规定 reduceOp 仅支持 sum、commTurn 仅支持 0
   visibility: 静默错误
@@ -40,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 集合通信
+        to: 算子/内核
+      effect:
+        from: 数值结果
+        to: 梯度

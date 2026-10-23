@@ -4,10 +4,10 @@ slug: opsnn_dequant_swiglu_quant_no_group_mode0_training
 aliases: []
 title: DequantSwigluQuant 无 group 变体模式静默按 mode0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: DequantSwigluQuant tiling
   behavior: 变体 SwiGLU 适配只覆盖 Dsk 路径（group 场景），无 group 时路由至通用 tiling 链路，该链路无 mode/clamp_limit/glu_alpha/glu_bias 参数管道、内核硬编码标准 SwiGLU
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化

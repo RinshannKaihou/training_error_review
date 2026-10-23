@@ -4,7 +4,7 @@ slug: torchair_cache_compile_pass_state_digest_collision
 aliases: []
 title: torchair cache_compile 忽略自定义 pass 状态复用旧图
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 隐状态
-  detail: 捕获值 1/2 的两个闭包 digest 相同（CPU 探针 closure_same=True）、partial(increment=1/2) 相同（partial_same=True）；首个 pass 编译缓存后，改 pass 行为复用旧编译图而非应用新 pass，静默产出过时/错误图
+  detail: NPU 上用 torch.compile + cache_compile 缓存编译自定义 post-grad pass 时，改 pass 行为（如调整捕获的偏移量）后重新编译不报错，实际复用先前编译的图而非应用新 pass，训练图静默用旧逻辑；只有清缓存或改函数体指令才恢复，改绑定状态无效。
   visibility: 静默错误
 mitigation:
   detect: 改 pass 绑定状态后断言 cache miss；对关键 pass 输出做图 hash 抽查
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    - behavior

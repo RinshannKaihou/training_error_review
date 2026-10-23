@@ -4,7 +4,7 @@ slug: opsnn_clipped_swiglu_group_rows_uninit_training
 aliases: []
 title: ClippedSwiglu 组外输出行未初始化显存残影
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 梯度
   detail: MoE group 场景 batch=8、sum(gi)=5 时行 5-7 输出 32/32 非零残影（e-12~e-7 量级）；需先污染显存池才复现，干净环境碰巧全 0——随机复现的未定义行为
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 预热污染显存池后对 group 场景输出范围外行做非零断言（仓内 golden 语义：范围外应为 0）
   fix: 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12603（open，2026-10-22）：has_group 时 at::zeros 初始化输出，非 group 路径保持 at::empty 零开销；12 项金标准对拍 PASS，group 场景修复后范围外行恒 0
@@ -45,3 +45,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现

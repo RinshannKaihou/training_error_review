@@ -4,7 +4,7 @@ slug: pytorch_npu_flight_recorder_hccl_matcher_false_matched
 aliases: []
 title: Flight Recorder HCCL 匹配器把不匹配集体通信报全匹配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -13,8 +13,8 @@ cause:
   behavior: 匹配器读首个栈帧名当 HCCL 操作而非 profiling_name，比较内置 type 而非 self.type，dtypes 与自身比——不同 size/dtype 的 collective 判 FULLY_MATCHED，端点不解析
 effect:
   objects:
-  - 指标/日志
   - 测试判定
+  - 指标/日志
   detail: 构造 input_sizes=(2,) 与 (3,) 的两个 Op 返回 FULLY_MATCHED；Float 与 Half 同样；hccl:send 0->1 事件 src=dst=-1。排障分布式训练挂起的开发者拿到假阴性干净结果
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 指标/日志
+        to: 测试判定
+    uncertain:
+    - behavior

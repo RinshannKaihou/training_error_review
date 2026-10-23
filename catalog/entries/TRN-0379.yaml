@@ -4,18 +4,18 @@ slug: vllm_ascend_rl_sampler_q_premature_reuse
 aliases: []
 title: RL 采样 q 显存异步除完成前被复用训推不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 解码/采样
     stack: vllm
     component: sampler probs.div_(q)
   behavior: 异步原地除 probs.div_(q) 完成前 q 的 NPU memory 被提前复用/再分配，采样分布与训练侧重算 logprob 的输入分叉
 effect:
   objects:
-  - 训练信号
   - 输出分布
-  detail: DeepSeek v4 Flash RL post-training 观察到训练与推理不一致；未记录 stream 的 q 在除法窗口内被 allocator 复用，采样概率错值
+  - 训练信号
+  detail: DeepSeek v4 Flash RL post-training（NPU、rollout 与训练同进程/同卡池）中，rollout 采样与训练侧重算的 logprob/分布不一致，重要性比值漂移、策略更新方向异常，reward 不涨或策略慢慢跑偏；无报错无 NaN、单测都绿，修复前难定位。
   visibility: 静默错误
 mitigation:
   detect: RL 回路内对 rollout 采样 logprob 与训练侧重算做 KL/比例抽检
@@ -43,3 +43,24 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 解码/采样
+      effect:
+        from: 训练信号
+        to: 输出分布
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior

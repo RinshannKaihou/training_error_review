@@ -4,7 +4,7 @@ slug: opstransformer_sparse_flash_mla_grad_oob_write_legal_input
 aliases: []
 title: SparseFlashMlaGrad 合法输入 GM 越界写 1060 处
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -47,3 +47,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - behavior

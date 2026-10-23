@@ -26,8 +26,6 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-10-23'
-  family: N/A
-  trigger: partial
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6524

@@ -21,10 +21,6 @@ mitigation:
   detect: 待定
   fix: 'AsyncGRPO 修复方向（PR #7627，open 未 merge）：trainer 侧按与 sampler 相同的 top-k/top-p 候选集重归一化 log-probs（vLLM --return-sampling-mask 返回候选集，keep-sampling-mask 策略，DeepSeek-V3.2/prime-rl 同路线）。https://github.com/huggingface/trl/pull/7627'
 labels:
-  family: N/A
-  trigger: N/A
-  trigger_review: N/A
-  trigger_note: N/A
   stage:
   - rl
   confidence: documented

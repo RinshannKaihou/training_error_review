@@ -365,7 +365,7 @@
 
 ### TRN-0300 `ragged_bincount_deterministic_switch_ignored` RaggedBinCount 显式确定性开关未生效
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / cann / RaggedBinCount 确定性 tiling
 - **原因行为**：host tiling 未消费 GE 确定性选项：非二值加权场景显式开启 ge.deterministic=1 后仍可能走浮点 atomic 累加。
@@ -376,7 +376,7 @@
 
 ### TRN-0301 `scatteraddwithsorted_fp32_missing_sync_stale_row` ScatterAddWithSorted FP32 缺向量同步偶发混入前行累加
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / cann / ScatterAddWithSorted FP32
 - **原因行为**：FP32 路径初始化累加缓存后缺少向量流水同步，当前行可读到前一行残留值，相同输入重复执行 scatter_add_ 偶发错果
@@ -387,7 +387,7 @@
 
 ### TRN-0302 `conv3d_dx_enlarge_partial_tail_oob_read` Conv3D 反向 enlarge 尾组越界读致尾通道系统性错
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / cann / Conv3D dx ENLARGE tiling
 - **原因行为**：ENLARGE下multiple_extend不整除groups产生不完整尾放大组，尾组K轴C0对齐后A矩阵加载越界读dedy外内存；tailN为singleShapeN_正整数倍时%取余把尾组最后N块有效列数误置0致漏算
@@ -398,7 +398,7 @@
 
 ### TRN-0303 `conv3d_dx_vec_fp32_refactor_precision_regression` Conv3D 反向 vec FP32 行计算重构后精度回归
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / cann / Conv3D dx vec FP32 行累加
 - **原因行为**：9.2.0 为消行数告警把 FP32 专用 ComputeRowBf16Vec 合并进共享函数并改运行期分支+三元缓冲选择，FP32 行累加路径被破坏
@@ -409,7 +409,7 @@
 
 ### TRN-0305 `foreach_list_pair_tiling_x2_unvalidated` arch35 foreach 二元 list tiling 不校验 x2 列表
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / cann / foreach list tiling
 - **原因行为**：arch35 foreach 二元 list tiling 仅按 x1 求取 tensorCount、偏移、totalElements，未获取 x2 信息；kernel 用 x1 偏移/dtype 索引 x2。
@@ -420,7 +420,7 @@
 
 ### TRN-0313 `aten_gelu_approximate_attr_ignored_tanh_only` torch_npu ATen gelu 静默走 tanh 近似
 
-`故障` · `active` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / ATen gelu 分发
 - **原因行为**：ATen gelu 分发到无 approximate 参数的 tanh-only aclnnGelu，未按 'none' 路由到带 attr 的 aclnnGeluV2；正确的 erf 路径已在 CANN 包内存在但未被选用。
@@ -432,7 +432,7 @@
 
 ### TRN-0314 `op_plugin_conv_family_hf32_silent_precision_loss` op-plugin fp32 conv 全族静默 HF32 降精度且污染梯度
 
-`故障` · `active` · `infra_off` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / conv 族 aclnn 出口精度模式选择
 - **原因行为**：fp32 conv 四算子的 aclnn 出口按 HF32 类低位宽执行，不遵循 high_precision 配置，前向与梯度同偏离；set_option（已废弃）与 jit_compile 均无法绕开。
@@ -444,7 +444,7 @@
 
 ### TRN-0315 `megamoe_sync_count_missing_dsb_barrier` MegaMoE 同步轮次 count 写后读缺 DSB 屏障致挂起
 
-`故障` · `active` · `infra_off` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / 通用 / MegaMoE 同步轮次 count 旁路写
 - **原因行为**：同步轮次旁路 GM 写后无 asc_sync_data_barrier(DSB_DDR)；后续重读同一 sequence 时 MTE3 事件不保证 Scalar 旁路写已完成，维测打点改变时序曾掩盖该依赖。
@@ -524,7 +524,7 @@
 
 ### TRN-0343 `opsnn_bn_grad_kahan_inf_nan_accumulator` BN 梯度 Kahan 补偿位 Inf-Inf 成 NaN 毒化累加器
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / KahanAdd/KahanAddReg 累加路径
 - **原因行为**：部分和为 ±Inf 时 Kahan 补偿位 c=(t-sum)-y 算得 Inf-Inf=NaN，y=src-c 变 NaN 并跨调用毒化累加器；无 NaN lane 防护。
@@ -535,7 +535,7 @@
 
 ### TRN-0344 `opsnn_gns_twopass_cross_call_x_buffer_race` GroupNormSwish 大 shape 跨调用 x 缓冲竞态输出不定
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / TWOPASS_PERF 模板 V_MTE2 握手
 - **原因行为**：每核多次调用 CalNormalize 时 chunk 复用同一 x ping/pong UB 缓冲，但 V_MTE2 事件握手只在单次调用内配对，下一次调用的 MTE2 覆写与上一调用尾部 V 读并发。
@@ -546,7 +546,7 @@
 
 ### TRN-0360 `msllm_li_cp_kvallgather_double_transpose` CP 融合 LI 算子重复转置致 S/B 互换
 
-`故障` · `active` · `infra_off` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / mindspeed-llm / fused LI CP KV 包装
 - **原因行为**：CP 的 compress+KV-allgather 分支先把 q/k/weights 从 SBND 转成 BSND 再调 npu_lightning_indexer，而该算子本身收 SBND 并在内部转 BSND，S 与 B 因此互换。
@@ -557,7 +557,7 @@
 
 ### TRN-0365 `opsnn_cegrad_label_smoothing_uninit_out` CELossGrad label_smoothing 非 0 返回未初始化内存
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad 写回路径
 - **原因行为**：kernel 在 labelSmoothing!=0 时无任何输出写回与拒绝路径，外层 CopyOutLog 把未初始化 UB 数据当结果写出；tiling/aclnn 层均未校验该取值。
@@ -568,7 +568,7 @@
 
 ### TRN-0366 `opsnn_cegrad_weight_dtype_reinterpret` CELossGrad weight dtype 未校验按 fp32 重解释
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad weight 读取
 - **原因行为**：weightOptional 非法 dtype 不被 161002 拦截，kernel 固定按 float* 解释缓冲并按 C 个 float 读取，越界读且字节重解释成错值。
@@ -579,7 +579,7 @@
 
 ### TRN-0367 `opsnn_cegrad_target_oob_weight_oobread` CELossGrad target 越界静默错值并越界读 weight
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / CELossGrad target 处理
 - **原因行为**：target 越界/负值仅处理「负且等于 ignoreIndex」，其余直接当下标做 one-hot 减法，weight 路径 weightGm.GetValue(target) 越界读 GM。
@@ -590,7 +590,7 @@
 
 ### TRN-0368 `opsnn_bcegrad_target_weight_broadcast_missing` BCE 反向 target/weight 广播未生效越界读错值
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BCEBackward 广播处理
 - **原因行为**：aclnn CheckShape 只校验可广播性不 expand，下游 TBE 动态内核只 broadcast grad_output，target/weight 按元素总数读取越界。
@@ -601,7 +601,7 @@
 
 ### TRN-0369 `opsnn_flceg_maskedtarget_oob_gm_rw` 融合CE梯度 maskedTarget 越界 GM 读写静默错值
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / FusedLinearCEGrad 下标
 - **原因行为**：高性能分支直接用 maskedTarget 值算目标下标，op_api 只校验长度不校验取值；-1 等越界值在 softmaxOptional 缓冲区外 4 字节非法读写。
@@ -612,7 +612,7 @@
 
 ### TRN-0370 `opsnn_bn_backward_saveinvstd_as_variance` BN 反向把 saveInvstd 当方差致梯度静默偏差
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BNBackward saveInvstd
 - **原因行为**：kernel 把入参 saveInvstd 直接当方差参与梯度公式，与资料/参数名定义的 1/sqrt(Var+eps) 口径相反；无校验。
@@ -623,7 +623,7 @@
 
 ### TRN-0371 `opsnn_bnelemtgrad_counter_reducesum_divisor` None
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / BNElemtBackward 除数
 - **原因行为**：MeanByCounter() 对 counter 先全轴 ReduceSum 再作除数，把资料公式的逐元素除法改成按总和除，多元素 counter 时除数放大 C 倍。
@@ -634,7 +634,7 @@
 
 ### TRN-0372 `opsnn_gns_grad_tiling_init_dropped_fp16bf16` GroupNormSwishGrad tiling 失败被丢弃梯度未写
 
-`故障` · `active` · `partial` · `shared` · `documented` · `var` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / GroupNormSwishGrad tiling
 - **原因行为**：GetDataTypeSize 对 fp16/bf16 按 6 字节虚增 3 倍，UB 预算算错使 tiling Init 返回 GRAPH_FAILED，但返回值被丢弃仍下发半初始化 tiling 并报成功，kernel 空转
@@ -646,7 +646,7 @@
 
 ### TRN-0373 `opsnn_ctc_loss_backward_blank_nonzero_grad_misplaced` CtcLossBackward blank!=0 修正项错写 c=0 梯度错
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / CtcLossBackward kernel
 - **原因行为**：blank 属性非 0 时 kernel 把 blank 修正项写到 c=0 而非 c=blank，相当于把 blank 当 0 使用，梯度分布整体错位
@@ -657,7 +657,7 @@
 
 ### TRN-0374 `opsnn_logit_grad_double_eps_narrowed_fp32` LogitGrad double eps 被窄化 float32 边界判错
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / LogitGrad 入口与 tiling 链路
 - **原因行为**：原型声明 double eps 但实现链路按 float32 承载（static_cast<float>(eps)），eps 与 x 的边界比较在比较前被舍入到 float32，次正规 eps 下溢为 0
@@ -668,7 +668,7 @@
 
 ### TRN-0375 `opsnn_thnn_fused_lstm_cell_global_state_mt_race` ThnnFusedLstmCell 全局状态多线程竞态错果崩进程
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / ThnnFusedLstmCell 全局状态
 - **原因行为**：aclnn 入口 AclnnParams/AclnnInfo/BaseOpOutputs 与 tiling 的 info/TilingData 均为文件作用域全局对象、被隐式共享，host 侧并发不安全；根因未钉死为串写
@@ -679,7 +679,7 @@
 
 ### TRN-0376 `opsnn_kldiv_target_backward_overflow_empty_unwritten` KlDivTargetBackward 中间量溢出 inf 且空输入不写输出
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / KlDivTargetBackward
 - **原因行为**：公式改写为 g*log t - g*s + (g*t)/t，(g*t) 在 fp32 下先溢出再除回；空输入分支两段返回 0 但完全不去写 gradTarget 输出
@@ -690,7 +690,7 @@
 
 ### TRN-0377 `opstransformer_sparse_flash_mla_grad_oob_write_legal_input` SparseFlashMlaGrad 合法输入 GM 越界写 1060 处
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / SparseFlashMlaGrad arch22
 - **原因行为**：A2 的 post.h 与 sfag_basic.h/smlag_basic.h 里 DataCopyPad 目标地址按 tile 步进直接计算，尾块/对齐无越界保护，写越界落在已映射内存时静默、落在未映射内存时 AI Core 异常
@@ -701,7 +701,7 @@
 
 ### TRN-0380 `triton_ascend_gather_rows_ep_rank_device_fault` Triton gather_rows EP 前向 rank1 设备越界静默楔死
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / triton / gather_rows kernel
 - **原因行为**：Triton gather_rows 做 AutoEP token 重排，2-rank 下 rank1 两形态故障：多为前向静默楔死（3/3 复现），偶发 host 同步报 MTE 访问 DDR 越界（多核同 PC）；单进程不复现
@@ -712,7 +712,7 @@
 
 ### TRN-0383 `opstransformer_mrs_v2_attrs_silently_ignored` MatmulReduceScatterV2 非法 reduceOp 静默按sum
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / MatmulReduceScatterV2 校验
 - **原因行为**：V1 有 reduceOp/commTurn 校验（非法值返回 561002），V2 缺失：reduceOp=max 或 commTurn=1 两段返回 0、执行成功，输出与 sum/0 逐元素一致——两个属性被静默忽略
@@ -723,7 +723,7 @@
 
 ### TRN-0386 `opsnn_clipped_swiglu_group_rows_uninit_training` ClippedSwiglu 组外输出行未初始化显存残影
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / ClippedSwiglu 适配层
 - **原因行为**：传 group_index 且 sum(gi)<batch 时 kernel 只写 min(sum(gi),batch) 行，适配层用 at::empty 分配输出——范围外行是显存池残影，同一输入有时全 0 有时脏值
@@ -827,7 +827,7 @@
 
 ### TRN-0385 `torchair_cache_compile_pass_state_digest_collision` torchair cache_compile 忽略自定义 pass 状态复用旧图
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：编译器 / torch_npu / cache_compile code digest
 - **原因行为**：_get_code_digest 只哈希反汇编指令：捕获值/默认参/partial 绑定不同的 pass 产生相同 digest（partial 可 dis 为空、全部变体折叠成空文本 MD5），改 pass 行为后命中旧缓存图
@@ -964,7 +964,7 @@
 
 ### TRN-0299 `hccl_single_rank_v_op_displacement_ignored` HCCL 单 rank 路径 V 算子忽略位移错位读写
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：集合通信 / cann / SingleRankProc 单 rank 拷贝
 - **原因行为**：单 rank 分支对 AllGatherV/ReduceScatterV/AlltoAllV 只按 count 拷贝、直接用原始地址，未应用 displacement，拷贝成功不报错但结果不符算子语义
@@ -976,7 +976,7 @@
 
 ### TRN-0351 `msllm_mc2_allgather_base_mm_nan` MC2 融合 all-gather 输出 NaN 污染 loss
 
-`故障` · `active` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：集合通信 / mindspeed / npu_all_gather_base_mm
 - **原因行为**：开 --use-ascend-mc2 后，MC2 列并行线性层里 npu_all_gather_base_mm 的输出整体为 NaN，通信与矩阵乘融合这条路径把中间结果污染成 NaN。
@@ -987,7 +987,7 @@
 
 ### TRN-0361 `msllm_batch_p2o_comm_hccl_group_unbalanced` 开 batch_p2o_comm 后 HcclGroupEnd 未配对
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：集合通信 / mindspeed-llm / optimize_p2p_comm 批量下发
 - **原因行为**：推断批量下发路径与 PP 调度实际收发次数/分支不一致，导致 HCCL group 调用不成对，HcclGroupEnd 缺少 HcclGroupStart。
@@ -998,7 +998,7 @@
 
 ### TRN-0384 `hccl_nhr_broadcast_uint32_slice_index_underflow` HCCL NHR Broadcast 切片索引 uint32 下溢收发错位
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：集合通信 / cann / NHR Broadcast 切片索引
 - **原因行为**：接收切片索引 (rankIdx - deltaRank + N) % N 在 rankIdx < deltaRank 时 uint32 减法先下溢再提升，非 2 次幂 NHR 组接收切片编号算错，Tx 与 Rx slice 不一致
@@ -1291,7 +1291,7 @@
 
 ### TRN-0347 `mindspeed_cp_pad_data_negative_seq_len` CP 长序列 pad_data 把 -1 填充算进序列长度
 
-`故障` · `active` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：并行切分 / mindspeed / context_parallel pad_data
 - **原因行为**：pad_data 对含 -1 占位的 actual_seq_len 直接 torch.diff，算出 -166 这类负段长，再用它构造 arange(start,end) 时上下界与 step 符号矛盾。
@@ -1302,7 +1302,7 @@
 
 ### TRN-0355 `msllm_tnd_cp_empty_rank_collective_desync` TND+CP 空 rank 跳过 indexer 反传致挂起
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：并行切分 / mindspeed-llm / DSv4 CSA indexer CP 分支
 - **原因行为**：CP 下某 rank 的 KV 段全短于 compress_ratio 就跳过 indexer/compressor 与索引 loss 反传，非空 rank 仍发 CP all_gather，两边梯度 bucket 不一致。
@@ -1315,7 +1315,7 @@
 
 ### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：KV缓存 / mindspeed-llm / Float16Module 与 wkv/wgate
 - **原因行为**：开 --kv-compress 时 Float16Module.__init__ 对整个模块递归 cast 到 bf16，把按 fp32 构造的 compressor wkv/wgate 一并降精（设计计算保持 fp32）。
@@ -1328,7 +1328,7 @@
 
 ### TRN-0318 `trl_gemma3_server_mode_image_features_misplaced` trl vLLM server 模式 Gemma3 图像特征错位被静默忽略
 
-`故障` · `active` · `config` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `rl；sft` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：调度/服务 / trl / VLLMGeneration 图像特征定位
 - **原因行为**：_place_features 以 processor 的 image_token_id（Gemma3/5.x 为 255999）定位特征 run，实际替换的 placeholder 是 262144，特征放错位置与长度。
@@ -1341,7 +1341,7 @@
 
 ### TRN-0379 `vllm_ascend_rl_sampler_q_premature_reuse` RL 采样 q 显存异步除完成前被复用训推不一致
 
-`故障` · `active` · `partial` · `rl` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：解码/采样 / vllm / sampler probs.div_(q)
 - **原因行为**：异步原地除 probs.div_(q) 完成前 q 的 NPU memory 被提前复用/再分配，采样分布与训练侧重算 logprob 的输入分叉
@@ -1444,7 +1444,7 @@
 
 ### TRN-0350 `msllm_fsdp2_mxfp8_quantizeconfig_field_mismatch` FSDP2 mxfp8 配置字段名不匹配致量化静默跳过
 
-`故障` · `active` · `config` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：量化 / mindspeed-llm / QuantizeConfig 字段映射
 - **原因行为**：本地 QuantizeConfig 传给 FSDPTurbo 的 build_model_converter，recipe_name 对不上 quant_recipe 使量化门控恒 None，converters 字段也不匹配。
@@ -1455,7 +1455,7 @@
 
 ### TRN-0364 `msllm_low_precision_opt_duplicate_router_bias_patch` 低精度优化器重复打 router bias 补丁致导入失败
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：量化 / mindspeed-llm / 低精度优化器 patch 注册
 - **原因行为**：MoE 特性已给 _update_router_expert_bias 打过补丁，低精度优化器在 register_patches 里再打一次，MindSpeed 的 patch 校验发现重复就抛错。
@@ -1466,7 +1466,7 @@
 
 ### TRN-0387 `opsnn_dequant_swiglu_quant_no_group_mode0_training` DequantSwigluQuant 无 group 变体模式静默按 mode0
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：量化 / cann / DequantSwigluQuant tiling
 - **原因行为**：变体 SwiGLU 适配只覆盖 Dsk 路径（group 场景），无 group 时路由至通用 tiling 链路，该链路无 mode/clamp_limit/glu_alpha/glu_bias 参数管道、内核硬编码标准 SwiGLU
@@ -1535,7 +1535,7 @@
 
 ### TRN-0342 `mindspeed_mla_yarn_original_max_pos_misforwarded` MindSpeed MLA YaRN 原始长度参数传错致长序列退化
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：位置编码 / mindspeed / MLA YaRN 初始化
 - **原因行为**：构造 YarnRotaryEmbedding 时把扩展后的 max_position_embeddings 当作 original_max_position_embeddings 传入，YaRN 缩放范围按错误的原始长度计算。
@@ -1708,7 +1708,7 @@
 
 ### TRN-0319 `mimo_whisper_encoder_attends_padded_mel_tail` MiMo Whisper 冻结塔前向泄漏 padded mel 尾部特征
 
-`故障` · `active` · `partial` · `sft` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：模型定义 / megatron-lm / hf_whisper_encoder 包装
 - **原因行为**：Wrapper 跑完整 3000 帧 encoder 后才按 seq_lengths 掩码；WhisperEncoder 忽略 attention_mask，各 query 仍 attend 到 pad 尾（0.0 非静默值）。
@@ -1719,7 +1719,7 @@
 
 ### TRN-0357 `msllm_mamba3_scratch_loss_zero_init` Mamba3 从零训练 loss 与 grad norm 骤降为 0
 
-`故障` · `active` · `ambiguous` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：模型定义 / mindspeed-llm / Mamba3 in/out_proj 初始化
 - **原因行为**：Mamba3 FSDP2 Demo train_from_scratch 缺少 in_proj/out_proj Kaiming 初始化处理
@@ -2050,7 +2050,7 @@
 
 ### TRN-0352 `msllm_mg2hf_grouped_qkv_plain_unpack` MCore→HF 拆 grouped QKV 错位致导出模型乱码
 
-`故障` · `active` · `yes` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：权重/检查点 / mindspeed-llm / convert_mg2hf QKV unpack
 - **原因行为**：convert_mg2hf 的 unpack 分支按 [Q,K,V] 顺序切 fused linear_qkv，而 GQA 模型在 MCore 里存的是 [Q 组,K,V] 交错布局，切完 q/k/v_proj 全错位。
@@ -2061,7 +2061,7 @@
 
 ### TRN-0356 `msllm_ms_ckpt_missing_qkv_bias_strict_false` MindSpore 加载 ckpt 缺键被 strict=False 吞掉
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：权重/检查点 / mindspore / MindSpore load_state_dict
 - **原因行为**：MindSpore 路径转换出的 ckpt 缺 linear_qkv.bias 与 linear_fc1.layer_norm_weight，加载报 Missing key；改 strict=False 后缺键被跳过、参数保持随机初始化。
@@ -2072,7 +2072,7 @@
 
 ### TRN-0359 `msllm_hf2mg_convert_ckpt_path_mismatch` hf2mg 自动转换与切分策略不对齐致加载失败
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：权重/检查点 / mindspeed-llm / hf2mg convert + VPP 切分
 - **原因行为**：示例脚本默认带 --enable-hf2mg-convert，会就地把 CKPT_LOAD_DIR 的 HF 权重转成 mg；README 却让人先转换再传转换后目录，且转换脚本未给 VPP 而预训练脚本给了。
@@ -2449,7 +2449,7 @@
 
 ### TRN-0358 `msllm_tft_rollback_dataloader_worker_loss` TFT 回滚重建 DataLoader 时丢 worker
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：数据管线 / mindspeed-llm / TFT 回滚 DataLoader 重建
 - **原因行为**：TFT 高可用回滚时无条件重建 DataLoader 与迭代器，num_workers>0 下新旧 worker 生命周期切换，worker 异常退出后父进程只在 gc.collect 处报错。
@@ -2460,7 +2460,7 @@
 
 ### TRN-0363 `msllm_packed_prefix_double_suffix_glob` DATA_PATH 带 _packed 后 glob 双后缀取空数据集
 
-`故障` · `active` · `infra_off` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：数据管线 / mindspeed-llm / packed 数据集 glob 拼接
 - **原因行为**：预处理固定输出 {prefix}_packed_*_document*，训练侧又给 data_prefix 追加 _packed 再 glob，用户按输出名填 DATA_PATH 就变成 _packed_packed，匹配不到文件。
@@ -2804,7 +2804,7 @@
 
 ### TRN-0317 `deepspeed_bf16_safe_set_full_grad_wrong_buffer` BF16 safe_set_full_grad 写错缓冲致梯度掩蔽失效
 
-`故障` · `active` · `config` · `shared` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：优化器 / deepspeed / safe_set_full_grad 分支
 - **原因行为**：safe_set_full_grad() 对 BF16 写 staging param.grad，而 BF16_Optimizer 从独立累加缓冲 step；backward 与 step 之间的梯度掩蔽/替换被静默忽略。
@@ -2826,7 +2826,7 @@
 
 ### TRN-0349 `msllm_fsdp2_epochs_lr_total_steps_default` 只填 num_train_epochs 时 LR 调度按 100000 步算
 
-`故障` · `active` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：优化器 / mindspeed-llm / FSDP2 lr scheduler
 - **原因行为**：只配置 num_train_epochs、不配 max_steps 时，cosine scheduler 用默认 100000 当 total_steps，而 dataloader 按样本量实际只排 609 步。
@@ -2837,7 +2837,7 @@
 
 ### TRN-0354 `msllm_reuse_fp32_param_fp16_convert_nan` reuse-fp32-param 的 fp32→fp16 转换溢出成 NaN
 
-`故障` · `active` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：优化器 / mindspeed / reuse_param fp32→fp16 转换
 - **原因行为**：reuse-fp32-param 的 fp32→fp16 转换在 optimizer step 里做 view(-1,2).transpose(1,0).reshape，第一环就出 NaN。
@@ -2848,7 +2848,7 @@
 
 ### TRN-0382 `msformers_muon_ns_schedule_spectral_divergence_nan` mindformers Muon 分段 NS 谱爆炸写 NaN 入参数
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：优化器 / mindformers / Muon Newton-Schulz 分段系数
 - **原因行为**：8 步分段 NS 系数下，归一化输入（谱≤1）经首步过冲至 σ≈1.3~1.97，中段负二次项交替放大，谱轨迹 1→1.30→1.97→4.52→588→2.4e13→inf，inf 参与后续迭代得 inf-inf=NaN 写入参数
@@ -3055,7 +3055,7 @@
 
 ### TRN-0307 `mindformers_per_token_loss_degenerate_to_per_microbatch` mindformers per-token loss 等价退化
 
-`故障` · `active` · `hw_specific` · `pretrain；sft` · `documented` · `var` · 发现 2026-10-17
+`故障` · `active` · `pretrain；sft` · `documented` · `var` · 发现 2026-10-17
 
 - **原因对象**：损失计算 / cann / _extract_model_loss 归一
 - **原因行为**：崩溃修复把 (numerator, denominator) 当场相除还原标量 loss，数值与开关关闭完全等价：每个 micro-batch 仍按自身 token 数归一，per-token 语义丢失
@@ -3079,7 +3079,7 @@
 
 ### TRN-0353 `msllm_mtp_loss_num_tokens_zero_nan` MTP num_tokens 为 0 致 mtp_1 loss 成 NaN
 
-`故障` · `active` · `config` · `sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：损失计算 / mindspeed-llm / MTP loss tracker
 - **原因行为**：multi_token_prediction.py 用 sum(mtp_loss)/num_tokens 存 loss tracker，num_tokens 为 0 时结果成 NaN 被静默写进 tracker。
@@ -3237,7 +3237,7 @@
 
 ### TRN-0348 `msllm_capacity_auxloss_drop_denominator_nan` 专家容量 drop 与 aux_loss 并存致负载均衡 loss NaN
 
-`故障` · `active` · `config` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：MoE路由 / mindspeed / capacity drop + aux_loss
 - **原因行为**：drop与dropless策略在路由和aux_loss计算路径上互斥：drop下被丢token不计入aux_loss，分母偏小甚至为零；dropless下重路由后aux_loss的路由分布与实际专家计算分布不一致，梯度异常。
@@ -3248,7 +3248,7 @@
 
 ### TRN-0362 `msllm_dualpipev_permute_fusion_capacity_conflict` DualPipeV 强绑 permute 融合与专家容量互斥
 
-`故障` · `active` · `infra_off` · `config` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：MoE路由 / mindspeed-llm / fused_moe_permute 参数校验
 - **原因行为**：DualPipeV 依赖 moe-permute-fusion 而自动开启它，capacity 又要按 token 截断/重路由、改变 permute 语义与输入 shape，参数校验直接把两者判为互斥。
@@ -3259,7 +3259,7 @@
 
 ### TRN-0378 `opstransformer_moe_finalize_routing_v3_a2_range_ignored` MoeFinalizeRoutingV3 A2 忽略特殊专家区间静默按普通专家
 
-`故障` · `active` · `partial` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：MoE路由 / cann / MoeFinalizeRoutingV2/V3
 - **原因行为**：zero/copy/constant 三类特殊专家区间实现只存在于 950 arch35 路径，A2 绑定的 membase tiling 与 kernel 完全不读这三个属性、也不校验，接口已暴露但实现缺失
@@ -4123,7 +4123,7 @@
 
 ### TRN-0316 `grpo_resume_inside_generation_block_shifts_schedule` GRPO 块内 resume 使 prompt 训练计划错位
 
-`故障` · `active` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：RL训练回路 / trl / _step 与 skip 基准分叉
 - **原因行为**：resume 后 self._step 重启为 0 而 Trainer 按 global_step 跳过 dataloader；ckpt 落在 generation 块内时两套计数基准分叉，块边界整体移动。
@@ -4178,7 +4178,7 @@
 
 ### TRN-0345 `mswift_dynamic_num_samples_gdpo_ignored_chunk_rescale` ms-swift 动态 GRPO 丢 gdpo 归一化且分块重缩放 loss
 
-`故障` · `active` · `config` · `rl` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：RL训练回路 / ms-swift / 动态 advantage/分块 loss
 - **原因行为**：动态路径的 advantage 函数未实现 gdpo 分支而静默退化为无缩放；分块 loss 按样本数加权平均，把已按全局 token 归一的窗口归一化损失再除以块数，梯度被静默缩小。
@@ -4348,7 +4348,7 @@
 
 ### TRN-0304 `torchair_benchmark_check_recompile_false_negative` torchair benchmark --check 校验别的 kernel
 
-`故障` · `active` · `hw_specific` · `shared` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：观测/评测 / cann / benchmark.py --check 精度校验
 - **原因行为**：--check 把 eager_fn 片段重交 torch.compile，重编 kernel 与整网 kernel 不同构（kernel 数与 md5 不同），校验通过不代表整网 kernel 正确
@@ -4359,7 +4359,7 @@
 
 ### TRN-0381 `pytorch_npu_flight_recorder_hccl_matcher_false_matched` Flight Recorder HCCL 匹配器把不匹配集体通信报全匹配
 
-`故障` · `active` · `partial` · `shared` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：观测/评测 / torch_npu / Flight Recorder matcher
 - **原因行为**：匹配器读首个栈帧名当 HCCL 操作而非 profiling_name，比较内置 type 而非 self.type，dtypes 与自身比——不同 size/dtype 的 collective 判 FULLY_MATCHED，端点不解析

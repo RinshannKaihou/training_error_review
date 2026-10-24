@@ -4,7 +4,7 @@ slug: verl_agent_loop_prompt_cap_ignores_truncation_policy
 aliases: []
 title: verl agent loop 忽略 truncation 策略截头
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -13,6 +13,7 @@ cause:
   behavior: agent_loop 共享 prompt cap 对超长文本 prompt 无条件左截断，data.truncation 配置完全不生效；#4759 移除策略执行后未迁入 agent loop，无条件 cap 由 caf9fee 引入。
 effect:
   objects:
+  - 输入编码
   - 训练样本流
   detail: 配置 error 的用户预期报错拒绝，实际静默左截断：system prompt/头部指令被丢弃、训练在残缺 prompt 上进行；CPU 可复现（4 种策略输出全相同 [6,7,8,9]），agent-loop 文本 prompt 路径（SingleTurn/ToolAgentLoop）。
   visibility: 静默错误
@@ -39,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 训练样本流
+        to: 输入编码

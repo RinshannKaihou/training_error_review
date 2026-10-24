@@ -4,7 +4,7 @@ slug: triton_ascend_onehot_gather_fold_masked_max_wrong_value
 aliases: []
 title: triton-ascend one-hot gather 折叠错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 梯度
-  detail: 最小复现：每行 [-3,-4,-5,...] 且列 1 被 mask 为 0 后 argmax 选列 1，正确 gather 结果 -4，源码构建版编译器输出 0.0（被 mask 的最大值）；差值整体进下游计算与梯度。
+  detail: 最小复现（单 NPU）：每行 logits 为 -(arange(32)+3)、列 1 被 mask，argmax 选列 1，one-hot 回取原始 logits 应得 -4，实际输出 0.0（被 mask 的最大值）；错值静默进前向与梯度。
   visibility: 静默错误
 mitigation:
   detect: 该模式（masked argmax + one-hot gather 回原始 logits）编译前后对拍；检查生成 TTGIR 中 FoldOneHotGather 变换。
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

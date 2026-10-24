@@ -4,12 +4,12 @@ slug: opsmath_clamp_max_scalar_wraps_bit_pattern
 aliases: []
 title: aclnnClampMax 标量越界按位环绕静默改写输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
-    component: aclnnClampCommon 标量类型转换
+    component: aclnnClampMax 标量类型转换
   behavior: A2 分支 promoteType 直接取 out dtype，标量转换无范围校验无饱和：整数越界按补码截断（1000→-24），「上界」变小负数后 min(x,max) 静默算成另一结果；原地入口直接改写入参缓冲。
 effect:
   objects:
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - component

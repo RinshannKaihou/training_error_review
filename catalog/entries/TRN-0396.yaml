@@ -4,7 +4,7 @@ slug: triton_ascend_num_stages_loop_carried_store_misched_training
 aliases: []
 title: triton-ascend num_stages>1 携带态存储错调度（训练侧）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -41,3 +41,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

@@ -4,7 +4,7 @@ slug: ops_math_addcmul_nan_value_treated_as_one
 aliases: []
 title: Addcmul 把标量 value=NaN 判为 1 静默输出有限值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 隐状态
-  detail: 标量 value=NaN 时按公式 out=self+value×t1×t2 应输出全 NaN，实际静默输出有限值；训练中本应通过 NaN 传播暴露的上游异常（如 loss scale 溢出、脏数据）被吞掉，继续用错误值更新。
+  detail: 标量 value=NaN 时按公式 out=self+value×t1×t2 应输出全 NaN，实际静默输出看似正常的有限值；训练中 value 来自已变 NaN 的量（如 loss scale、权重系数）时，本应立即暴露的 NaN 被吞成静默错值，训练继续但更新已错。
   visibility: 静默错误
 mitigation:
   detect: 对含 NaN 标量的 addcmul 调用检查输出是否 NaN；训练侧监控 value 来源（loss scale 等）是否为 NaN。
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

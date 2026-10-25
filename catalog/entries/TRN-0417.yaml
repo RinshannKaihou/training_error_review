@@ -4,7 +4,7 @@ slug: ops_transformer_concat_final_tile_overrun
 aliases: []
 title: ops-transformer concat 末 tile 全量拷贝越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: concat 末核越界读写相邻核 block 与张量边界外（如 x[1,1024,128] fp32、196608B UB 下末核越写 16128 元素）：污染相邻数据或崩溃；不同 shape 稳定触发。
+  detail: shape 使 posPerBlock 不能整除 posPerTile 时末 tile 必越界：相邻核数据被越界读写、末核读写越过张量边界上万元素（如 x[1,1024,128]、196608B UB 下末核越写 16128 元素），输出悄悄错或进程崩溃，随 shape 与 UB 容量浮动。
   visibility: 静默错误
 mitigation:
   detect: memcheck/保护带定量（报告者给出越界元素数计算）；tile 边界 shape 扫描用例。
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

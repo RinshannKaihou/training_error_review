@@ -4,7 +4,7 @@ slug: ops_math_concat_empty_sorter_invalid_iterator
 aliases: []
 title: SearchSorted 空 sorter 空序列解引用末迭代器
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,8 +15,8 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 带 sorter 的空 sorted_sequence（文档契约允许空 shape 如 {2,0}）触发越界读/null 读：轻则读到垃圾值当 min/max 边界输出错误检索结果，重则进程崩溃；属 fail-loud 面较宽的边界缺陷，训练数据管线中空 batch 边缘可触发。
-  visibility: 报错
+  detail: sorted_sequence 与 sorter 元素数均为 0（文档允许空 shape 如 {2,0}）时带 sorter 调 SearchSorted，host 侧解引用空范围迭代器读到越界/null：可能段错误，或把垃圾值当边界输出错误结果；空 batch 偶发。无实机崩溃日志，训练面较窄。
+  visibility: 静默错误
 mitigation:
   detect: 空序列 + sorter 用例回归；ASan/memcheck 落点 SearchSortedKernel:127-128。
   fix: 待定（issue open，未见修复 MR）。
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 报错
+        to: 静默错误
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: ops_math_searchsorted_cuSeq_shape_validation_family
 aliases: []
 title: 索引/可选输入 shape 与值域缺校验静默越界族
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -52,3 +52,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

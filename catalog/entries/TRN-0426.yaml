@@ -4,7 +4,7 @@ slug: ops_transformer_nsa_compress_grad_overlap_nondeterministic
 aliases: []
 title: NsaCompressGrad overlap 输入梯度非确定违反默认确定性
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 数值结果
-  detail: NSA 压缩反向在 overlap 配置下梯度逐次运行不一致：同进程同输入重复调用结果漂移，确定性训练/梯度对拍/断点续训校验失效；无报错。
+  detail: compressBlockSize>compressStride（overlap）时 inputGradOut 每次运行不一样：同输入连跑 10 次几乎次次位模式不同；无 overlap（stride=64）0/9 全稳定。梯度对拍、数值验收、断点续训比对随机失败。
   visibility: 不可复现
 mitigation:
   detect: 同输入 10 次重复调用位模式比对（overlap vs 无 overlap 对照）。
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

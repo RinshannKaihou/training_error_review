@@ -4,17 +4,17 @@ slug: ops_transformer_sla_kl_grad_metadata_numheads_boundary_delayed_aicpu
 aliases: []
 title: SLA KL Grad Metadata 边界头数假绿后异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
-    component: aclnnSparseLightningIndex
+    component: IndexerKLLossGradMetadata
   behavior: A2 资料「numHeadsQ 仅支持 8/16/32/64」，取 1/7/128 时第一段不按 161002 拒绝而返回 0，第二段也返回 0，错误延迟到 aclrtSynchronizeStream 以 507018（AICPU 异常）
 effect:
   objects:
-  - 可用性/进度
   - 数值结果
+  - 可用性/进度
   detail: Lightning Indexer KL loss 反向 metadata 算子在不支持的头数下假绿：调用方拿到成功返回，metadata 未写（哨兵全残留），错误迟到同步点；训练在 loss 反向处崩或拿到未写 metadata。
   visibility: 报错
 mitigation:
@@ -40,3 +40,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 可用性/进度
+        to: 数值结果
+    rewritten:
+    - component
+    issue_unfixed:
+    - detail

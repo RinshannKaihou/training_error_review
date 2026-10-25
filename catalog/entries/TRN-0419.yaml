@@ -4,7 +4,7 @@ slug: ops_transformer_moe_backward_missing_value_range_validation_family
 aliases: []
 title: MoE 反向算子族缺值域校验静默吞错输入
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 可用性/进度
-  detail: 越界/非法索引与枚举进入 MoE 反向：部分被 kernel 当 -1 跳过（梯度静默丢失）、部分触发设备向量核异常 507035/-1 或挂起；host 侧不拦截，错误延迟到设备侧或被静默吞掉。
+  detail: 上游路由产物被错配/改写时，越界或负的专家索引、负 numTopk、非法枚举、空张量、start>end 区间进入 MoE 反向算子：host 第一段校验不报参数错误，轻则接口成功返回 0、该项梯度被当 -1 静默丢掉，重则设备侧向量核异常 507035 打断作业；上游路由正常时不触发。
   visibility: 静默错误
 mitigation:
   detect: 上游路由产物 idx/numTopk 加值域断言；跨边界输入对拍 CPU 标杆（skip/clamp/mod 三语义）。
@@ -52,3 +52,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

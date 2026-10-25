@@ -4,10 +4,10 @@ slug: ops_transformer_gmsq_quant_param_validation
 aliases: []
 title: GMSQ 量化融合算子参数静默忽略与延迟异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: aclnnGroupedMatmulSwigluQ
   behavior: A8W8 场景传非空 bias 被完全忽略（输出与不传逐字节相同，资料要求报 161002）；groupList 只校验长度不校验取值，负值/非单调/末值越界/全零均两段返回 0，错误延迟到 sync 以 507015 暴露。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    uncertain:
+    - component

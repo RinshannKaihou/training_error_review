@@ -4,7 +4,7 @@ slug: ops_math_turboquant_centroids_unvalidated
 aliases: []
 title: TurboQuant 乱序/NaN centroids 静默输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 模型权重
-  detail: 量化中心点表乱序或含 NaN 时量化结果静默错误（应 161002 拒绝），产出的错误量化权重/scale 无告警进入下游；训练侧量化路径与量化感知训练受影响。
+  detail: centroids 非升序（首尾对调）或含 NaN 时（A2 910B2 / CANN 9.2.0 实测），两段接口均返回 0，kernel 照常写出 y 与 scale，量化编码静默错误；错误量化输出无告警流入下游权重/激活，量化训练或量化感知流程产物质量悄悄变差。
   visibility: 静默错误
 mitigation:
   detect: centroids 单调性与 isfinite 断言；量化输出与参考对拍。
@@ -40,3 +40,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

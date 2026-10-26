@@ -258,3 +258,27 @@
 {"job": "verify|TRN-0436|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
 {"job": "verify|TRN-0436|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "n≤上限-1 全部正常", "evidence": "n 比上限小 1 时完全正常；INT8 127/UINT8 255/INT16 32767/FP16 2049/BF16 257/FP32 5000 全部正确（原文只验证了 n=上限-1 及若干点值正确，未声称所有 n≤上限-1 的取值均正常，字段把点结论扩大为范围结论）"}}]}
 {"job": "verify|TRN-0438|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "同步段报 507018 设备内存错误", "evidence": "原文将该内容归入【行为效应】（影响）：“执行完后同步阶段报 507018 设备内存错误”；“两段返回 0”（原文“两段均返回 0”）同为执行后果。这些属于影响详情，却被写进原因行为字段（原因行为应仅为：TND 下传入资料允许的较小非负 maxQSeqLen、校验缺失、进入 kernel 错误寻址），且 detail 中已正确包含这些后果"}}]}
+{"job": "baseF|TRN-0444|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0444|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "模型权重", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "baseF|TRN-0451|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0444|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}, "round": "reaudit-2026-10-26", "attempts": 2}
+{"job": "baseF|TRN-0444|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0444|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "模型权重", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0451|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "baseF|TRN-0451|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0451|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "baseF|TRN-0444|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "修复 MR 收紧门控为非连续走慢路径。", "evidence": "修复 MR !6099（open）新增 npu_foreach_can_use_fast_route 双重载附加全输入 is_contiguous 合取、131 调用点替换、95 格矩阵探针；"}}], "round": "reaudit-2026-10-26"}
+{"job": "baseF|TRN-0451|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "baseC|TRN-0451|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}, "round": "reaudit-2026-10-26", "attempts": 2}
+{"job": "panelC|TRN-0444|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "模型权重", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelC|TRN-0451|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelC|TRN-0444|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0444|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0451|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0451|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0444|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "panelC|TRN-0444|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelC|TRN-0451|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelC|TRN-0451|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "梯度", "visibility": "静默错误"}, "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0444|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}
+{"job": "panelF|TRN-0451|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "round": "reaudit-2026-10-26"}

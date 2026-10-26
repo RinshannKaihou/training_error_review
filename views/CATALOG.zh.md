@@ -8,7 +8,7 @@
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 92 |
+| 算子/内核 | 93 |
 | 编译器 | 13 |
 | 运行时/执行 | 10 |
 | 集合通信 | 8 |
@@ -22,11 +22,11 @@
 | 模型定义 | 9 |
 | 权重/检查点 | 31 |
 | 数据管线 | 35 |
-| 优化器 | 36 |
-| 损失计算 | 20 |
+| 优化器 | 35 |
+| 损失计算 | 21 |
 | MoE路由 | 23 |
 | 重计算/卸载 | 14 |
-| RL训练回路 | 71 |
+| RL训练回路 | 70 |
 | 观测/评测 | 16 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -1144,6 +1144,18 @@
 - **影响详情**：fp32[1024,8] dim=0 默认配置 5 次输出哈希 b336efea…/539fed0d…/e8a3a534…/3ed6d0f3…/7ef87852… 全不同；det=1 后 375ece58… ×5。
 - **改进措施**：检测 同输入重复执行哈希比对（≥5 次）；确定性开关对照。；修复 待定（issue open，未见修复 MR）。
 - **来源**：https://gitcode.com/cann/ops-math/issues/3907；https://gitcode.com/cann/ops-math/issues/3908
+
+### TRN-0444 `op_plugin_foreach_noncontig_view_silent_noop_training` torch_npu _foreach_ 非连续视图静默不生效（训练侧）
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-26
+
+- **原因对象**：算子/内核 / torch_npu / _foreach_* 快路径门控
+- **原因行为**：foreach 快路径门控只检查 is_non_overlapping_and_dense、不检查连续性，转置等非连续视图穿透进入 aclnn 快路径后就地加法静默不执行；修复 MR 收紧门控为非连续走慢路径。
+- **影响对象**：模型权重；优化器状态（静默错误）
+- **影响详情**：_foreach_add_ 对转置张量无报错、存储不变、maxabs 3.38；下游 fused 优化器/AMP 对非连续权重视图的更新静默丢失（权重冻结）；三芯逐位同错。
+- **改进措施**：检测 非连续视图 foreach 前后 allclose 断言；95 格矩阵探针（修复 PR 附带 probe_foreach_nc.py）。；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6099 （open，未合入）：门控加 is_contiguous 合取，非连续走上游慢路径；三芯验证 17/19 成员转置列转绿。
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/640；https://gitcode.com/Ascend/op-plugin/merge_requests/6099
+- **关联**：cross:INF-2169
 
 ### TRN-0445 `op_plugin_sdpa_bool_mask_full_masked_row_uniform` SDPA bool 掩码全遮行输出均匀分布而非 0
 
@@ -3425,18 +3437,6 @@
 - **改进措施**：检测 监控 Muon update 谱半径/有限性（NS 迭代中间量 σ）；参数 NaN 告警前置到 optimizer step 后；修复 修复 MR https://atomgit.com/mindspore/mindformers/merge_requests/8882（open，2026-10-22）：双层防护——非有限输入清洗为零 + NS 输出非有限回退归一化输入；对收敛迭代 bitwise 恒等；8×910B3 deterministic 40 步端到端 loss/grad_norm 逐步 bitwise 一致
 - **来源**：https://atomgit.com/mindspore/mindformers/merge_requests/8882
 
-### TRN-0444 `op_plugin_foreach_noncontig_view_silent_noop_training` torch_npu _foreach_ 非连续视图静默不生效（训练侧）
-
-`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-26
-
-- **原因对象**：优化器 / torch_npu / _foreach_* 快路径门控
-- **原因行为**：foreach 快路径门控只检查 is_non_overlapping_and_dense、不检查连续性，转置等非连续视图穿透进入 aclnn 快路径后就地加法静默不执行；修复 MR 收紧门控为非连续走慢路径。
-- **影响对象**：模型权重；优化器状态（静默错误）
-- **影响详情**：_foreach_add_ 对转置张量无报错、存储不变、maxabs 3.38；下游 fused 优化器/AMP 对非连续权重视图的更新静默丢失（权重冻结）；三芯逐位同错。
-- **改进措施**：检测 非连续视图 foreach 前后 allclose 断言；95 格矩阵探针（修复 PR 附带 probe_foreach_nc.py）。；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6099 （open，未合入）：门控加 is_contiguous 合取，非连续走上游慢路径；三芯验证 17/19 成员转置列转绿。
-- **来源**：https://gitcode.com/Ascend/op-plugin/issues/640；https://gitcode.com/Ascend/op-plugin/merge_requests/6099
-- **关联**：cross:INF-2169
-
 ### TRN-0450 `deepspeed_universal_ckpt_resume_cpu_step_fused_adamw` DeepSpeed universal ckpt 恢复 step 留 CPU
 
 `故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-26
@@ -3678,6 +3678,17 @@
 - **影响详情**：glm5.2 SFT 开 --mtp-num-layers 1 后日志只剩 lm loss 与 global_load_balancing_loss，mtp_1 loss 字段整个消失（值为 NaN）；主 loss 看起来正常，MTP 层是否在学无法从日志判断。
 - **改进措施**：检测 检查日志是否打印 mtp_1 loss；或直接在 MTPLossLoggingHelper.save_loss_to_tracker 入口断言 num_tokens>0；修复 issue #1841（closed）只指出 num_tokens=0 这一处，正文未附修复 PR，未核实
 - **来源**：https://gitcode.com/Ascend/MindSpeed-LLM/issues/1841
+
+### TRN-0451 `verl_logprob_margin_fp32_rounds_to_zero` verl 确信标签 logprob 与梯度 fp32 舍入到 0
+
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-26
+
+- **原因对象**：损失计算 / verl / logprobs_from_logits
+- **原因行为**：logp_t=z_t-logsumexp(z) 把标签自身 exp(0)=1 计入和式：margin 超 ~16.6 后 fp32 的 1+exp(-m) 舍入为 1，logprob 与标签梯度变精确 0，其余梯度保留。
+- **影响对象**：梯度；训练信号（静默错误）
+- **影响详情**：30.0 margin 下 logprob=0、label_grad=0、other_grads_sum=-2.994e-09（fp64 参考 -2.994e-09）；bf16 分支 margin~5.5 即触发；Triton fused linear CE 同病。
+- **改进措施**：检测 大 margin 标签（如 30.0）单元对拍 fp64；检查梯度逐元素和是否为零。；修复 待定（issue open，未见修复 PR）。
+- **来源**：https://github.com/verl-project/verl/issues/8376
 
 ## MoE路由
 
@@ -4891,17 +4902,6 @@
 - **改进措施**：检测 rollout/train 双侧 tokenize 后 diff 中间轮上下文；检查 prefix 前后的 token 序列。；修复 待定（issue open；related #10106/#10107 同类 response_prefix 已修（merged），本条为多轮非思考模板路径）。
 - **来源**：https://github.com/modelscope/ms-swift/issues/10429
 - **关联**：var:TRN-0238
-
-### TRN-0451 `verl_logprob_margin_fp32_rounds_to_zero` verl 确信标签 logprob 与梯度 fp32 舍入到 0
-
-`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-26
-
-- **原因对象**：RL训练回路 / verl / logprobs_from_logits
-- **原因行为**：logp_t=z_t-logsumexp(z) 把标签自身 exp(0)=1 计入和式：margin 超 ~16.6 后 fp32 的 1+exp(-m) 舍入为 1，logprob 与标签梯度变精确 0，其余梯度保留。
-- **影响对象**：训练信号；梯度（静默错误）
-- **影响详情**：30.0 margin 下 logprob=0、label_grad=0、other_grads_sum=-2.994e-09（fp64 参考 -2.994e-09）；bf16 分支 margin~5.5 即触发；Triton fused linear CE 同病。
-- **改进措施**：检测 大 margin 标签（如 30.0）单元对拍 fp64；检查梯度逐元素和是否为零。；修复 待定（issue open，未见修复 PR）。
-- **来源**：https://github.com/verl-project/verl/issues/8376
 
 ## 观测/评测
 

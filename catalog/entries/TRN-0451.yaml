@@ -7,14 +7,14 @@ kind: 故障
 status: active
 cause:
   objects:
-  - subsystem: RL训练回路
+  - subsystem: 损失计算
     stack: verl
     component: logprobs_from_logits
   behavior: logp_t=z_t-logsumexp(z) 把标签自身 exp(0)=1 计入和式：margin 超 ~16.6 后 fp32 的 1+exp(-m) 舍入为 1，logprob 与标签梯度变精确 0，其余梯度保留。
 effect:
   objects:
-  - 训练信号
   - 梯度
+  - 训练信号
   detail: 30.0 margin 下 logprob=0、label_grad=0、other_grads_sum=-2.994e-09（fp64 参考 -2.994e-09）；bf16 分支 margin~5.5 即触发；Triton fused linear CE 同病。
   visibility: 静默错误
 mitigation:
@@ -41,7 +41,7 @@ migration:
   method: scan
   scanned: '2026-10-26'
   audit:
-    round: daily-audit-2026-10-26
+    round: reaudit-2026-10-26
     base:
     - glm-5.3-flash
     - deepseek-v4.1-flash
@@ -50,8 +50,30 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
-    uncertain:
-    - kind
-    - subsystem
-    - effect
-    - visibility
+    corrected:
+      subsystem:
+        from: RL训练回路
+        to: 损失计算
+      effect:
+        from: 训练信号
+        to: 梯度
+    previous:
+      round: daily-audit-2026-10-26
+      base:
+      - glm-5.3-flash
+      - deepseek-v4.1-flash
+      - qwen3.8-flash
+      panel:
+      - kimi-k3
+      - glm-5.3
+      - qwen3.8-max
+      uncertain:
+      - kind
+      - subsystem
+      - effect
+      - visibility
+  updates:
+  - date: '2026-10-26'
+    fields:
+    - cause.objects
+    - effect.objects

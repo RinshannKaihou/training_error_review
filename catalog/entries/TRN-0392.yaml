@@ -39,6 +39,7 @@ original:
   discovery: 2026-10-24 每日扫描
   notes:
   - 2026-10-25 2026-10-25 回访：修复 MR !12612（softplus_grad 空 Tensor/未知秩/稳定 sigmoid/inf×0）open，2026-10-24T16:32Z 仍有更新；未合入。
+  - 2026-10-26 2026-10-26 回访：修复 MR !12612 批次快照 open、2026-10-25T00:48Z 仍更新未合入。
 migration:
   method: scan
   scanned: '2026-10-24'
@@ -51,5 +52,8 @@ migration:
     panel: []
   updates:
   - date: '2026-10-25'
+    fields:
+    - original.notes
+  - date: '2026-10-26'
     fields:
     - original.notes

@@ -4,7 +4,7 @@ slug: opsmath_divmod_double_mode01_fp32_downgrade
 aliases: []
 title: DivMod DOUBLE mode=0/1 静默降级 FP32 计算
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 1/3 输出 0.3333333432674408，与 fp32 逐位相同（max|got-fp32|=0）、与 fp64 差 7.9e-8；mode=2 对照正确（fp64 逐位）。
+  detail: mode=0/1 时 1/3 输出 0.33333334（fp32 值）而非双精度 0.33333333333333331，与 fp32 结果逐位相同、与 fp64 差 1e-8 量级；同一接口 mode=2（floor）时 DOUBLE 结果正确。
   visibility: 静默错误
 mitigation:
   detect: 非整除用例（如 1/3）与 fp64 参考对拍；同一接口跨 mode 对比。
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

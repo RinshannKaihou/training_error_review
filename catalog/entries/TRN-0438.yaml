@@ -4,7 +4,7 @@ slug: opstransformer_gbsa_metadata_maxqseqlen_mismatch_507018
 aliases: []
 title: BlockSparseAttnMetadata maxQSeqLen 设备错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - 数值结果
-  detail: 资料允许的 maxQSeqLen=1 取值下第一段不拒绝，执行后同步 507018；对照组 -1 与正确值 8 均 0/0/0。错误从参数校验延迟到设备异常。
+  detail: TND 下 maxQSeqLen 传非负但小于每 batch Q 存储长度时，两段均返回 0，同步报 507018 设备内存错误；传 -1 或 8（=每 batch 存储长度）则 0/0/0 且 metadata 头 magic 正常。batch=1、totalQBlocks=8 最小化仍复现。
   visibility: 报错
 mitigation:
   detect: maxQSeqLen 扫 { -1, 1, 正确值 } 三点对照同步返回码。
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

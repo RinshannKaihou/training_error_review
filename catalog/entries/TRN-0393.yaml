@@ -30,7 +30,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6622
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: INF-2173
 original:
   mechanism: CANN ops-transformer aclnnMoeTokenPermuteWithEp：rangeOptional 为环绕区间（start>end，即 EP 切分窗口跨 token 数组末尾）时，op_host/moe_token_permute_with_ep_tiling.cpp:498-505 按环绕语义算出 numOutTokens=end-start+totalLength（输出形状合法）；但 op_kernel/moe_index_copy_with_ep.h:158/185 的过滤条件 (indicesValue>=start && indicesValue<start+numOutTokens) 中 indicesValue 取自 sortedIndicesOut，其值域恒为 [0,totalLength)，环绕场景实际命中区间 [start,min(start+numOutTokens,totalLength)) 只到数组末尾，尾部 end 行从未被 DataCopyPad 写入。实测 num_tokens=8,range=[12,4]：8 行只有前 4 行写入，后 4 行保持哨兵 -12345；4 种 shape×76 组 (start,end) 扫描，start>end 且 end>0 时实际写入行数恒为 numOutTokens-end，无一例外；start<end 时缺口为 0。两段接口均返回 ACLNN_SUCCESS。C++ 纯 aclnn 直调（非框架路径）实测。与 TRN-0386/0387（clipped_swiglu/dequant_swiglu_quant 输出未初始化/变体丢失）同为 MoE 训练算子输出完整性缺陷，但触发点不同（EP 环绕窗口语义）。无训练框架受害报告。
   source: https://gitcode.com/cann/ops-transformer/issues/6622
@@ -52,3 +54,7 @@ migration:
     uncertain:
     - subsystem
     - detail
+  updates:
+  - date: '2026-10-26'
+    fields:
+    - relations

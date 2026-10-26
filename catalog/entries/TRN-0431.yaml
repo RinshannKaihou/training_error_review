@@ -4,13 +4,13 @@ slug: opsnn_deep_norm_meanout_rstdout_tail_dim_unchecked
 aliases: []
 title: DeepNorm meanOut/rstdOut 尾维形状不校验致越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: aclnnDeepNorm
-  behavior: CheckDeepNormShapeValue 只校验 meanOut/rstdOut 前导维与维数，不校验尾维必须为 1；尾维非 1 或 0 时两段返回 0，kernel 仍按前导维乘积个元素写入，写出声明范围之外。
+  behavior: aclnnDeepNorm 的校验（CheckDeepNormShapeValue）只校验 meanOut/rstdOut 的前导维与维数，不校验归约维（尾维）为 1；尾维非 1 或 0 时接口不报参数错误，仍继续执行输出写入。
 effect:
   objects:
   - 数值结果
@@ -44,3 +44,15 @@ migration:
   - date: '2026-10-26'
     fields:
     - labels.discovered
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

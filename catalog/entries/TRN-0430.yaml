@@ -4,10 +4,10 @@ slug: opstransformer_moe_init_routing_v4_quant_round_boundary_1lsb
 aliases: []
 title: MoeInitRoutingV4 静态量化取整边界多进 1 LSB
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 量化
     stack: cann
     component: aclnnMoeInitRoutingV4
   behavior: quantMode=0 静态量化对 |x-trunc(x)|∈[0.49,0.5) 的边界值多进 1 LSB：round(x*scale+offset) 的取整方向在该区间系统性偏移，与资料公式不一致。
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 量化
+    issue_unfixed:
+    - behavior

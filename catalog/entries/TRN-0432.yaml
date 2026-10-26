@@ -4,13 +4,13 @@ slug: opsmath_addlora_result_written_to_input_y
 aliases: []
 title: AddLora 结果写回输入 y 而 out 未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: aclnnAddLora
-  behavior: kernel 结果写回输入 yGm_（add_lora_base.h:653），输出张量 youtputGm_ 全仓只有声明与绑定、无任何写回；310P 路径 add_lora_310.h:301 同样写 yGm_。
+  behavior: kernel 结果写回输入 yGm_（add_lora_base.h:653），输出 youtputGm_ 仅有声明(:96)与绑定(:207)、无写回；310P 路径同样。
 effect:
   objects:
   - 数值结果
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

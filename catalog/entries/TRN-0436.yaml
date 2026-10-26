@@ -4,7 +4,7 @@ slug: opsmath_randperm_dtype_boundary_whole_output_unwritten
 aliases: []
 title: Randperm n=dtype 上限输出整块未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 训练样本流
-  detail: 出参预填 0xFF 金丝雀：INT8 n=128 写入 0 字节 distinct=1；对照 n=127 正常 127/127。资料声明 n 不超过 128/256/32768 属支持面内。
+  detail: INT8 n=128、UINT8 n=256、INT16 n=32768 均返回 0/0/0 且写入字节=0（预填 0xFF 全保留）；INT8 127、UINT8 255、INT16 32767、FP16 2049、BF16 257、FP32 5000 全部正确，缺陷值在资料声明支持面内。
   visibility: 静默错误
 mitigation:
   detect: n 扫 dtype 边界 {max-1, max, max+1} + 金丝雀统计写入字节。
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

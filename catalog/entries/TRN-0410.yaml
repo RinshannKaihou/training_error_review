@@ -33,6 +33,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6710
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0053
 original:
   mechanism: 'cann/ops-transformer #6691（2026-10-24，open，A2 910B2 / CANN 9.2.0 / master 5f9cdcf3）。aclnnMoeInitRoutingV2Grad 对越界（≥gradExpandedX 行数）与小于 -1 的 expandedRowIdx 两段均返回 0、同步 0，并把这类值当 -1（跳过）处理，被跳过行的梯度静默丢失。报告者以同一份输入按 skip/clamp/mod 三种语义算 CPU 标杆：算子输出与 skip 逐元素一致（max_abs≤6e-8），与 clamp/mod 差 0.43~0.54，判据闭合。资料约束 Drop/Pad 场景 [-1,E*C)、其他 [0,B*S*K)，区间外属非法入参应报 161002。根因：kernel 侧对 idx<0 与 idx≥rows 一律按无效行跳过，host 第一段无值域校验。正常流程上游 MoeInitRoutingV2 产出的 idx 不会越界；该缺陷在 idx 被外部改写/错配时把显式报错机会吞掉，梯度静默少项。同族 #6672（MoeTokenPermuteGrad numTopk 负数）、#6685/#6693 等为 MoE 反向校验缺失族。'
   source: https://gitcode.com/cann/ops-transformer/issues/6691
@@ -65,3 +66,6 @@ migration:
   - date: '2026-10-26'
     fields:
     - original.notes
+  - date: '2026-10-26'
+    fields:
+    - pattern

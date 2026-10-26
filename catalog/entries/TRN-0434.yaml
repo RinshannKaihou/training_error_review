@@ -4,7 +4,7 @@ slug: opsmath_all_uint8_truncates_not_bool
 aliases: []
 title: aclnnAll out=UINT8 输出数值截断非布尔真值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 全非零输入正确应 [1,1,1,1]：UINT8 出参得到 [100,200,44,144]；FLOAT16→[1,2,3,4]、BF16→[0,2,32,0]、BOOL→[0,60,0,64] 等，静默脏数据。
+  detail: fp16[2x4] dim=0 归约：1..8→[1,2,3,4]，100..400→[100,200,44,144]，0.1..0.8→[0,0,0,0]；BOOL 出参正确 [1,1,1,1]。FLOAT/BF16/BOOL/INT32/INT64 等 self dtype 同样错，静默脏数据。
   visibility: 静默错误
 mitigation:
   detect: out dtype 变异对照 BOOL vs UINT8，全非零输入结果必须全 1。
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,18 +4,18 @@ slug: deepspeed_universal_ckpt_resume_cpu_step_fused_adamw
 aliases: []
 title: DeepSpeed universal ckpt 恢复 step 留 CPU
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 优化器
     stack: deepspeed
     component: load_hp_checkpoint_state
   behavior: universal checkpoint 恢复直接写 optimizer.state['step']=CPU 张量，绕过设备迁移；且 param_group 设置随 ckpt 写回，fused 标志被强制还原。
 effect:
   objects:
-  - 优化器状态
   - 可用性/进度
-  detail: fused/capturable AdamW resume 后第一步抛设备不一致 RuntimeError；resume 换非 fused 优化器无效；torch>=2.8 HF Trainer 默认 fused 开箱即撞。
+  - 优化器状态
+  detail: universal ckpt 恢复后 fused AdamW 第一步报设备不一致 RuntimeError；换非 fused 无效；torch>=2.8、config 无 optimizer 段时 transformers 默认 adamw_torch_fused，HF Trainer 开箱即撞。
   visibility: 报错
 mitigation:
   detect: resume 后首步 optimizer.step() 冒烟；检查 state['step'].device。
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 优化器
+      effect:
+        from: 优化器状态
+        to: 可用性/进度
+    rewritten:
+    - detail

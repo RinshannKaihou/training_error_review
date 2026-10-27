@@ -4,10 +4,10 @@ slug: inplace_adagrad_v2_tail_accum_and_tiling_overflow
 aliases: []
 title: AdagradV2 尾块 accum 错值与 tiling 溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 算子/内核
     stack: cann
     component: InplaceApplyAdagradV2
   behavior: kernel 端 accum UB 搬运用裸三参 DataCopy（按 32B 向下取整），numel%8≠0 时尾部元素被丢弃、回写取到错误数据；tiling 端 coreNum 计算另有有符号乘法溢出。
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 算子/内核
+    uncertain:
+    - detail

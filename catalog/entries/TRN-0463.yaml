@@ -4,15 +4,16 @@ slug: trl_orpo_cpo_prompt_fills_maxlen_nan
 aliases: []
 title: ORPO/CPO 满长 prompt 除零写 NaN 入参数
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 损失计算
+  - subsystem: 数据管线
     stack: trl
     component: ORPO/CPO 平均 logprob
   behavior: prompt 独自达到 max_length 时 completion 截成 0 token；平均 logprob 0/0 得 NaN（ORPO/CPO simpo/ipo），NaN 梯度写进参数；sigmoid 变体静默记 0。
 effect:
   objects:
+  - 梯度
   - 模型权重
   - 训练信号
   detail: 数据集中存在 prompt≥max_length 的行时，ORPO/CPO(simpo/ipo) 单步把 NaN 写入全部参数；CPO sigmoid 变体静默按 logprob 0 打分空 completion。#6588 只交付截断+警告，未交付丢弃满 prompt 行。
@@ -39,3 +40,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 损失计算
+        to: 数据管线
+      effect:
+        from: 模型权重
+        to: 梯度

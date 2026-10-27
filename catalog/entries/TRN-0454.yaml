@@ -4,7 +4,7 @@ slug: groupnorm_fp32_illconditioned_rstd_nan
 aliases: []
 title: GroupNorm 族 fp32 病态输入 rstd 抵消致整块 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: fp32 下组内方差远小于均值平方时，方差计算灾难性抵消成负或 0，rstdOut 变 NaN 或 1/sqrt(eps)，out 整块 NaN，两段接口返回 0 无错误码。
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 训练信号
   detail: 合法 fp32 输入（如 x=1000±0.01，满足资料全部约束）下 GroupNorm/GroupNormSilu 输出整块 NaN 且无任何报错；同形状良态输入正常，激活分布漂移到病态区间即静默产出 NaN。
@@ -43,3 +44,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果
+    uncertain:
+    - behavior

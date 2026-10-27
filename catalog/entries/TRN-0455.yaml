@@ -4,7 +4,7 @@ slug: batchnorm_extreme_numeric_accuracy
 aliases: []
 title: BatchNormExt2/BN3D 极端数值三精度缺陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: 三缺陷：rstd 中间量 v∈(8.5e37,3.4e38] 下 denormal 被 FTZ 清零；Welford 归约 x 与 mean 相等（含 ±inf）时 NaN 污染累加；BN3D 方差直接相减量级接近时抵消放大。
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 训练信号
   detail: 极端数值输入下 BN 前向/训练更新精度崩坏：rstd 清零后输出 y 精确等于 offset；inf 输入把 NaN 写进滚动统计扩散到后续 batch；方差抵消使更新结果与 golden 不一致。无报错。
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

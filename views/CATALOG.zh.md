@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 451 条；状态：active 451
+共 467 条；状态：active 451、pending_audit 16
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 93 |
-| 编译器 | 13 |
-| 运行时/执行 | 10 |
+| 算子/内核 | 99 |
+| 编译器 | 14 |
+| 运行时/执行 | 11 |
 | 集合通信 | 8 |
 | 并行切分 | 27 |
 | KV缓存 | 1 |
@@ -21,12 +21,12 @@
 | 分词/模板 | 7 |
 | 模型定义 | 9 |
 | 权重/检查点 | 31 |
-| 数据管线 | 35 |
-| 优化器 | 35 |
-| 损失计算 | 21 |
+| 数据管线 | 36 |
+| 优化器 | 37 |
+| 损失计算 | 23 |
 | MoE路由 | 23 |
 | 重计算/卸载 | 14 |
-| RL训练回路 | 70 |
+| RL训练回路 | 73 |
 | 观测/评测 | 16 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -1179,6 +1179,76 @@
 - **改进措施**：检测 非整除用例（如 1/3）与 fp64 参考对拍；同一接口跨 mode 对比。；修复 待定（issue open，未见修复 MR）。
 - **来源**：https://gitcode.com/cann/ops-math/issues/3946
 
+### TRN-0453 `matmul_emu_split_weight_layout_mismatch` MatmulEmuSplitWeight 混合布局权重静默算错
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / aclnnMatmulEmuSplitWeight
+- **原因行为**：转置标志只从 wHigh 推导却同时决定 wLow 的读取方式；两权重内存布局不一致时 kernel 按列主序读连续的 wLow。两层形状校验只比较 view 形状，混合布局下仍相等，校验全过。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：wHigh 转置而 wLow 连续的合法输入下，y 与 fp64 参考最大相对误差 4.26（对照组 4.5e-8），两段接口返回 0；资料未声明两权重必须同布局。
+- **改进措施**：检测 wHigh/wLow 布局不一致负例对拍 fp64 参考；检查 strides 而非 view 形状；修复 待定（建议从各自 strides 推导 layoutTag，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7392
+- **关联**：cross:INF-2194
+
+### TRN-0454 `groupnorm_fp32_illconditioned_rstd_nan` GroupNorm 族 fp32 病态输入 rstd 抵消致整块 NaN
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / GroupNorm/GroupNormSilu
+- **原因行为**：fp32 下组内方差远小于均值平方时，方差计算灾难性抵消成负或 0，rstdOut 变 NaN 或 1/sqrt(eps)，out 整块 NaN，两段接口返回 0 无错误码。
+- **影响对象**：隐状态；训练信号（数值异常）
+- **影响详情**：合法 fp32 输入（如 x=1000±0.01，满足资料全部约束）下 GroupNorm/GroupNormSilu 输出整块 NaN 且无任何报错；同形状良态输入正常，激活分布漂移到病态区间即静默产出 NaN。
+- **改进措施**：检测 监控 norm 层 mean²/var 比与输出 NaN；上游用例（50±0.001、1000±0.01）可作探针；修复 待定（#7334/#7347 均 open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7334；https://gitcode.com/cann/ops-nn/issues/7347
+- **关联**：cross:INF-2203
+
+### TRN-0455 `batchnorm_extreme_numeric_accuracy` BatchNormExt2/BN3D 极端数值三精度缺陷
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / BatchNormExt2、BN3DUpdate
+- **原因行为**：三缺陷：rstd 中间量 v∈(8.5e37,3.4e38] 下 denormal 被 FTZ 清零；Welford 归约 x 与 mean 相等（含 ±inf）时 NaN 污染累加；BN3D 方差直接相减量级接近时抵消放大。
+- **影响对象**：隐状态；训练信号（静默错误）
+- **影响详情**：极端数值输入下 BN 前向/训练更新精度崩坏：rstd 清零后输出 y 精确等于 offset；inf 输入把 NaN 写进滚动统计扩散到后续 batch；方差抵消使更新结果与 golden 不一致。无报错。
+- **改进措施**：检测 BN 输出 golden 对拍覆盖 var+eps∈(8.5e37,3.4e38]、x==mean（含 ±inf）、square_sum≈(sum/num)² 三类输入；修复 修复 MR https://gitcode.com/cann/ops-nn/pull/12611 已 merged（2026-10-26，随 ops-nn 后续发布，版本未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7314；https://gitcode.com/cann/ops-nn/pull/12611
+
+### TRN-0457 `weightquant_bmm_v2_l1_budget_nondet` WeightQuantBatchMatmul tiling L1 缺陷非确定错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / WeightQuantBMM tiling
+- **原因行为**：tiling 三处 L1 预算校验缺陷：A 预载未扣 WeightL1/bias 占用（预载越界踩 WeightL1 与 AIV 反量化竞态）；baseN 扩展检查无符号下溢误放行；A 全载准入低估占用。
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：Ascend950 perchannel int4 转置权重 + bf16 输入下多组形状输出非确定性错误：同输入多次执行 rel_l2 在 0.2~1.4 漂移（阈值 3.9e-3），图模式限核与 eager 均可触发。
+- **改进措施**：检测 同输入多次执行比对（非确定性特征）；限核 16/22 配置跑 rel_l2 回归；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/12304 （issue 注明；状态未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7357；https://gitcode.com/cann/ops-nn/pull/12304
+
+### TRN-0458 `block_sparse_mask_offset_uint32_wrap` BlockSparseAttention 超大掩码偏移回绕错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / block_sparse 偏移计算
+- **原因行为**：超大 blockSparseMask 时偏移计算使用 32 位整型，掩码规模使偏移超过 2^32 后按模回绕，掩码索引错位、注意力输出精度劣化；修复 MR 提升整型宽度。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：超长序列/超大稀疏块掩码下 block_sparse_attention 输出精度劣化，无报错；训练使用长序列稀疏注意力时前向/反向静默错。
+- **改进措施**：检测 大掩码 shape 与 golden 对拍；监控偏移量是否接近 2^32；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14632 （open 未合入，对应 issue #6766）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6766；https://gitcode.com/cann/ops-transformer/merge_requests/14632
+- **关联**：cross:INF-2197
+
+### TRN-0459 `acos_grad_tiling_dtype_check_and_wraparound` acos_grad tiling 混 dtype 错读与块参数回绕
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：算子/内核 / cann / acos_grad tiling（arch35）
+- **原因行为**：tiling 只校验输入 y 的 dtype，dy/z 一致性未校验，kernel 按 y 的模板类型解引用 dy/z，混合 dtype 错读；块参数先运算后窄化 uint32，超大 shape 回绕只覆盖前 512 元素。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：y=fp32、dy=fp16 的 AcosGrad 被静默放行产出错梯度；元素总数 ~2^41 量级时只算前 512 个元素其余保持旧值，均无报错。同族 asin_grad 已正确校验且全程 int64 可对照。
+- **改进措施**：检测 对 dy/z dtype 组合与超大 totalLength 构造负例校验 tiling 拒绝；对照 asin_grad；修复 待定（建议对齐 asin_grad：校验 dtype 一致、块参数全程 int64 并校验值域，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4085；https://gitcode.com/cann/ops-math/issues/4087
+- **关联**：cross:INF-2201
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -1328,6 +1398,18 @@
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5632；https://gitcode.com/Ascend/pytorch/pull/48472
 - **关联**：cross:INF-2159
 
+### TRN-0452 `concat_to_concatd_tree_default_desc` ConcatToConcatD 拆树中间节点默认 desc 错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：编译器 / cann / ConcatToConcatD 融合 pass
+- **原因行为**：输入数超 kMaxConcatDInputs(512) 时拆成多级 ConcatD 树，除顶层外中间层节点没有任何手动 desc 处理，保留 ES 默认 desc（dtype FLOAT、空 shape）下发真机，静默计算错误。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：输入数 >512 的 Concat/ConcatV2 图经自动融合后真机输出错误且无报错；训练图模式与推理图模式同路径，影响超宽拼接图（如超长专家列表拼接）。
+- **改进措施**：检测 对 >512 输入 Concat 图做端到端 golden 对拍；检查融合后中间节点 desc；修复 待定（issue closed，未见关联修复 MR，落地版本未核实）
+- **来源**：https://gitcode.com/cann/ops-math/issues/3974
+- **关联**：cross:INF-2206
+
 ## 运行时/执行
 
 ### TRN-0020 `fsdp_cpu_offload_rng_tracker_device_mismatch` CPU offload 下 RNG tracker 设备错配致随机值重复
@@ -1439,6 +1521,17 @@
 - **影响详情**：任一异步算子设备侧失败后，队列进入半死状态：后续提交/同步不报错，训练继续跑但输出是未计算显存残留；重试同样假成功。实机复现（#4738）以提交不存在的算子触发真实异步错误验证。
 - **改进措施**：检测 故障注入（提交不存在算子）后检查后续提交/同步是否持续报错；输出 canary 校验。；修复 修复 MR https://gitcode.com/Ascend/pytorch/pull/48474 （open 未合入：Repository 增加持久故障标志，故障后提交/同步持续抛异常；6 组配置实机验证通过；未核实发布版本）。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4738；https://gitcode.com/Ascend/pytorch/pull/48474
+
+### TRN-0467 `torchnpu_910_pageable_d2h_sync_contract_break` 经典 910 pageable D2H 同步契约失效读垃圾值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：运行时/执行 / torch_npu / pageable D2H copy_ 同步
+- **原因行为**：copy_(npu, non_blocking=False) 的同步契约（返回即数据完整）在进程此前执行过 pinned 分配与 Event/Stream 序列后失效：返回即读 pageable 目标拿到未就绪垃圾值；上下文依赖。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：经典 910（CANN 9.1.0/torch_npu 2.7.1）上嵌入 pin/event 序列后的 D2H copy_ 即读得 -1.05e-21 级垃圾值；950PR（torch_npu 2.9.1）同探针 0 发现。训练 host 读 loss/指标/权重快照可能拿到部分传输值。
+- **改进措施**：检测 关键 D2H 读数前显式 torch.npu.synchronize() 对比；pageable 读回值做 sanity 校验；修复 待定（issue 期望契约不因进程历史失效或文档明示需显式 synchronize；源码定位未给出，open）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/644
 
 ## 集合通信
 
@@ -3049,6 +3142,17 @@
 - **改进措施**：检测 对 max_prompt_length 边界样本断言截断方向与配置一致；训练前 dump 首个 batch prompt 首部核对 system prompt。；修复 待定（issue open 2026-10-19，verl 0.10.0.dev 4b26c78；关联 #4600 针对旧 tokenization 路径，未覆盖 agent loop）
 - **来源**：https://github.com/verl-project/verl/issues/8281
 
+### TRN-0464 `trl_dpo_stale_ref_scores_collator_limit` DPO 复用陈旧参考分数缓存致梯度错
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：数据管线 / trl / precompute_ref 缓存键
+- **原因行为**：precompute_ref_log_probs=True 时参考分缓存以数据集目录为键、不含 collator 截断长度；collator 限制改变后模型分数对新序列计算、参考分数仍来自旧序列，不同序列的分数进入同一 DPO loss。
+- **影响对象**：训练信号；梯度（静默错误）
+- **影响详情**：缓存目录存在旧参考分且 collator 截断长度改变时，初始 loss/梯度即错且依赖缓存历史：同配置同数据，仅因是否命中旧缓存目录，初始 loss/梯度不同；静默无告警。
+- **改进措施**：检测 清理缓存目录对比初始 loss/梯度是否变化；缓存键纳入 collator 截断参数指纹；修复 待定（issue open）
+- **来源**：https://github.com/huggingface/trl/issues/7897
+
 ## 优化器
 
 ### TRN-0013 `loss_scaler_swallows_overflow` 动态 loss scaler 把 SDC 引起的 inf 当普通溢出跳过
@@ -3448,6 +3552,28 @@
 - **改进措施**：检测 resume 后首步 optimizer.step() 冒烟；检查 state['step'].device。；修复 待定（issue open，未见修复 PR；规避：resume 构建非 fused 优化器也无效，需等上游修恢复循环）。
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8884
 
+### TRN-0456 `inplace_adagrad_v2_tail_accum_and_tiling_overflow` AdagradV2 尾块 accum 错值与 tiling 溢出
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：优化器 / cann / InplaceApplyAdagradV2
+- **原因行为**：kernel 端 accum UB 搬运用裸三参 DataCopy（按 32B 向下取整），numel%8≠0 时尾部元素被丢弃、回写取到错误数据；tiling 端 coreNum 计算另有有符号乘法溢出。
+- **影响对象**：优化器状态；训练轨迹（静默错误）
+- **影响详情**：参数元素数非 8 对齐时 accum（二阶矩）输出尾部 numel%8 个元素为错值（135/135 用例零例外，var 输出恒正确），单元素张量即触发；优化器状态静默错位后训练轨迹偏离。
+- **改进措施**：检测 对 numel%8≠0 参数检查 accum 尾部与 golden；TTK/GEIR 双通路失败集逐名一致可定位 kernel；修复 待定（issue 给出修复方案：搬运长度向上取整到 32B、按真实长度回写；未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7427；https://gitcode.com/cann/ops-nn/issues/7428
+
+### TRN-0462 `deepspeed_lowprec_optimizer_init_step` DeepSpeed 低精度优化器构造期推进 Adam
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：优化器 / deepspeed / FP16/BF16 优化器包装初始化
+- **原因行为**：FP16/BF16 包装在初始化时对零梯度执行真实 optimizer.step()：计数器被推进、weight decay 在首步 backward 前修改 master 权重，首步用错 bias correction。
+- **影响对象**：优化器状态；模型权重（静默错误）
+- **影响详情**：FP16/BF16 训练构造包装后未见过任何数据，master 权重已被 weight decay 改动（实测 0.5→0.4995）、Adam step=1；首步更新与独立初始化的 FP32 优化器不一致。静默。
+- **改进措施**：检测 构造包装后立即比对 master 权重与 step 计数（应 0.5/0）；首步与 FP32 参考对照；修复 待定（issue 提出移除合成 step、改用不改参数的状态分配例程，open）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8910
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -3689,6 +3815,28 @@
 - **影响详情**：30.0 margin 下 logprob=0、label_grad=0、other_grads_sum=-2.994e-09（fp64 参考 -2.994e-09）；bf16 分支 margin~5.5 即触发；Triton fused linear CE 同病。
 - **改进措施**：检测 大 margin 标签（如 30.0）单元对拍 fp64；检查梯度逐元素和是否为零。；修复 待定（issue open，未见修复 PR）。
 - **来源**：https://github.com/verl-project/verl/issues/8376
+
+### TRN-0463 `trl_orpo_cpo_prompt_fills_maxlen_nan` ORPO/CPO 满长 prompt 除零写 NaN 入参数
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：损失计算 / trl / ORPO/CPO 平均 logprob
+- **原因行为**：prompt 独自达到 max_length 时 completion 截成 0 token；平均 logprob 0/0 得 NaN（ORPO/CPO simpo/ipo），NaN 梯度写进参数；sigmoid 变体静默记 0。
+- **影响对象**：模型权重；训练信号（数值异常）
+- **影响详情**：数据集中存在 prompt≥max_length 的行时，ORPO/CPO(simpo/ipo) 单步把 NaN 写入全部参数；CPO sigmoid 变体静默按 logprob 0 打分空 completion。#6588 只交付截断+警告，未交付丢弃满 prompt 行。
+- **改进措施**：检测 训练前统计 tokenized prompt≥max_length 行数；逐步参数 NaN 检查；修复 待定（#6548 计划的丢弃满 prompt 行未随 #6588 交付，issue open）
+- **来源**：https://github.com/huggingface/trl/issues/7912
+
+### TRN-0466 `trl_gkd_onpolicy_dataset_token_denom` GKD on-policy 步按数据集 token 数归一化
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：损失计算 / trl / GKD loss 归一化口径
+- **原因行为**：Trainer 在用生成 completion 替换 labels 前就从 dataset labels 数出 num_items_in_batch；JSD 和除以数据集 token 数，分母含已丢弃的参考答案 token。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：每个 on-policy/seq_kd 步的 loss 尺度取决于被扔掉的参考答案长度（默认 lmbda=0.5 约一半步受影响）；实测 num_items_in_batch=172 而生成 batch label token 远小。同仓 DistillationTrainer 已按生成侧重数。
+- **改进措施**：检测 对照 DistillationTrainer 重数逻辑；打印 num_items_in_batch 与生成 batch label token 数；修复 待定（issue open）
+- **来源**：https://github.com/huggingface/trl/issues/7924
 
 ## MoE路由
 
@@ -4902,6 +5050,40 @@
 - **改进措施**：检测 rollout/train 双侧 tokenize 后 diff 中间轮上下文；检查 prefix 前后的 token 序列。；修复 待定（issue open；related #10106/#10107 同类 response_prefix 已修（merged），本条为多轮非思考模板路径）。
 - **来源**：https://github.com/modelscope/ms-swift/issues/10429
 - **关联**：var:TRN-0238
+
+### TRN-0460 `trl_repetition_penalty_is_ratio_zero` GRPO vLLM 重复惩罚使 IS ratio 归零停滞
+
+`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-10-27
+
+- **原因对象**：RL训练回路 / trl / vLLM 采样 logprob 口径
+- **原因行为**：repetition_penalty 传入 vLLM 后其返回 logprobs 已含惩罚；trainer 用无惩罚 raw logits 重算取比值，被惩罚 token 给 log-ratio 加偏置并连乘。
+- **影响对象**：训练信号；训练轨迹（静默错误）
+- **影响详情**：use_vllm=True 且 repetition_penalty≠1.0 时 IS 权重每个 completion 都≈0，grad_norm 无报错跌到 0、训练停滞；presence/frequency penalty 同点位施加应同病。#7866 修复不覆盖。
+- **改进措施**：检测 监控 sampling_logp_difference 与 IS ratio 分布；grad_norm→0 告警；修复 待定（同机制 #7865 修复 #7866 不覆盖此触发面，issue open）
+- **来源**：https://github.com/huggingface/trl/issues/7914
+- **关联**：var:TRN-0229
+
+### TRN-0461 `trl_cispo_epsilon_high_default_clip` TRL cispo 默认 epsilon_high 截死全部权重
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：RL训练回路 / trl / GRPO cispo 默认参数
+- **原因行为**：CISPO 用绝对上界 clamp(coef_1, max=epsilon_high)；epsilon_high 未设置时回退 0.2（对绝对界无意义），on-policy coef_1=1 也被截到 0.2；推荐值 5.0 无代码生效。
+- **影响对象**：梯度；训练信号（静默错误）
+- **影响详情**：loss_type=cispo 未显式设 epsilon_high 时梯度比预期小 5 倍（实测 grad_norm 0.054 vs 0.269），cispo_clip_ratio 把每个正 advantage token 报为 clipped；静默减速无报错。
+- **改进措施**：检测 监控 cispo_clip_ratio 是否恒 ≈1；检查 epsilon_high 是否显式设置；修复 待定（作者建议未设置时默认 5.0 或报错，issue open）
+- **来源**：https://github.com/huggingface/trl/issues/7916
+
+### TRN-0465 `trl_rloo_exp_before_clip_nan_grad` RLOO 先 exp 后 clip 致 NaN 梯度
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-27
+
+- **原因对象**：RL训练回路 / trl / RLOO 序列 ratio 裁剪顺序
+- **原因行为**：RLOO 对正 advantage completion 先对序列 log-ratio 求和取 exp 再 clamp：复用旧 completion 时增量和超 FP32 指数域，exp 溢出 inf 后才裁剪，反传 NaN。
+- **影响对象**：梯度（数值异常）
+- **影响详情**：num_iterations>1 且被复用的正 advantage 长 completion 序列 log-ratio 增量超 FP32 指数域时，loss 数值有限但反传 NaN 梯度；真实 tiny-Llama 复现。默认 num_iterations=1 不触发。
+- **改进措施**：检测 clip 前检查序列 log-ratio 上界（>~88 for fp32 exp）；先 clamp log-ratio 再 exp；修复 待定（issue open，建议先裁剪后指数化）
+- **来源**：https://github.com/huggingface/trl/issues/7896
 
 ## 观测/评测
 

@@ -4,17 +4,17 @@ slug: torchair_cat_fusion_axis_size_mismatch
 aliases: []
 title: torchair Cat 融合跳过逐维 size 检查致错误融合
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: torch_npu
     component: torchair concat 融合 pass
-  behavior: concat 融合组跳过同秩节点与公共轴的逐维 size 检查：公共轴相同但其他轴 size 不一致的节点仍可能按位置绑定轴被融合，图执行结果与 eager 不一致。
+  behavior: concat 融合组跳过同秩节点与公共轴的逐维 size 检查，公共轴相同但其他轴 size 不一致的同秩节点仍可能按位置绑定轴被融合。
 effect:
   objects:
   - 数值结果
-  detail: Cat 融合把不该融合的节点（公共轴与其他轴 size 不一致）融到一起，图执行结果与 eager 不一致；issue 附图显示不同轴被融到一起的计算错误。
+  detail: torchair 图模式下含 Cat 的模型，当同秩节点公共轴相同但其他轴 size 不一致时被错误融合，输出数值与 eager 不一致且无报错；等尺寸节点不受影响。issue 截图显示不同轴被融到一起。
   visibility: 静默错误
 mitigation:
   detect: 图模式 vs eager 输出对照；融合组节点逐维 size 审计
@@ -41,3 +41,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

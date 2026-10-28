@@ -4,7 +4,7 @@ slug: op_plugin_oob_index_family_no_indexerror
 aliases: []
 title: op-plugin 越界索引族无 IndexError 静默丢/污染
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,9 +13,9 @@ cause:
   behavior: 越界索引在 torch 语义应抛 IndexError；NPU 全芯全族无一例同型抛错——写侧 index_put_(idx=99) 在 950PR/2.9.1 无异常且载荷凭空消失（哨兵 20/20 未触）
 effect:
   objects:
-  - 训练样本流
   - 数值结果
-  detail: 用户常见笔误（索引越界）在 2.9.1 上=静默数据丢失，读侧=静默垃圾读/静默零/张量内错值；2.7.1 附加设备死。训练数据管线中 embedding OOB 读回权重表外内存实值（实测 head=[-1.132,0.303,-0.704,0.456] 非 NaN 非哨兵）。
+  - 训练样本流
+  detail: 用户常见笔误（索引越界）在 2.9.1（950PR）上=写侧载荷静默丢失，读侧=静默读回表外内存实值/静默零/张量内错位值；2.7.1 附加 index_select 设备死；embedding 越界三芯一致 NO-RAISED 返回表外实值；语法糖路径不受影响。
   visibility: 静默错误
 mitigation:
   detect: 数据管线入口对 index 做 min/max 断言（CPU/NPU 行为分叉）；embedding 输出抽样与权重行对照
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 训练样本流
+        to: 数值结果
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

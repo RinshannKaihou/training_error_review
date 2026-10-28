@@ -4,7 +4,7 @@ slug: mindformers_pynative_skip_recompute_single_card
 aliases: []
 title: MindFormers PyNative 单卡跳过 activation c
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 重计算/卸载
@@ -15,7 +15,7 @@ effect:
   objects:
   - 性能/资源
   detail: 单卡训练开了 activation checkpoint 配置却按未开跑：显存占用高于预期、重算与否与配置不符；无报错，用户按显存预算排布时被误导。
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 单卡下显存占用与开启重算的预期对比；检查重算节点是否生效
   fix: 修复 PR https://atomgit.com/mindspore/mindformers/merge_requests/8884（open，2026-10-27）——PyNative 单卡正确启用 activation checkpoint
@@ -41,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 性能退化

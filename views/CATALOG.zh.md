@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 494 条；状态：active 467、pending_audit 27
+共 494 条；状态：active 494
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 111 |
+| 算子/内核 | 112 |
 | 编译器 | 17 |
 | 运行时/执行 | 11 |
 | 集合通信 | 8 |
@@ -23,7 +23,7 @@
 | 权重/检查点 | 31 |
 | 数据管线 | 37 |
 | 优化器 | 37 |
-| 损失计算 | 23 |
+| 损失计算 | 22 |
 | MoE路由 | 24 |
 | 重计算/卸载 | 15 |
 | RL训练回路 | 77 |
@@ -787,6 +787,7 @@
 - **影响详情**：int8 上界 1000 时全表输出 -24（期望原值）；反向 -200 时原样返回输入（期望全 -200），语义完全相反；uint8 300 时输出 0,44,44；原地入口把调用方输入数据直接覆盖，无法从返回值或输出察觉。PyTorch 同类调用直接 RuntimeError 拒绝。
 - **改进措施**：检测 调用前校验标量在目标 dtype 可表示范围；对拍 CPU clamp 语义。；修复 待定（issue open 2026-10-23，根因定位至 conversion/clip_by_value_v2/op_api/aclnn_clamp.cpp:345-362 A2 分支，master efff3523 在位）
 - **来源**：https://gitcode.com/cann/ops-math/issues/3849；https://gitcode.com/cann/ops-math/issues/3850
+- **关联**：cross:INF-2217
 
 ### TRN-0395 `opsmath_exp_segsum_tail_stripe_column_calcount_oob_read` ExpSegsum 末条带误用列向长度 GM 越界读
 
@@ -1240,18 +1241,18 @@
 
 ### TRN-0474 `ascend_pytorch_scatter_add_race_loss` aclnnScatterAdd 多对一累加偶发丢失贡献
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / torch_npu / aclnnScatterAdd 多对一累加
-- **原因行为**：aclnnScatterAdd 在多对一冲突写入（同一目标行被多源并发累加）时偶发丢失或重复计入一次累加贡献，属竞态类缺陷；固定种子输入下偶发（4 数据点 1 失败 3 通过），排除代码回归。
+- **原因行为**：NPU 上 Tensor.scatter_add_（aclnnScatterAdd）在多对一冲突写时偶发输出错误：固定种子输入多数运行通过、偶发失败（66519 用例 1 次）；根因为推断，竞态类最可能、设备级偶发计算错误次之，待复现确认。
 - **影响对象**：梯度；数值结果（不可复现）
-- **影响详情**：Embedding per-sample 梯度（expanded weights grad_sample.scatter_add_）偶发整行 15 维偏差：实测最大绝对差 0.0405（容差 1e-4）、相对差 6.04（容差 5e-5），超容差约 400 倍/12 万倍。
+- **影响详情**：Embedding grad_sample 偶发整行 15 维偏差 0.0405，超容差约 400 倍，远超 ~1e-6 的累加顺序差；算子日志无 ERROR。触发：A3/CANN 9.2.0/torch_npu 77169f23 的 scatter_add_ 多对一冲突写，并发关联未证实。
 - **改进措施**：检测 固定种子循环跑 per-sample 梯度对照（batch=1 循环 vs 整 batch）统计失败率；线上可对 embedding 梯度行做和校验；修复 待定（issue open 2026-10-27；CI 偶发 1/66519，未定位到算子提交）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5667
 
 ### TRN-0475 `opstransformer_block_attn_res_prepare_subnormal_nan` BlockAttnResPrepare eps 次正规数时输出全 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / aclnnBlockAttnResPrepare
 - **原因行为**：eps 为 fp32 次正规数（0<eps<1.17549435e-38）且 blockRes 全 0（均合法、通过第一段校验）时三个输出全 NaN、两段返回 0；eps 下溢为 0 时第一段不报 161002 而 workspaceS
@@ -1261,9 +1262,20 @@
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6785
 - **关联**：cross:INF-2221
 
+### TRN-0476 `opstransformer_fcel_vocab0_ub_overlap` FusedCEWithMaxSum 词表维 V=0 静默错值
+
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-28
+
+- **原因对象**：算子/内核 / cann / fused_ce_with_max_sum
+- **原因行为**：V=0 时 InitParams 的 else 分支只申请 sumExpLogits/predictedLogits 的 UB buffer、漏申请 logitsMax；BtCompute 仍无条件 GMToUB 搬 logitsMax
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：V=0 时 lossOut = ln(logitsMax) - predictedLogits：实测 ln(0.5)-0.25=-0.943 而非期望 ln(2.0)-0.25=0.443（logitsMax 数值被当 sumExpLogits 用）；两段均返回 0，无告警。
+- **改进措施**：检测 词表维为 0 的分片（VP 空分片）对 lossOut 抽查与解析公式对照；修复 待定（issue open 2026-10-27；第一段应返回 161002 或修 UB 分配）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7446
+
 ### TRN-0480 `opsmath_pdist_p_inf_all_nan_legacy_tbe` aclnnPdist p=+inf 返回 0 输出全 NaN（legacy 
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / pdist legacy TBE 内核
 - **原因行为**：A2+CANN 9.2.0 只带 ops_legacy/pdist 旧 TBE 实现：pdist_sum_process 用 ln(sum)*(1/p) 收尾，p=+inf 时 1/inf=0、ln(sum)=inf
@@ -1274,7 +1286,7 @@
 
 ### TRN-0481 `opsmath_floor_divides_int_float_silent_precision_loss` InplaceFloorDivides 整型配浮点标量静默降精度
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / aclnn_floor_divide dtyp。
 - **原因行为**：InferFloorDivTensorScalarDtype 在非 RegBase 平台返回 PromoteType(int,fp32)=fp32；CalcFloorDivides 先把整型输入 Cast 到 fp32（大整数降精度）、
@@ -1285,7 +1297,7 @@
 
 ### TRN-0482 `opsmath_pdist_forward_tail_oob_write` PdistForward 出参非 32B 对齐尾部越界写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / pdist_forward 尾块搬运
 - **原因行为**：aclnnPdistForward 在出参字节数非 32B 对齐时尾部越界写（最多 20 字节），写坏 out 之后分配的内存；无报错。
@@ -1296,7 +1308,7 @@
 
 ### TRN-0483 `opsmath_round_decimals_int_negative_wrong` InplaceRoundDecimals 整型负 decimals 结果错误
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / round_decimals 整型通路
 - **原因行为**：aclnnInplaceRoundDecimals 在整数 dtype+负 decimals 下未按四舍五入到指定位数执行：INT32 通路忽略 decimals（输出恒等），INT64 通路输出不等于恒等/截断/半偶舍入且正负不对称。
@@ -1307,7 +1319,7 @@
 
 ### TRN-0486 `opstransformer_pfa_310p3_fp16_o_acc_overflow` PFA 310P3 fp16 高性能模式 O 累加溢出 +Inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / prompt_flash_attention。
 - **原因行为**：fp16+HighPerformance 下 mmOutputType/computeType 为 half，O 累加（未归一化加权和）超 FP16 上限 65504 溢出为 +Inf（实测 position 1871 处 1872×3
@@ -1318,19 +1330,19 @@
 
 ### TRN-0487 `op_plugin_oob_index_family_no_indexerror` op-plugin 越界索引族无 IndexError 静默丢/污染
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / torch_npu / index_put_/embedding/ga。
 - **原因行为**：越界索引在 torch 语义应抛 IndexError；NPU 全芯全族无一例同型抛错——写侧 index_put_(idx=99) 在 950PR/2.9.1 无异常且载荷凭空消失（哨兵 20/20 未触）
-- **影响对象**：训练样本流；数值结果（静默错误）
-- **影响详情**：用户常见笔误（索引越界）在 2.9.1 上=静默数据丢失，读侧=静默垃圾读/静默零/张量内错值；2.7.1 附加设备死。训练数据管线中 embedding OOB 读回权重表外内存实值（实测 head=[-1.132,0.303,-0.704,0.456] 非 NaN 非哨兵）。
+- **影响对象**：数值结果；训练样本流（静默错误）
+- **影响详情**：用户常见笔误（索引越界）在 2.9.1（950PR）上=写侧载荷静默丢失，读侧=静默读回表外内存实值/静默零/张量内错位值；2.7.1 附加 index_select 设备死；embedding 越界三芯一致 NO-RAISED 返回表外实值；语法糖路径不受影响。
 - **改进措施**：检测 数据管线入口对 index 做 min/max 断言（CPU/NPU 行为分叉）；embedding 输出抽样与权重行对照；修复 待定（issue open 2026-10-27，三芯×六变体证据矩阵；修复方向=API 路径对齐语法糖的边界检查）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/651
 - **关联**：cross:INF-2219
 
 ### TRN-0488 `op_plugin_maxpool_indices_int8_wraparound` max_pool indices int8 三芯分裂环绕溢出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / torch_npu / max_pool1d/2d indices d。
 - **原因行为**：max_pool1d/2d(return_indices=True) indices dtype 三芯分裂：CPU 契约 int64、950PR/2.9.1 int32、2.7.1 双芯 int8。
@@ -1342,7 +1354,7 @@
 
 ### TRN-0490 `opsmath_sinc_subnormal_nan` sinc 算子 subnormal 输入产生 NaN 输出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / sinc SIMT kernel
 - **原因行为**：950PR SIMT kernel（SincSimtCompute）原实现只对 x==0.0f 输出 1；当 |x| < 2^-126/π 时 PI*x 下溢为 fp32 次正规数
@@ -1353,7 +1365,7 @@
 
 ### TRN-0491 `opsmath_xlog1py_precision_uninit_const` xlog1py 精度问题与 constantValue 未初始化
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / xlog1py kernel
 - **原因行为**：ops-math xlog1py 算子存在精度问题与 constantValue 未初始化问题（修复 PR 自述勾选 Bug 修复；细节未在正文展开）。
@@ -1364,22 +1376,22 @@
 
 ### TRN-0492 `opsmath_remainder_fractal_nz_silent_accept` Remainder 静默接受 FRACTAL_NZ 按 ND 解释
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / remainder 格式校验
 - **原因行为**：aclnnRemainderTensorTensor 资料声明「数据格式支持 ND」，实测 FRACTAL_NZ 被静默接受并按 ND 线性解释——NZ 分块布局内存被线性读取，输出系统性错值。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：传入 FRACTAL_NZ 布局张量时两段返回 0、结果按 ND 解释计算——NZ 分块布局的内存被线性读取，输出系统性错值；无报错。
+- **影响详情**：NPU 上向 aclnnRemainderTensorTensor 传入 FRACTAL_NZ 布局张量时不报错不拒绝，接口返回成功，但分块布局内存被按 ND 线性语义解释计算，输出系统性错值；文档声明仅支持 ND，与实现分叉。
 - **改进措施**：检测 NZ 布局输入的输出与稠密参考对照；调用前显式断言 format==ND；修复 待定（issue open 2026-10-27，Documentation 类但实测行为缺陷：要么校验拒绝要么文档声明支持）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4114；https://gitcode.com/cann/ops-math/issues/4126
 
 ### TRN-0493 `op_plugin_stft_gelu_error_over_budget` conv/Stft 融合内核近似致 gelu/stft 误差超预算
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / torch_npu / conv/Stft 融合内核近似
 - **原因行为**：op-plugin conv/Stft 融合内核采用近似实现，gelu→stft 级联累计误差超预算；eager 纯 stft 主路径 72/72 PASS（maxabs≤2.67e-05）不受影响。
-- **影响对象**：数值结果（质量退化）
+- **影响对象**：数值结果（静默错误）
 - **影响详情**：gelu/stft 级联输出误差超出容差预算，音频/谱特征类训练特征值偏差；无 crash。
 - **改进措施**：检测 gelu→stft 链路输出与 CPU 参考逐点误差监控；修复 待定（issue open 2026-10-27，与 !6097（stft eager 注册+组合内核）关系为「正交」；数值策略待上游定夺）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/649
@@ -1548,18 +1560,18 @@
 
 ### TRN-0478 `torchair_cat_fusion_axis_size_mismatch` torchair Cat 融合跳过逐维 size 检查致错误融合
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：编译器 / torch_npu / torchair concat 融合 pass
-- **原因行为**：concat 融合组跳过同秩节点与公共轴的逐维 size 检查：公共轴相同但其他轴 size 不一致的节点仍可能按位置绑定轴被融合，图执行结果与 eager 不一致。
+- **原因行为**：concat 融合组跳过同秩节点与公共轴的逐维 size 检查，公共轴相同但其他轴 size 不一致的同秩节点仍可能按位置绑定轴被融合。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：Cat 融合把不该融合的节点（公共轴与其他轴 size 不一致）融到一起，图执行结果与 eager 不一致；issue 附图显示不同轴被融到一起的计算错误。
+- **影响详情**：torchair 图模式下含 Cat 的模型，当同秩节点公共轴相同但其他轴 size 不一致时被错误融合，输出数值与 eager 不一致且无报错；等尺寸节点不受影响。issue 截图显示不同轴被融到一起。
 - **改进措施**：检测 图模式 vs eager 输出对照；融合组节点逐维 size 审计；修复 修复 PR https://gitcode.com/Ascend/torchair/merge_requests/3906（open，2026-10-27）——补齐已有校验：同秩节点逐维 size 不一致时拒绝融合；补静态/动态轴不匹配回归用例
 - **来源**：https://gitcode.com/Ascend/torchair/issues/902；https://gitcode.com/Ascend/torchair/merge_requests/3906
 
 ### TRN-0484 `torchair_atan2_swapped_args` torchair atan2 lowering x/y 入参顺序互换
 
-`故障` · `pending_audit` · `shared` · `verified` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `verified` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：编译器 / torch_npu / torchair ASCIR atan2 lo。
 - **原因行为**：torchair 图模式下 atan2 的 x 与 y 入参顺序不正确：AF.atan2(x,y) 结果等于 EAGER.atan2(y,x)；512 点对照匹配 atan2(x,y) 512/512（即互换）
@@ -1570,12 +1582,12 @@
 
 ### TRN-0485 `ge_hostcpu_const_fold_desc_attr_loss` GE HostCPU 常量折叠丢失输出描述符属性
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：编译器 / cann / GE HostCPU 常量折叠
 - **原因行为**：HostCPU 自定义算子常量折叠的输出从 gert::Tensor 转回 GeTensor 时重建描述符，丢失 shape_range、origin_shape_range 等 GE 属性
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：下游 MirrorPad 等算子的动态 shape 范围在重推导时退化，图执行结果出错或行为异常；修复前无告警。
+- **影响详情**：GE 图模式训练中，HostCPU 自定义算子常量折叠后，下游 MirrorPad 等算子的动态 shape 范围可能在重推导时退化；无显式报错，表现为特定输入形状下结果错或后续 shape 校验异常。
 - **改进措施**：检测 含 HostCPU 常量折叠 + 动态 shape 算子的图与关闭常量折叠对照；修复 已修复：https://gitcode.com/cann/ge/merge_requests/5608（merged，2026-10-27）——以节点原 output desc 为基础仅覆盖 gert 返回的 shape/origin_shape/dtype/format/placement，保留范围与扩展属性；补 bottom 多输出 UT
 - **来源**：https://gitcode.com/cann/ge/merge_requests/5608
 
@@ -2100,7 +2112,7 @@
 
 ### TRN-0468 `mindspeed_cp_eod_zigzag_layout_mismatch` MindSpeed CP EOD zigzag 切分布局不一致致 loss/
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：并行切分 / mindspeed / CP KV all-gather 切分
 - **原因行为**：reset-attention-mask+causal+all_gather+CP>1 组合下 batch 路径用 zigzag 切分，而 TENPU THD all-gather 要求各 rank 持连续分片。
@@ -2111,7 +2123,7 @@
 
 ### TRN-0472 `deepspeed_autotp_mq_kv_replica_drift` DeepSpeed AutoTP 多查询 K/V 副本梯度不归约致漂移
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：并行切分 / deepspeed / AutoTP fused QKV 切分
 - **原因行为**：_bigcode_type_transpose 给每 rank 返回其 query 切片拼接整块共享 K/V 行；各 rank 对复制 K/V 行算出部分梯度，column-parallel 的权重梯度留本地
@@ -2135,7 +2147,7 @@
 
 ### TRN-0479 `opstransformer_indexer_quant_cache_neg_slot_stomp` IndexerQuantCache 负 slotMapping 静默踩写其它
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：KV缓存 / cann / aclnnIndexerQuantCache。
 - **原因行为**：aclnnIndexerQuantCache 的 host/tiling 对 slotMapping 无值域校验（资料声明 [-1,num_slots-1]）：负值被 kernel 当合法 slot 参与地址计算
@@ -2362,6 +2374,7 @@
 - **影响详情**：Ascend950 perchannel int4 转置权重 + bf16 输入下多组形状输出非确定性错误：同输入多次执行 rel_l2 在 0.2~1.4 漂移（阈值 3.9e-3），图模式限核与 eager 均可触发。
 - **改进措施**：检测 同输入多次执行比对（非确定性特征）；限核 16/22 配置跑 rel_l2 回归；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/12304 （issue 注明；状态未核实）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7357；https://gitcode.com/cann/ops-nn/pull/12304
+- **关联**：cross:INF-2215
 
 ## 位置编码
 
@@ -3380,7 +3393,7 @@
 
 ### TRN-0477 `mindformers_static_batch_resume_epoch_repeat` MindFormers 静态 batch 恢复后跨 epoch 重复数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：数据管线 / mindformers / Trainer 恢复偏移清除
 - **原因行为**：PyNative Trainer 从 checkpoint 恢复时设置的初始跳过步数在静态 batch 路径 epoch 耗尽重建迭代器前不清除（只在 dynamic_batch 时 set_init_step(0)）
@@ -3801,11 +3814,11 @@
 
 ### TRN-0494 `opsnn_inplace_apply_adagrad_da_l1_polarity_denormal` AdagradDA l1=NaN 极性反转与软阈值 t<0 失效
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
-- **原因对象**：优化器 / cann / inplace_apply_adagrad_d。
+- **原因对象**：优化器 / cann / inplace_apply_adagrad_da
 - **原因行为**：l1T_/l2Tlr_ 推导与主分支按 l1<=0 判定：l1=NaN 时比较为 false 误入 l1>0 稀疏截断分支，l1T_=NaN·T 泄漏至全部元素输出全 NaN（TF 语义 if(l1>0) 应走直通）。
-- **影响对象**：优化器状态；模型权重（数值异常）
+- **影响对象**：优化器状态；模型权重（静默错误）
 - **影响详情**：l1=NaN 时输出全 NaN；global_step<0（t=l1·T<0）时输出偏离软阈值公式含 2g/NaN；denormal 输入下与 TF CPU 结果不一致且被放大；Host 校验缺失使非法 shape/dtype/负维不 fail-fast。
 - **改进措施**：检测 AdagradDA 更新后权重 NaN 断言；与 TF raw_ops.ApplyAdagradDA 参考对照；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/12578（open，2026-10-27）——kernel 503/503+GEIR 56/56+UT 41/41 全绿、NPU vs GPU A100 vs CPU 三方一致 534/534、CPU/GPU 参考 bitwise 一致 108/108 组
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7453；https://gitcode.com/cann/ops-nn/pull/12578
@@ -4062,17 +4075,6 @@
 - **影响详情**：每个 on-policy/seq_kd 步的 loss 尺度取决于被扔掉的参考答案长度（默认 lmbda=0.5 约一半步受影响）；实测 num_items_in_batch=172 而生成 batch label token 远小。同仓 DistillationTrainer 已按生成侧重数。
 - **改进措施**：检测 对照 DistillationTrainer 重数逻辑；打印 num_items_in_batch 与生成 batch label token 数；修复 待定（issue open）
 - **来源**：https://github.com/huggingface/trl/issues/7924
-
-### TRN-0476 `opstransformer_fcel_vocab0_ub_overlap` FusedCEWithMaxSum 词表维 V=0 静默错值
-
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-28
-
-- **原因对象**：损失计算 / cann / fused_cross_entropy_los。
-- **原因行为**：V=0 时 InitParams 的 else 分支只申请 sumExpLogits/predictedLogits 的 UB buffer、漏申请 logitsMax；BtCompute 仍无条件 GMToUB 搬 logitsMax
-- **影响对象**：训练信号（静默错误）
-- **影响详情**：V=0 时 lossOut = ln(logitsMax) - predictedLogits：实测 ln(0.5)-0.25=-0.943 而非期望 ln(2.0)-0.25=0.443（logitsMax 数值被当 sumExpLogits 用）；两段均返回 0，无告警。
-- **改进措施**：检测 词表维为 0 的分片（VP 空分片）对 lossOut 抽查与解析公式对照；修复 待定（issue open 2026-10-27；第一段应返回 161002 或修 UB 分配）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7446
 
 ## MoE路由
 
@@ -4336,12 +4338,12 @@
 
 ### TRN-0473 `opstransformer_moe_token_unpermute_negidx_family` CANN MoE token unpermute 族负索引缺下界校验
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：MoE路由 / cann / moe_token_unpermute 族索引。
-- **原因行为**：moe_token_unpermute/moe_token_permute_grad/moe_index_copy 对 INT32 sortedIndices 只做上界判断、完全缺 >=0 下界。
+- **原因行为**：moe_token_unpermute/moe_token_permute_grad/moe_index_copy 对 sortedIndices 只判上界不判下界，负值经 int64_t offset 直读 GM。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：sortedIndices=-1（vLLM padding 惯例）静默读错数据；-2^30 级大负值触发 NPU 设备错误 507035。实测 {-1,1} 索引下输出 [0,0,1.5,2] 而非 [0,0]（无效槽应清零）；两段返回 0 无告警。
+- **影响详情**：sortedIndices 含负值时（上游 -1 padding，vLLM 标准行为）：{-1,1} 输出 [0,0,1.5,2]，无效槽未清零、无报错，两段接口返回 0；大负值（-2^30）sync fail 507035 KERNEL_ERROR。CANN 9.0.0、910_93 实测。
 - **改进措施**：检测 训练/路由输入含 -1 padding 时输出对照 CPU 参考实现；大负值直接 KERNEL_ERROR；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14742（open，2026-10-27）——按本仓 moe_token_unpermute_with_routing_map_not_pad.h:228-233 的 IsValidInputIndex 范本补 `in_token_index >= 0 && < num_out_tokens` 下界，三文件 4+4+2 处；同仓 commit 0c5c1ed15 为既有范本。用户自编译修复版实测 {-1,1} 用例通过
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6814；https://gitcode.com/cann/ops-transformer/merge_requests/14742
 - **关联**：cross:INF-2214
@@ -4507,11 +4509,11 @@
 
 ### TRN-0489 `mindformers_pynative_skip_recompute_single_card` MindFormers PyNative 单卡跳过 activation c
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：重计算/卸载 / mindformers / PyNative activation che。
 - **原因行为**：PyNative Trainer 单卡（data_parallel=1）时 activation checkpoint / full recompute 配置未生效——配置了重算但实际未启用，配置面与执行面分叉。
-- **影响对象**：性能/资源（静默错误）
+- **影响对象**：性能/资源（性能退化）
 - **影响详情**：单卡训练开了 activation checkpoint 配置却按未开跑：显存占用高于预期、重算与否与配置不符；无报错，用户按显存预算排布时被误导。
 - **改进措施**：检测 单卡下显存占用与开启重算的预期对比；检查重算节点是否生效；修复 修复 PR https://atomgit.com/mindspore/mindformers/merge_requests/8884（open，2026-10-27）——PyNative 单卡正确启用 activation checkpoint
 - **来源**：https://atomgit.com/mindspore/mindformers/issues/2615；https://atomgit.com/mindspore/mindformers/merge_requests/8884
@@ -5357,7 +5359,7 @@
 
 ### TRN-0469 `trl_vespo_token_mask_sequence_collapse` trl VESPO+token_mask 单 token 出界压零整条序列权
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：RL训练回路 / trl / VESPO get_gamma_weights
 - **原因行为**：token_mask 把出界 token 的 IS ratio 置 0 后，VESPO 的 get_gamma_weights 对置零 ratio 取 log 并按序列求和：单个被掩 token 给整条序列加 log(1e-8)≈-18
@@ -5369,7 +5371,7 @@
 
 ### TRN-0470 `trl_asyncgrpo_minp_is_bias` trl AsyncGRPO min_p 单独开启时 IS ratio 偏低偏
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：RL训练回路 / trl / AsyncGRPO rollout 候选集请求
 - **原因行为**：AsyncGRPOTrainer 的 rollout worker 只为 top_p/top_k 请求候选集；min_p 单独开启时请求不带采样掩码，vLLM 按 min_p 截断后词表归一化 logprob
@@ -5381,7 +5383,7 @@
 
 ### TRN-0471 `trl_gkd_think_format_reward_leak` trl think 格式示例给 think 内 boxed 答案记分
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：RL训练回路 / trl / rloo/gspo math 示例 rewar。
 - **原因行为**：六个官方示例在 prompt 要求 <think></think> 块的同时用 accuracy_reward 计分：reasoning 块内出现的 \boxed{} 答案也被记为正确

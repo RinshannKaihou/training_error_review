@@ -31,7 +31,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/pull/12304
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: INF-2215
 original:
   mechanism: 'cann/ops-nn #7357（open，Ascend950/DAV3510，CANN 9.2.0）：WeightQuantBatchMatmulV2 adaptive split tiling 路径（perchannel + weight int4 转置 + x bf16 非转置）三处 host 侧 L1 预算校验缺陷（kernel 无问题）：1) SetPreLoad 判断 A 预载只用粗估 256KB，未扣 L1 A 区实际被 WeightL1（baseN×baseK×stepKb 双缓冲）与 bias（4KB 双缓冲）占用，kernel 按 host 下发 aPreloadSize（≈M×K/核数）预载时越界踩踏 WeightL1_P1，与 AIV 反量化写 Weight 竞态（16 核 baseN=352 溢出 32KB、22 核 baseN=384 溢出 12KB 实测）；2) CheckL1SizeAfterExtending 用无符号减法，al1Size=260KB>aL1MaxSize=256KB 时左侧下溢为巨大正数，baseN 扩展 256→288 误放行；3) OptimizeMatmulTiling 按 baseM×CeilAlign(K,32)×2B 估 255KB 放行，kernel 按 baseK 粒度实分（K=1632→1664 实 260KB）且未扣 WeightL1(288KB)，AL1+WeightL1=548KB>512KB。用例1 M=256,K=6144,N=6912 图模式限核 16/22 核 rel_l2 0.2~0.6 非确定；用例2 M=80,K=1632,N=9216 eager 原生配置 rel_l2 0.95~1.4 非确定；修复后分别 2.82e-03/2.80e-03 且逐 bit 确定。修复 PR !12304。'
   source: GitCode issue：https://gitcode.com/cann/ops-nn/issues/7357 （open，含 torch 单算子复现形状、竞态根因三缺陷与修复前后 rel_l2 数据）；修复 PR https://gitcode.com/cann/ops-nn/pull/12304
@@ -57,3 +59,6 @@ migration:
   - date: '2026-10-28'
     fields:
     - original.notes
+  - date: '2026-10-28'
+    fields:
+    - relations

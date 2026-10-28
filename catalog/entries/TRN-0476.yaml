@@ -4,12 +4,12 @@ slug: opstransformer_fcel_vocab0_ub_overlap
 aliases: []
 title: FusedCEWithMaxSum 词表维 V=0 静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 损失计算
+  - subsystem: 算子/内核
     stack: cann
-    component: fused_cross_entropy_los。
+    component: fused_ce_with_max_sum
   behavior: V=0 时 InitParams 的 else 分支只申请 sumExpLogits/predictedLogits 的 UB buffer、漏申请 logitsMax；BtCompute 仍无条件 GMToUB 搬 logitsMax
 effect:
   objects:
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 损失计算
+        to: 算子/内核
+    rewritten:
+    - component

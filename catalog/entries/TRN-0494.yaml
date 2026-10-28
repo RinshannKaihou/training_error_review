@@ -4,19 +4,19 @@ slug: opsnn_inplace_apply_adagrad_da_l1_polarity_denormal
 aliases: []
 title: AdagradDA l1=NaN 极性反转与软阈值 t<0 失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
     stack: cann
-    component: inplace_apply_adagrad_d。
+    component: inplace_apply_adagrad_da
   behavior: l1T_/l2Tlr_ 推导与主分支按 l1<=0 判定：l1=NaN 时比较为 false 误入 l1>0 稀疏截断分支，l1T_=NaN·T 泄漏至全部元素输出全 NaN（TF 语义 if(l1>0) 应走直通）。
 effect:
   objects:
   - 优化器状态
   - 模型权重
   detail: l1=NaN 时输出全 NaN；global_step<0（t=l1·T<0）时输出偏离软阈值公式含 2g/NaN；denormal 输入下与 TF CPU 结果不一致且被放大；Host 校验缺失使非法 shape/dtype/负维不 fail-fast。
-  visibility: 数值异常
+  visibility: 静默错误
 mitigation:
   detect: AdagradDA 更新后权重 NaN 断言；与 TF raw_ops.ApplyAdagradDA 参考对照
   fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/12578（open，2026-10-27）——kernel 503/503+GEIR 56/56+UT 41/41 全绿、NPU vs GPU A100 vs CPU 三方一致 534/534、CPU/GPU 参考 bitwise 一致 108/108 组
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 数值异常
+        to: 静默错误
+    rewritten:
+    - component
+    uncertain:
+    - subsystem
+    - effect

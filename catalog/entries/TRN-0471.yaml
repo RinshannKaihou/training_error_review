@@ -4,7 +4,7 @@ slug: trl_gkd_think_format_reward_leak
 aliases: []
 title: trl think 格式示例给 think 内 boxed 答案记分
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -39,3 +39,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

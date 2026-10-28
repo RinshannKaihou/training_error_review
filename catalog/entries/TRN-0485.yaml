@@ -4,7 +4,7 @@ slug: ge_hostcpu_const_fold_desc_attr_loss
 aliases: []
 title: GE HostCPU 常量折叠丢失输出描述符属性
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 下游 MirrorPad 等算子的动态 shape 范围在重推导时退化，图执行结果出错或行为异常；修复前无告警。
+  detail: GE 图模式训练中，HostCPU 自定义算子常量折叠后，下游 MirrorPad 等算子的动态 shape 范围可能在重推导时退化；无显式报错，表现为特定输入形状下结果错或后续 shape 校验异常。
   visibility: 静默错误
 mitigation:
   detect: 含 HostCPU 常量折叠 + 动态 shape 算子的图与关闭常量折叠对照
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

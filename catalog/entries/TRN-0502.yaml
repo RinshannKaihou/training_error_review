@@ -4,7 +4,7 @@ slug: opstransformer_dense_lightning_kl_grad_ws_overflow
 aliases: []
 title: Lightning Indexer KL 反向 workspace 越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 模型权重
-  detail: B=1 S2=5 时 workspace 尾部越界写 96 字节（首个偏移 32，3 次运行一致）；越界量随 S2/B 增长（S2=1→28B、S2=5→140B），S2=8 对齐时为 0；mssanitizer memcheck 同配置报 out of bounds GM write 命中本算子。
+  detail: B=1 S2=5 实测越界写 96 字节（首个偏移 32，连续 3 次一致）；越界量与 S2/B 相关：S2=1→28B、S2=2→56B、S2=5→140B（B=3），S2=8（8 对齐）→0B；mssanitizer memcheck 同配置报 GM 越界写命中本算子。
   visibility: 静默错误
 mitigation:
   detect: 按 workspaceSize+4096 分配、尾部预填 0x5A 哨兵执行后回读（issue 附 C++ 一键复现）；mssanitizer --tool=memcheck
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0377
+pattern: PAT-TRN-0056
 original:
   mechanism: 'cann/ops-transformer #6847（2026-10-28，Ascend950PR + CANN 9.2.0-beta.2，master f3f3135a6104）：aclnnDenseLightningIndexerKLLossGrad 第一段返回的 workspaceSize 比 kernel 实际使用量小，kernel 写到 workspace 缓冲之外，越界写无报错。判定方法：按返回 workspaceSize 申请 ws+4096 字节、多出 4096 预填 0x5A 哨兵、执行后回读，非 0x5A 字节数即越界量。实测 B=1 S1=1 S2=5 N1=1 D=128 maskMode=0 cmpRatio=1 layout=BSND：越界写 96 字节（首个偏移 32），连续 3 次一致非偶发；mssanitizer memcheck 同配置报 out of bounds of size 70 on GM writing in DenseLightningIndexerKLLossGrad_*。触发量与 S2/B 相关：S2=1→28B、S2=2→56B、S2=5→140B（B=3），S2=8（8 对齐）→0B；与 S1、N1、dtype、maskMode、pMode 无关。作者附自包含 C++ 一键复现（ctypes/c++ 两段式调用）。'
   source: https://gitcode.com/cann/ops-transformer/issues/6847
@@ -42,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

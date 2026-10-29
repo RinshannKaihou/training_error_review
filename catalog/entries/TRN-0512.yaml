@@ -4,10 +4,10 @@ slug: trl_continuous_batching_inplace_bf16_cast
 aliases: []
 title: TRL 连续批采样把训练权重就地 cast bf16
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: RL训练回路
     stack: trl
     component: generate_batch 前就地 cast
   behavior: 连续批每次生成前把模型就地 cast bf16 且不 cast 回（FlashAttention 拒 fp32）；nn.Module.to 换掉优化器所持 Parameter 的 .data，第一次生成起纯 bf16 训练。
@@ -40,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 优化器
+        to: RL训练回路

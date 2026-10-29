@@ -4,7 +4,7 @@ slug: opsnn_bn_training_update_v2_ftz_subnormal_nan
 aliases: []
 title: BNTrainingUpdateV2 次正规域 FTZ 输出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -4,10 +4,10 @@ slug: msformers_pynative_scaling_factor_alias_dropped
 aliases: []
 title: MindFormers 配置转换静默丢弃 scaling_factor
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 配置/参数
+  - subsystem: 位置编码
     stack: mindformers
     component: ConfigConverter 键映射
   behavior: DeepseekV3Config 接收 scaling_factor，但 ConfigConverter 未映射到 rotary_scaling_factor；源键在未映射白名单不提示，静默回落默认值 40。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 配置/参数
+        to: 位置编码
+    uncertain:
+    - effect

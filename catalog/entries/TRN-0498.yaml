@@ -4,7 +4,7 @@ slug: trl_server_peft_last_chunk_unmerged_broadcast
 aliases: []
 title: TRL server 模式 LoRA 权重同步尾块未合并
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -40,3 +40,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

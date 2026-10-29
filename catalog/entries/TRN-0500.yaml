@@ -4,10 +4,10 @@ slug: trl_chunked_logprob_support_underflow_inf_grad
 aliases: []
 title: TRL chunked logprob 支持集远低于最大 logit 时下溢
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: RL训练回路
+  - subsystem: 算子/内核
     stack: trl
     component: ChunkedLogProbFunction
   behavior: support_ids 的 support_sum_exp 相对全词表行最大值累加；support 全部远低于行最大值时 exp(z-max) 在 fp32 下溢为 0，log 项成 -inf。
@@ -16,7 +16,7 @@ effect:
   - 训练信号
   - 梯度
   detail: 行内 support 全部远低于最高 logit（约 90+）时该行 logprob 输出 0.0 而非正确值（如 -log2=-0.6931），weight.grad 含 -inf/nan；梯度按全行累加，单行即污染整个 LM 头梯度。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 对 support_ids 输入统计 support 内最大 logit 与全词表最大值差距；监控 fused LM head 梯度 finite 检查
   fix: 修复 PR https://github.com/huggingface/trl/pull/7983（open，2026-10-28）——track 支持的最大值？以 issue 正文与 PR 标题 Track the support maximum in the chunked log-prob kernel 判定，状态 open 未合入，细节未逐行核
@@ -35,6 +35,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0451
+pattern: PAT-TRN-0054
 original:
   mechanism: 'huggingface/trl #7982（2026-10-28，open）：ChunkedLogProbFunction（fused LM head + support_ids，AsyncGRPO top-k/top-p 路径）在行内 support 的全部 token 低于全词表最高 logit 约 90 logits 以上时 logprob 与梯度错误。复现（main，row 0 logits [200,0,0,0]、support {1,2}、target 1）：logps[0]=0.0 而非 -log(2)=-0.6931；weight.grad 含 -inf（CUDA）或 nan 与 -inf（CPU），参考梯度有限。根因：support 和（support_sum_exp/support_other_sum_exp）相对行最大值 running_max 累加，而 running_max 取自全词表、可能在 support 之外；support 远低于它时 support 内每个 exp(z-running_max) 在 fp32 下溢为 0，log(others) 与 support_log_z 变 -inf。梯度按全行累加，单行即让整个 LM 头梯度非有限。修复 PR #7983（open）按标题在 kernel 内跟踪 support 的最大值。'
   source: https://github.com/huggingface/trl/issues/7982 + 修复 PR https://github.com/huggingface/trl/pull/7983（open）
@@ -44,3 +45,26 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: RL训练回路
+        to: 算子/内核
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    uncertain:
+    - effect

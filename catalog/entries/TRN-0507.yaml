@@ -4,7 +4,7 @@ slug: opsmath_fake_quant_cachemask_fp16_mask_compare
 aliases: []
 title: FakeQuant Cachemask fp16 掩码半精比较失真
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0506
+pattern: PAT-TRN-0057
 original:
   mechanism: 'cann/ops-nn #7535（2026-10-28，Ascend 910B3 + CANN 9.2.0，master a2b7042257）：aclnnFakeQuantPerTensorAffineCachemask fp16 输入下返回的 mask 与资料公式 mask=(qval>=quant_min)&&(qval<=quant_max)（qval 为整数）不一致。实测 quantMax=32767、scale=0.01、zeroPoint=0、self=[327.6,327.7,327.7,328.0]：qval=32760/32770/32770/32800，期望 mask=1 0 0 0，实测 1 1 1 0；quantMax=4096、qval=4097~4099 同样实测 1（期望 0）；fp32 输入同参数 mask 正确，同一组输入的 out 正确（钳到 32767）。根因：kernel fp16 模板把 qval 转成 half 后再与 quantMin/quantMax 比较，half 只能精确表示 |x|<=2048 的整数，超出后比较失真。int16 量化（quantMax=32767）、uint12（4095）等大区间下 mask 必须与 out 的钳位一致而当前不一致。作者附 C++ 复现（issue_mask.cpp）。'
   source: https://gitcode.com/cann/ops-nn/issues/7535
@@ -45,3 +46,18 @@ migration:
   - date: '2026-10-29'
     fields:
     - relations
+  - date: '2026-10-29'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - detail

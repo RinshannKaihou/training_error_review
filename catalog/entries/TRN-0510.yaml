@@ -4,7 +4,7 @@ slug: verl_k3_kl_cancellation_wrong_rejection
 aliases: []
 title: verl k3 KL 相减消去致拒绝判定反转
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0220
+pattern: PAT-TRN-0055
 original:
   mechanism: 'verl-project/verl #8386（2026-10-26，open PR）：KL 惩罚、rollout 拒绝采样与 off-policy 诊断三处 k3 KL 估计用 exp(x)-1-x，数学上等价但 x 接近 0 时对接近 1 的指数减 1 发生灾难性消去。fp32 x=-1e-4：现行拒绝统计量≈-1.65965e-8（k3 非负，fp64 参考≈4.99983e-9）；32768 token 求和≈-5.43833e-4 而非 1.63835e-4。seq_sum_k3 阈值 1e-4 配置下未打补丁的实现保留本应拒绝的序列；x=+1e-4 时 token_k3 阈值 1e-8 误拒。作者明示：以上是小 log-ratio 与严格阈值下的数值与阈值错误示例，未确立端到端训练回归或模型质量改善。修复改用 torch.expm1(x)-x（等价、无消去）；Windows 11/py3.12.13/torch 2.13.0+cpu/TensorDict 0.10.0 本地 CPU 验证；查重确认无其他 open PR 处理这三处表达式（#8377/#8378 是别的文件的 logprob/CE 精度、#2928 是 KL 下钳位）。'
   source: https://github.com/verl-project/verl/pull/8386
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - behavior

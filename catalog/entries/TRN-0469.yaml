@@ -40,6 +40,9 @@ original:
   behavior: GRPO 训练用 loss_type=vespo 且 vllm_importance_sampling_mode=token_mask 时，只要某条 completion 出现 1 个出界 token，该整条序列的 γ 权重即塌到 1e-15~1e-24 量级、序列梯度整体消失；无任何报错，grad_norm 只表现为变小，训练看起来仍在进行但对应样本不再学习。含出界 token 的序列越 多，有效 batch 越小。
   trigger_surface: trl GRPOTrainer loss_type=vespo + vllm_importance_sampling_mode=token_mask（vLLM rollout）；任一 token 的 IS ratio 落在 [C_min, C_max] 外即触发
   discovery: 2026-10-28 每日扫描
+  notes:
+  - '2026-10-29 2026-10-29 轮巡：issue #7952 open（6 评论，GitHub core 轮巡确认）；修复 PR !7998/!8000/!8001（exclude masked tokens from VESPO sequence weight）已关闭但均 merged_at=None——closed 非合入，fix 维持待定。'
+  - '2026-10-29 更正 2026-10-29 note：VESPO sequence weight 修复 PR 为 #7996/#8000/#8001（closed 且 merged_at=None，未合入）；#7998 是 FSDP2 权重广播另一修复，与本条无关。fix 维持待定。'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -47,6 +50,12 @@ migration:
   - date: '2026-10-28'
     fields:
     - pattern
+  - date: '2026-10-29'
+    fields:
+    - original.notes
+  - date: '2026-10-29'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-28
     base:

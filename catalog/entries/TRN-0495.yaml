@@ -39,6 +39,8 @@ original:
   behavior: 预训练开启 MTP 与 reset-attention-mask（packed 序列、多文档拼接）时，每个输入序列第一个子序列的 MTP 训练信号是错的：模型在每个位置以自身 token 作为预测目标（标签未左移一位），段尾位置未按约定清零，MTP loss 的有效 token 计数与归一化随之偏差。训练正常跑、loss 正常显示，无任何报错或 NaN 提示；只有对照首段与后续段的学习信号或插入诊断打印才能发现。影响所有含首个子段的 packed batch。
   trigger_surface: MindSpeed core_r0.18.0 + Megatron Core 0.18（016 同类）；--mtp-num-layers ≥1 + --reset-attention-mask + packed（自然 EOD 分段或 fix-sub-seq-length）；CP=1 已验证，CP>1 未验证；FB overlap 变体另涉 012
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：修复 !4115 仍 open；FB overlap 变体修复 !4123 已 closed（批次快照 2026-10-29T11:44Z，未见 merge 记录）—— MindSpeed #369 updated 停在 10-28T09:42Z 无新评论'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -58,3 +60,7 @@ migration:
         to: 训练信号
     rewritten:
     - title
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

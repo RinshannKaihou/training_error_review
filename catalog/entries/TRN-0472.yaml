@@ -37,6 +37,8 @@ original:
   behavior: GPTBigCode 类 multi-query 模型在 DeepSpeed AutoTP（TP>1）下训练时，各 rank 的 c_attn K/V 权重从第一步起朝不同方向更新（一步后梯度与单卡差 61%~81%），训练全程无报错但训出的权重与单卡不一致、副本间互相漂移；loss 曲线本身看不出异常。
   trigger_surface: DeepSpeed AutoTP（tensor_parallel.autotp_size>1）+ GPTBigCode multi_query=True（StarCoder/SantaCoder 类）；c_attn.weight/bias
   discovery: 2026-10-28 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：DeepSpeed #8927 open；共享 KV 梯度归约修复 PR 未出现（搜索窗口内无）'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -50,3 +52,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

@@ -39,6 +39,8 @@ original:
   behavior: RL 训练用 k3 KL 估计（KL 惩罚/rollout 拒绝/off-policy 诊断）且 log-ratio 接近 0（近 on-policy）时，k3 统计量因浮点消去可算出负值：按 seq_sum_k3 或 token_k3 阈值做的序列拒绝判定反转——该拒的留下、该留的拒掉；KL 惩罚项同源失真。数值量级小（1e-8/token）但 3 万 token 求和后达 5e-4，足以越过严格阈值。无报错；与 fp64 基准对照才能发现。
   trigger_surface: verl k3 KL 三处表达式（惩罚/拒绝采样/诊断）；近 on-policy 小 log-ratio（|x|~1e-4）+ 严格阈值（1e-4/1e-8 量级）；fp32
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：verl k3 修复 PR #8386 仍 open 未合入；同日新增 CANN mhc 1-σ(z) 消去同族条目 TRN-0536（var→本条）'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -46,6 +48,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-29
     base:

@@ -40,6 +40,8 @@ original:
   behavior: 调用 Lightning Indexer KL loss 的反向算子（Dense 变体）时，kernel 向 workspace 之外的内存写字节（S2 非 8 对齐时 28~140+ 字节）：两段接口与同步全部返回 0、结果数值本身看似正常，但相邻显存内容被静默改写——训练中可破坏同 stream 上其他张量或 allocator 元数据，症状随机且难归因。mssanitizer memcheck 可直接命中；无该工具时用哨兵缓冲复现。
   trigger_surface: Ascend950PR + CANN 9.2.0-beta.2（master f3f3135a 同在）；aclnnDenseLightningIndexerKLLossGrad；S2 非 8 对齐时越界（S2=1/2/5 实测，S2=8 为 0）
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：ops-transformer #6847 open 无修复动态'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-29
     base:

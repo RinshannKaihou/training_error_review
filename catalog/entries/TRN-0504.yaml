@@ -36,6 +36,8 @@ original:
   behavior: MoE 训练开启 --overlap-dispatch-backward-with-experts-wgrad（Megatron DDP 下）时，专家权重的梯度静默算错：上一次迭代的旧梯度不被清除、被再次累加进 main_grad。表现是指纹式的非确定性——同一配置每次运行从第 2 个迭代起 grad norm 各不相同（第 1 迭代正常），训练不报错；关闭该选项则恢复正常。长跑下专家权重按错误梯度更新。
   trigger_surface: Megatron-LM DDP + MoE + --overlap-dispatch-backward-with-experts-wgrad（与 --delay-wgrad-compute 互斥）；TE 分组专家线性层；Nemotron 3 Nano EP8 HybridEP 实测
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：!8613 仍 open
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -53,3 +55,7 @@ migration:
       visibility:
         from: 静默错误
         to: 不可复现
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

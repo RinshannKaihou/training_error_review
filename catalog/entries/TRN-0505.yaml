@@ -39,6 +39,8 @@ original:
   behavior: RL 训练（如 MiniMax-M3.1-Flash）用 vllm-ascend V1 runner 并配置 processed_logprobs/processed_logits/raw_logits 模式时，Ascend sampler 静默以默认 raw_logprobs 口径工作：rollout 侧报告的概率/logit 语义与配置不符，训推一致性度量（train/rollout logprob 对比）随之漂移——用户看到的是「一致性指标异常」而非配置未生效；无报错。修复后四种模式正确到达 sampler。
   trigger_surface: vllm-ascend V1 runner + model_config.logprobs_mode 非 raw_logprobs 配置 + RL 训推一致性度量负载（MiniMax-M3.1-Flash 实测动机）
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：ops-nn #7550 open；同 PR !13097（fake_quant_with_min_max_vars_per_channel 修复）open'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -58,3 +60,7 @@ migration:
         to: 输出分布
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

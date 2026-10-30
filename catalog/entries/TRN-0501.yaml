@@ -38,6 +38,8 @@ original:
   behavior: 在 NPU 上对 fp32/bf16（含 int32）大数值做 fmod/remainder 取模：|x| 超过约 2^24~2^25 后结果整片变 0 或邻值错位（期望 2/1 交替得到全 0），除数极小时返回 -inf——余数比除数还大且符号翻转。两段接口返回成功、无任何报错；同输入 fp64/int64 路径正确、GPU/CPU 正确。训练里 LR 周期调度、位置折返、大数值取模的 mask 计算会静默拿到错值。
   trigger_surface: CANN 9.2.0（910B2 实测；fmod 侧三芯形态未列明）；fp32/bf16/int32 + |self|≳2^24~2^25 或商溢出的极小 other；aclnnFmodScalar/aclnnInplaceFmodScalar/aclnnInplaceRemainderTensorScalar
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：ops-math #4181/#4006 open 无修复动态'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -53,3 +55,7 @@ migration:
     - qwen3.8-max
     uncertain:
     - detail
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

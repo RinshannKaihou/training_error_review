@@ -37,6 +37,8 @@ original:
   behavior: QAT/pseudo-quant 训练用 FakeQuantPerChannelAffineCachemask 且量化边界取值越过 INT32（如 30 亿）时，越界值被静默回绕成符号相反的数：量化夹取区间整体落到负数侧，输出为符号翻转、量级相近的错值（-1.29e9 而非 +3.0e9），接口返回成功。同算子常规 INT32 内范围正常；只有大边界输入或与 CPU 对照才能发现。
   trigger_surface: Ascend 910B2 + CANN 9.2.0（master 仍可复现）；aclnnFakeQuantPerChannelAffineCachemask；quantMin/quantMax 超出 INT32 的合法取值
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：vllm-ascend !20146 仍 open
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-29
     base:

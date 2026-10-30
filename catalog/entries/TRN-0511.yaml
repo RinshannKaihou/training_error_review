@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 高置信样本（margin>16.6）检查 per-token loss 是否精确 0、梯度是否和为零
-  fix: 修复 PR https://github.com/pytorch/torchtitan/pull/5624（open WIP，2026-10-26）——按 arXiv:2610.31642 把 NLL 改为 softplus(logsumexp_{j!=t}(z_j) - z_t)，目标移出和式；owner shard 归零目标 exp 项后 all-reduce，反向 expm1(-NLL)
+  fix: 修复 PR https://github.com/pytorch/torchtitan/pull/5624 仍 open 未合入（2026-10-30 核对）
 labels:
   stage:
   - shared
@@ -49,6 +49,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - mitigation.fix
   audit:
     round: daily-audit-2026-10-29
     base:

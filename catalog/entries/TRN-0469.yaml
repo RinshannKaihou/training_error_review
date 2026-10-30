@@ -43,6 +43,7 @@ original:
   notes:
   - '2026-10-29 2026-10-29 轮巡：issue #7952 open（6 评论，GitHub core 轮巡确认）；修复 PR !7998/!8000/!8001（exclude masked tokens from VESPO sequence weight）已关闭但均 merged_at=None——closed 非合入，fix 维持待定。'
   - '2026-10-29 更正 2026-10-29 note：VESPO sequence weight 修复 PR 为 #7996/#8000/#8001（closed 且 merged_at=None，未合入）；#7998 是 FSDP2 权重广播另一修复，与本条无关。fix 维持待定。'
+  - '2026-10-30 2026-10-30 回访：trl #7952 open 6 评论无变化；修复 PR #7996/#8000/#8001 仍 closed 未合入（merged_at=None 核对）'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -54,6 +55,9 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-29'
+    fields:
+    - original.notes
+  - date: '2026-10-30'
     fields:
     - original.notes
   audit:

@@ -37,6 +37,8 @@ original:
   behavior: GRPO/RLOO 开 use_transformers_continuous_batching + bf16=True 训练时，第一次 rollout 生成后整个训练静默变成纯 bf16：策略参数与优化器实际操作的 .data 被就地换成 bf16，与文档承诺的 fp32 策略/fp32 master 权重配置不符。无报错，指标不直接暴露精度降级，训练质量相对预期配置静默偏差；非连续批模式不受影响。
   trigger_surface: trl GRPO/RLOO + use_transformers_continuous_batching + bf16/fp16；transformers 连续批切 FlashAttention（可用时）
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：trl #7965 open；同 issue 族 vllm_mode=server+PEFT 尾块广播 TRN-0498 无修复动态'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -51,3 +53,7 @@ migration:
       subsystem:
         from: 优化器
         to: RL训练回路
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

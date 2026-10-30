@@ -39,6 +39,8 @@ original:
   behavior: fp16 输入的 fake-quant 带 cachemask 训练/校准里，量化区间大于 2048（int16/uint12 等大区间）时掩码失真：已经超出 quantMax 的元素 mask 仍判 True（如 qval=32770 期望 0 实测 1），离群点不再被标记；同输入的 out（钳位值）却正确——mask 与 out 口径分叉，依赖 mask 做剪枝/校准统计的流程静默拿到错集合。fp32 输入正常可作对照。
   trigger_surface: Ascend 910B3 + CANN 9.2.0；aclnnFakeQuantPerTensorAffineCachemask fp16 输入；quantMax>2048（int16/uint12 等大区间量化）
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：FakeQuant Cachemask 修复 !13041（P16 半精度比较失真）open 未合入
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -49,6 +51,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-29
     base:

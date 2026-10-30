@@ -37,6 +37,8 @@ original:
   behavior: GRPO/RL 训练用 vllm_mode=server + LoRA 时，权重同步后 vLLM 收到的最后一块参数是没有加上 LoRA 增量的原始 base 权重：rollout 生成持续用接近原模型的旧权重，而 trainer 侧继续训练，训推权重静默脱节。表现为采样质量不随训练改善、importance ratio/KL 等指标逐渐失真但无报错；colocate 模式正常可作对照。模型越大（fp32 默认 dtype）越必然触发。
   trigger_surface: trl GRPOTrainer + vllm_mode=server + PEFT/LoRA + packed_nccl_broadcast 权重同步；fp32 默认 dtype（2.4GB+ 模型）必触发尾块耗尽路径
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：trl #8003 open 无修复 PR'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -50,3 +52,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

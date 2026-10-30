@@ -42,6 +42,8 @@ original:
   behavior: AsyncGRPO/top-k/top-p 用 support_ids 的 fused LM head 计算每 token logprob 时，若某行候选集内 token 的 logit 都远低于全词表最高 logit（约 90 以上），该行 logprob 输出 0 而非真实负值，且反向产生 -inf/NaN 梯度污染整个 LM 头——训练在若干步后以 NaN loss 或梯度爆掉显现，但源头 logprob=0 本身无告警。作者给了四行 logits 的 CUDA/CPU 最小复现与有限参考梯度对照。
   trigger_surface: trl ChunkedLogProbFunction + support_ids（AsyncGRPO top-k/top-p 截断候选）；support 与全词表 max 差距约 90 logits 以上（fp32 exp 下溢界）
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：trl chunked logprob 修复 #7983 仍 open'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -49,6 +51,9 @@ migration:
   - date: '2026-10-29'
     fields:
     - pattern
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-29
     base:

@@ -36,6 +36,8 @@ original:
   behavior: GRPO/PPO 类训练用 group_norm advantage 且酬赏函数给某 prompt 组内全部样本相同分数（部分得分、格式全对/全错等可验证酬赏常见）时，该组 advantage 不是零而是 ±0.9 量级的浮点舍入噪声：组内响应按噪声方向被无差别推高/压低，训练在无学习信号的组上做无效甚至有害更新。无报错，loss/指标正常显示，只有检查同酬组 advantage 才能发现。
   trigger_surface: OpenRLHF --advantage_estimator group_norm + 全等酬赏组（部分得分/可验证酬赏）；fp32 组统计
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：OpenRLHF #1383 仍 open'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -49,3 +51,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

@@ -19,7 +19,7 @@ effect:
   visibility: 数值异常
 mitigation:
   detect: ttk kernel 通路 seed=1234 跑 L0_045（稳定复现）；对 batch_variance 分布做次正规域检查
-  fix: 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/12961（open，2026-10-28）——Sqrt/Div 改 FTZ_FALSE 0ULP 高精度模式（次正规输入预归一化/先乘 2^24 再开方），950DT+cann-9.3.0 实测 L0 全量 48/48 PASS
+  fix: 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/12961 已 merged（2026-10-29T07:13Z 批次快照）：sqrt/div 关闭 FTZ 消除次正规域 NaN/Inf，48/48 PASS→已合入，发布状态未核实
 labels:
   stage:
   - shared
@@ -39,6 +39,8 @@ original:
   behavior: BN 训练更新（BNTrainingUpdateV2，arch35 路径）遇到次正规的 batch_variance（方差极小，如 6.53e-40）或次正规的 scale/方差商时，归一化输出 y 全 NaN 而不是 IEEE 语义的 ±inf/有限值：ttk kernel 通路报 NaN/Inf mismatch（L0_045/L1_505 seed=1234 稳定，L1_154 偶发）。训练中若出现极小方差 batch，该层输出 NaN 向下游传播；用例为 EXPLORATORY/epsilon=0 或次正规边界输入，超出 README 记录的 epsilon>0 文档域。
   trigger_surface: Ascend 950PR/950DT（arch35 实现路径）+ CANN 9.3.0；BNTrainingUpdateV2；次正规 batch_variance+eps 或次正规 multiplier（fp32 约 1e-39 量级）；ttk kernel 通路
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：修复 !12961 状态由 open 变 merged（批次快照 2026-10-29T07:13Z）；未随版本发布信息，发布核实待下轮
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -49,3 +51,10 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - mitigation.fix
+  - date: '2026-10-30'
+    fields:
+    - original.notes

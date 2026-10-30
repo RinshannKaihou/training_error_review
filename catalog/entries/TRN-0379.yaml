@@ -40,6 +40,7 @@ original:
   discovery: 2026-10-23 每日扫描
   notes:
   - '2026-10-29 2026-10-29 轮巡：批次快照 state=open（updated 2026-10-22T07:46Z 后无变化），未合入；上游 main 侧关联 #13394 状态未查（本轮不耗 core 额度），fix 维持 open。'
+  - '2026-10-30 2026-10-30 回访：vllm-ascend #19461 修复 PR 仍 open 未合入（连续多轮无变化）'
 migration:
   method: scan
   scanned: '2026-10-23'
@@ -66,5 +67,8 @@ migration:
     - behavior
   updates:
   - date: '2026-10-29'
+    fields:
+    - original.notes
+  - date: '2026-10-30'
     fields:
     - original.notes

@@ -38,6 +38,8 @@ original:
   behavior: 开 FSDP2 与 cpu_ram_efficient_loading 做 DPO/KTO/RLOO/GRPO（beta>0）/蒸馏训练时，参考模型或教师模型在每个节点除 rank0 外的分片是全零：参考 logprob、KL 惩罚、蒸馏目标都按错误参考计算，训练不报错、指标不直接显示参考错了（GRPO 里 ref logprob 项整体偏移），最终策略被静默拉偏。单机多卡或多机 FSDP2 配置下复现；同配置 FSDP1 正常可作对照。
   trigger_surface: trl FSDP2 路径 + fsdp_cpu_ram_efficient_loading（官方 fsdp2.yaml 默认开）+ 需要第二模型的角色（ref/teacher）；full fine-tuning
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：trl #7993 open（2 评论）；修复 PR #7997/#7998/#8002 均 closed 未合入（merged_at=None）；#8002 最新 closed。fix 维持待定'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -55,3 +57,7 @@ migration:
       subsystem:
         from: 并行切分
         to: 权重/检查点
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

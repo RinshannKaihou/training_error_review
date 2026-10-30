@@ -38,6 +38,8 @@ original:
   behavior: 用 HybridDeviceOptimizer（优化器 CPU offload）+ dp_reshardable 分布式优化器检查点恢复训练后，Adam 的步数计数器静默回到 1（保存值如 63）：恢复后的前几个更新步用了错误的偏差校正，更新量约偏大 1.7 倍，表现为恢复后 loss 短暂尖峰再回落原曲线。权重、动量、二阶矩都恢复正确，日志无任何告警；只有直接审计优化器 step 值才能发现。
   trigger_surface: Megatron-Core HybridDeviceOptimizer + optimizer_cpu_offload + 分布式优化器 dp_reshardable 检查点格式 + AdamW（CPU offload 侧）；NeMo-RL DPO/SFT+DPO 恢复工作流实测
   discovery: 2026-10-29 每日扫描
+  notes:
+  - '2026-10-30 2026-10-30 回访：#8632 closed（无关联修复 PR）；第二报告 #8622 仍 open（2 评论无变化）。修复动态继续下轮跟踪'
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -52,3 +54,7 @@ migration:
       subsystem:
         from: 权重/检查点
         to: 重计算/卸载
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

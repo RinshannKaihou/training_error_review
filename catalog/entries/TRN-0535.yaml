@@ -4,7 +4,7 @@ slug: fa_prefill_310p_fp16_softmax_sum_overflow_inf
 aliases: []
 title: PromptFA 310P fp16 归一化前溢出 Inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: 310P fp16 高性能路径先把未归一化 fp32 累加 O cast 成 fp16 再除，均匀 softmax 时 O=n*35 超 fp16 上限溢出 +Inf
 effect:
   objects:
-  - 隐状态
   - 数值结果
+  - 隐状态
   detail: 长序列均匀注意力下注意力输出变 +Inf（tiling key QINT8_KVFP16_OUTBF16_BSH_HIGHLEVELAPI_MDL_310TILING 触发路径）
   visibility: 数值异常
 mitigation:
@@ -39,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

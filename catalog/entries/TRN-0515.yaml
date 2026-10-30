@@ -4,7 +4,7 @@ slug: deepspeed_zero_init_casts_rope_inv_freq_bf16
 aliases: []
 title: ZeRO-3 init 把 fp32 RoPE inv_freq 算成 bf16
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -13,9 +13,10 @@ cause:
   behavior: zero.Init 的 fp tensor constructor 包装把显式 dtype=torch.float 的构造结果也 cast 到 bf16，RoPE inv_freq 计算落 bf16
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 梯度
-  detail: ZeRO-3 下 RoPE 角度=位置×频率，误差随位置线性放大；Qwen3.8-27B LoRA 65k 长度实测 grad norm 0.78 vs 单卡 7.91（差 10 倍），ZeRO-0/2 与单卡逐位一致
+  detail: ZeRO-3 下 RoPE 角度=位置×频率，误差随位置增长；Qwen3.8-27B LoRA 单条 65k token 实测 grad norm 0.78 vs 单卡 7.91（差一个量级），ZeRO-0/2 与单卡 bit-identical
   visibility: 静默错误
 mitigation:
   detect: 对比 ZeRO-3 与 ZeRO-0/2/单卡的 grad norm 与 loss；检查 inv_freq buffer dtype 是否 bf16
@@ -39,3 +40,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

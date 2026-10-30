@@ -4,10 +4,10 @@ slug: swift_v5_rl_precision_fp32_override_ignored
 aliases: []
 title: swift v5 RL FP32 计算精度被覆盖
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 配置/参数
+  - subsystem: RL训练回路
     stack: ms-swift
     component: v5 RL 共共 builder 精度解析
   behavior: FP32 参数加载覆盖与计算精度未独立处理，显式 FP32 配置的计算精度被加载覆盖静默降为混精
@@ -16,7 +16,7 @@ effect:
   - 训练轨迹
   - 数值结果
   detail: 显式 FP32 配置的 RL 训练实际按非 FP32 计算精度运行，与用户配置意图不符；修复后 BF16/FP16 保留对应 mixed_precision、显式 FP32 保持 no
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 检查训练日志 mixed_precision 是否与显式 dtype 配置一致；对比半精/全精 loss 曲线
   fix: 修复 PR https://github.com/modelscope/ms-swift/pull/10451（merged 至 dev-swift-v5 2026-10-29T02:49Z，目标分支 dev-swift-v5 非 main）：FP32 加载覆盖与计算精度独立，覆盖 GRPO/PPO/在线蒸馏公共 builder
@@ -39,3 +39,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 配置/参数
+        to: RL训练回路
+      visibility:
+        from: 静默错误
+        to: 质量退化

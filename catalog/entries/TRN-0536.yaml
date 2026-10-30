@@ -4,7 +4,7 @@ slug: mhc_sigmoid_one_minus_catastrophic_cancellation
 aliases: []
 title: CANN mhc 1-σ(z) 灾难性消去
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0510
+pattern: PAT-TRN-0055
 original:
   mechanism: CANN ops-transformer mhc 算子族（MhcPre/MhcPost，DeepSeek 系 indexer/mhc 注意力用）以 1-σ(z) 直接计算互补 sigmoid：大 z 时 σ(z) 接近 1，浮点减法 1-σ(z) 的有效位灾难性丢失，结果相对误差急剧放大。修复 PR !14812（merged 2026-10-29）：以数学等价式 σ(-z) 替换 1-σ(z)，大 z 时精度稳定；算子泛化用例验证原失败输入修改后通过。mhc 出现在 DeepSeek V3.2 系 indexer/lightning attention 前后处理，训练前向使用。
   source: https://gitcode.com/cann/ops-transformer/merge_requests/14812
@@ -40,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

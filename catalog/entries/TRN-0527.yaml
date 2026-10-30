@@ -4,10 +4,10 @@ slug: meg_sft_moe_aux_loss_mask_normalization_mismatch
 aliases: []
 title: SFT MoE aux loss 系数随 mask 漂移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 损失计算
+  - subsystem: MoE路由
     stack: megatron-lm
     component: router aux loss 归一化
   behavior: per_token_loss 模式 router aux loss 乘输入 token 数而 finalize 除以目标 token 数，SFT mask prompt 时 aux 系数随 mask 比例漂移
@@ -15,7 +15,7 @@ effect:
   objects:
   - 训练信号
   - 梯度
-  detail: 两个同 200 输入 token、目标数 60/140 的 DP 副本，用户期望 (g0+g1)/2 的 aux 梯度实际得 g0+g1；路由正则强度随数据 mask 比例逐步漂移，无报错
+  detail: SFT 训练 MoE 模型（mask prompt、calculate_per_token_loss=True）时，目标 token 占比不同的 DP 副本贡献的 aux 梯度没有按预期平均而是相加；路由正则强度随每步 prompt/目标 token 比例漂移，专家负载均衡效果偏离配置，全程无报错
   visibility: 静默错误
 mitigation:
   detect: 对比不同 prompt mask 比例下 aux loss/梯度尺度；检查 router aux 梯度与 moe_grad_scale 的关系
@@ -39,3 +39,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 损失计算
+        to: MoE路由
+    rewritten:
+    - detail
+    uncertain:
+    - effect

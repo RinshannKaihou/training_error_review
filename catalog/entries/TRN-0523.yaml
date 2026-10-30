@@ -4,7 +4,7 @@ slug: dynamic_quant_arch35_bf16_range_overflow
 aliases: []
 title: DynamicQuant arch35 bf16 极差溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 950/A3 上 bf16 行内交替 ±极值（|x|>1.70e38）时 scale=inf、y 全饱和且两段返回 0；6-8 处 regbase 模板同病
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 量化输出对拍 fp32 参考；检查 scaleOut 是否 inf
   fix: A2 标量路径修复 https://gitcode.com/cann/ops-nn/pull/13078（closed，注明未覆盖 arch35）；arch35 向量级 guard（Select/Greater 组合改两端分别除）待单独立项，issue open 无修复 PR
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常

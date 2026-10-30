@@ -4,7 +4,7 @@ slug: quant_grouped_matmul_32core_precision
 aliases: []
 title: QuantGMM 32 核精度问题
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 32 核 blockDim 下量化 grouped matmul 输出错值（复现 PR 载体，根因未知）；该算子是 MoE 量化训练/推理核心 GEMM
+  detail: 32 核下量化 grouped matmul 输出错值，专家结果静默偏离参考，loss 曲线无显式异常但模型质量受损；强制其他核数（如 16）输出正常，可用 PR !14895 环境变量定向复现，根因未公开。该算子是 NPU MoE 量化训练（量化感知/低精度 MoE）核心 GEMM。
   visibility: 静默错误
 mitigation:
   detect: 环境变量强制 32 核复现（PR !14895 提供复现开关）；与 16/8 核输出对拍
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

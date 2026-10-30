@@ -4,7 +4,7 @@ slug: deepspeed_zero12_boundary_drops_request_gradients
 aliases: []
 title: ZeRO-1/2 请求边界提前丢梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 优化器状态
-  detail: 调用方在多个请求后再 step() 的模式（Arctic 平台范式）下，更新缺梯度（丢请求）或混入上一步梯度（offload 路径），训练静默错
+  detail: 调用方对多个请求各设梯度累积边界、把 engine.step() 推迟到所有请求贡献完毕时，非 offload 路径更新静默缺少部分请求的梯度，offload 路径静默混入上一步存量梯度；权重更新方向错但 loss 无异常、无报错；标准单边界即 step 的用法不受影响
   visibility: 静默错误
 mitigation:
   detect: 多请求单 step 模式下对比单请求逐步 step 的权重轨迹；检查边界后梯度张量是否仍保留
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

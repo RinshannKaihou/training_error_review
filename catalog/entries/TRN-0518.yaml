@@ -4,7 +4,7 @@ slug: op_plugin_batch_norm_inference_saved_stats_uninitialized
 aliases: []
 title: torch_npu BN 推理保存量未初始化污染 backward
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0149
+pattern: PAT-TRN-0020
 original:
   mechanism: 'op-plugin（torch_npu 后端）native_batch_norm 在推理模式返回 C 形状保存量，但值未可靠对应 running mean 和 rsqrt(running_var+eps)；default/out、JIT 两设置及 fp16/fp32 下修复前 8 项保存量检查均失败。_native_batch_norm_legit.no_stats 未注册 PrivateUse1 内核而走 CPU 回退：CPU 返回 rstd，而 NPU native_batch_norm_backward 训练入口按 variance 消费保存量，造成反向数值错误。修复方案（issue 内叙述，Ascend910B4、CANN 9.2.0-beta.2、PyTorch 2.16.0.dev20261019 验证）：ACL/OpAPI 推理调用后填充保存量、低精度用 float32 中间计算；新增 no_stats ACL/OpAPI 注册（空 running statistics 转发现有 native BN，training=True 检查）；op-plugin 原生回归 20/20、torch-npu 严格编译回归 42/42 通过。与 pytorch #5694（torch 侧 BN 保存量契约，10-29 留观）互补：本条是 NPU 后端实现层面的具体缺陷与修复验证。'
   source: https://gitcode.com/Ascend/op-plugin/issues/661
@@ -40,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - effect

@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 541 条；状态：active 512、pending_audit 29
+共 541 条；状态：active 541
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 129 |
+| 算子/内核 | 130 |
 | 编译器 | 18 |
 | 运行时/执行 | 12 |
 | 集合通信 | 9 |
@@ -23,12 +23,12 @@
 | 权重/检查点 | 32 |
 | 数据管线 | 38 |
 | 优化器 | 41 |
-| 损失计算 | 24 |
-| MoE路由 | 25 |
+| 损失计算 | 23 |
+| MoE路由 | 26 |
 | 重计算/卸载 | 16 |
 | RL训练回路 | 83 |
 | 观测/评测 | 16 |
-| 配置/参数 | 5 |
+| 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
 
@@ -1442,9 +1442,20 @@
 - **改进措施**：检测 ttk kernel 通路 seed=1234 跑 L0_045（稳定复现）；对 batch_variance 分布做次正规域检查；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/12961 已 merged（2026-10-29T07:13Z 批次快照）：sqrt/div 关闭 FTZ 消除次正规域 NaN/Inf，48/48 PASS→已合入，发布状态未核实
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7578；https://gitcode.com/cann/ops-nn/merge_requests/12961
 
+### TRN-0514 `verl_fused_kernels_skip_lm_head_logit_scaling` verl fused kernel 丢 lm_head logit 缩放
+
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：算子/内核 / verl / fused 线性 CE 路径
+- **原因行为**：use_fused_kernels=True 时绕过 CausalLM.forward，取 pre-lm_head hidden states 与 lm_head.weight 直接调融合核，不执行模型自带的 logit 缩放/bias
+- **影响对象**：输出分布；训练信号（静默错误）
+- **影响详情**：Granite（logits_scaling 3~16×）/Cohere（logit_scale 0.0625~0.8333）/Falcon-H1（1/25.6~1/51.2）等家族的 logprob、PPO/GRPO loss 与 KL 全部按错误尺度的 logits 计算，无报错
+- **改进措施**：检测 对比 fused 与非 fused 路径的 logprob/loss；检查模型 config 中 logits_scaling/logit_scale/lm_head_multiplier 是否非默认；修复 修复 PR https://github.com/verl-project/verl/pull/8441（open，未合入）：把缩放因子折进 fused 核的 temperature 并拒绝带 lm_head.bias 的模型
+- **来源**：https://github.com/verl-project/verl/pull/8441
+
 ### TRN-0517 `meg_te_fused_mlp_ignores_clamp_options` Megatron TE 融合 MLP 静默忽略 SwiGLU clamp 配置
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / megatron-lm / TEFusedMLP 系激活构造
 - **原因行为**：TEFusedMLP/GroupedLinear/FusedSharedExpertMLP 构造激活时不读 clamp 选项，配置了 clamp 也静默按普通 SwiGLU 运行
@@ -1455,7 +1466,7 @@
 
 ### TRN-0518 `op_plugin_batch_norm_inference_saved_stats_uninitialized` torch_npu BN 推理保存量未初始化污染 backward
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / torch_npu / native_batch_norm 保存量
 - **原因行为**：推理模式保存量值未按 mean/rstd 填充；no_stats 未注册 NPU 内核走 CPU 回退返回 rstd，而 NPU backward 按 variance 消费
@@ -1467,7 +1478,7 @@
 
 ### TRN-0519 `fast_gelu_grad_fp32_large_input_nan` CANN FastGeluGrad fp32 大有限输入返回 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / fast_gelu_grad arch35
 - **原因行为**：arch35 反向实现先算 -1.702*x 再乘 sigmoid(x)-1，有限 fp32 输入接近最大值时中间量上溢 ±Inf，0*Inf 得 NaN，而该处导数数学上仍有限可表示
@@ -1478,10 +1489,10 @@
 
 ### TRN-0521 `aclnn_rsub_int64_alpha_int32_narrowing` CANN Rsub int64 alpha 窄化丢系数
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / aclnnRsub IsScalarOne 判等
-- **原因行为**：IsScalarOne 对整型 alpha 用 ToInt32()==1 判等，int64 alpha 低 32 位为 1 时判真走快路径丢弃 alpha，输出塌成 other-self
+- **原因行为**：IsScalarOne 对整型 alpha 用 ToInt32()==1 判等，ACL_INT64 alpha 数值超 int32 范围但低 32 位恰为 1 时返回 true，算子走快路径丢弃 alpha，输出塌成 other-self
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：误差量级 self_i*(alpha-1)，实测 1.29e11；A2 910B2、CANN 9.2.0、ops-math 1b415030
 - **改进措施**：检测 int64 alpha 大值调用后与参考对比；扫描调用侧 alpha 来源；修复 待定（issue open；同文件 #4247 Rsubs 变体同病，待修）
@@ -1490,7 +1501,7 @@
 
 ### TRN-0524 `gelu_mul_noncontiguous_out_silent_wrong_write` GeluMul 非连续 out 静默错写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / gelu_mul 输出布局处理
 - **原因行为**：aclnnGeluMul 的 out 传非连续 Tensor（资料声明不支持）时不拒绝也不转换，kernel 按连续布局写入，调用方按自己的 stride 读回错位值；两段接口均返回 0
@@ -1502,7 +1513,7 @@
 
 ### TRN-0529 `fa_score_v4_undeclared_attr_silent_default` FA Score V4 未声明属性静默默认
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / FA ScoreV4 参数校验
 - **原因行为**：sparseMode=-1、innerPrecise=3 等未声明值第一段返回 0 不拒绝，-1 按 dense 执行、3 按默认处理，输出与调用意图不符
@@ -1513,18 +1524,18 @@
 
 ### TRN-0533 `ops_math_std_mean_correction_zero_var_inf` CANN StdMeanCorrection 零方差返 Inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / StdMeanCorrection 零方差分支
 - **原因行为**：N<=correction 且归约段方差为 0 时 stdOut 返回 +Inf；资料公式与 PyTorch 同输入均为 NaN（0/0 语义），算子把 0/0 处理成 +Inf
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：N<=correction 且方差为 0 的归约段输出 +Inf 而非 NaN；下游把 Inf 当有效值继续算，符号语义错（NaN 可被 isnan 捕获、Inf 会静默传播）
 - **改进措施**：检测 构造 N=1/correction=0 方差 0 用例对拍 torch.std；修复 待定（issue open）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4246
 
 ### TRN-0534 `reduce_mean_leaves_vector_mask_register_dirty` ReduceMean 残留 VECTOR_MASK 污染后核
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / ReduceMean high_precision
 - **原因行为**：4 个 high_precision aiv kernel 结束后不复位 VECTOR_MASK 寄存器（残留 1/16/0），后续复用该 core 的 kernel 其余 lane 被屏蔽
@@ -1535,18 +1546,18 @@
 
 ### TRN-0535 `fa_prefill_310p_fp16_softmax_sum_overflow_inf` PromptFA 310P fp16 归一化前溢出 Inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / prompt FA UpdateOutput
 - **原因行为**：310P fp16 高性能路径先把未归一化 fp32 累加 O cast 成 fp16 再除，均匀 softmax 时 O=n*35 超 fp16 上限溢出 +Inf
-- **影响对象**：隐状态；数值结果（数值异常）
+- **影响对象**：数值结果；隐状态（数值异常）
 - **影响详情**：长序列均匀注意力下注意力输出变 +Inf（tiling key QINT8_KVFP16_OUTBF16_BSH_HIGHLEVELAPI_MDL_310TILING 触发路径）
 - **改进措施**：检测 均匀 softmax 长 seq fp16 路径对拍 fp32 参考；监控注意力输出 Inf；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14827（open）：先广播 l 在 fp32 域完成 O/l 归一化再 cast 回 fp16
 - **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14827
 
 ### TRN-0536 `mhc_sigmoid_one_minus_catastrophic_cancellation` CANN mhc 1-σ(z) 灾难性消去
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `var` · 发现 2026-10-30
+`故障` · `active` · `pretrain` · `documented` · `var` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / mhc sigmoid 互补计算
 - **原因行为**：mhc 相关 kernel 用 1-σ(z) 直接相减，大 z 时 σ(z)→1、1-σ(z) 有效位大规模丢失（灾难性消去）；数学等价式 σ(-z) 无此损失
@@ -1558,7 +1569,7 @@
 
 ### TRN-0537 `topk_v2_multicore_template_flaky_precision` CANN TopkV2 多核模板偶现精度
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / topk_v2 多核模板
 - **原因行为**：TopkV2 多核模板存在偶现精度问题（标题级信息；PR !6831 模板未填根因细节，open 待合入）
@@ -1569,7 +1580,7 @@
 
 ### TRN-0540 `pytorch_npu_masked_load_padding_zero_maxpool` torch_npu masked load 补 0 坏 maxpool
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / torch_npu / NPU masked load 填充值
 - **原因行为**：NPU masked load 忽略上游传入的填充值、固定补 0，最大池化 padding 应使用 -inf 却拿到 0，窗口内全 padding 时最大值与索引计算错误
@@ -1580,7 +1591,7 @@
 
 ### TRN-0541 `dynamic_stitch_cross_tensor_waw_race` CANN DynamicStitch 跨张量散射 WAW
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / dynamic_stitch arch35 散射写
 - **原因行为**：y 写地址由 indices 决定而核按输入张量切分，无原子操作，跨张量重复 index 由不同核并发写同一地址产生 WAW，结果取决于写序
@@ -1786,7 +1797,7 @@
 
 ### TRN-0530 `triton_ascend_noop_permute_ub_overflow` triton-ascend 空 permute UB 溢出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：编译器 / triton / getTransposedValue 降级
 - **原因行为**：tl.permute 无条件降为 linalg.transpose，只移动 size-1 维的空排列被当真转置 bufferize，NZ 分形布局放大 UB 8 倍触发编译期 ub overflow
@@ -1920,7 +1931,7 @@
 
 ### TRN-0538 `ge_half_precision_numpy_view_shape_lost` GE 半精度 numpy 视图 shape 丢失
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：运行时/执行 / cann / GE llm 数据半精度 numpy 视图处理
 - **原因行为**：GE llm 路径对半精度 numpy 视图的 shape 恢复缺失（PR !5680 标题级：恢复半精度 numpy 视图的 shape 并支持 Unicode 字符串编码，关联 #631/#632）
@@ -2023,12 +2034,12 @@
 
 ### TRN-0520 `hccl_reduce_scatter_v_prod_missing_barrier` HCCL ReduceScatterV 缺 barrier 静默错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：集合通信 / cann / ReduceScatterV AICPU 模板
 - **原因行为**：ReduceScatterV 的 RDMA 写后仅 host 线程同步无 device DMA barrier，LocalReduce 可能读到未落盘 slot；非 V 版已修 V 版漏同步
 - **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：PROD 规约与 INT64/UINT64/FP64 在特定 count 下读到旧值，16 卡 INT32 PROD countSize=2097152 实测 exp:2147483647 vs act:-501334399；非 V 版同场景已有 barrier 修复，V 版漏同步
+- **影响详情**：多卡训练 ReduceScatterV 做 PROD 或 INT64/UINT64/FP64 归约时结果静默错误，梯度被污染致数值漂移，无报错无超时、随时序偶发；16 卡 INT32 PROD countSize=2097152 实测 exp:2147483647、act:-501334399
 - **改进措施**：检测 规约结果与单卡参考对比；对 64 位/PROD 场景跑一致性自检；修复 修复 PR https://gitcode.com/cann/hccl/merge_requests/3805（open，未合入）：与非 V 版 !154 对齐补 HcommBatchModeEnd+Start+HcommThreadJoin barrier 并补 UINT64/FP64 判断
 - **来源**：https://gitcode.com/cann/hccl/merge_requests/3805
 - **关联**：cross:INF-2263
@@ -2372,7 +2383,7 @@
 
 ### TRN-0513 `mfsdp_v2_backward_prefetch_stale_weights` Megatron MFSDP v2 预取错序静默用旧权重
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：并行切分 / megatron-lm / MFSDP v2 prefetch
 - **原因行为**：MFSDP v2 按静态注册序预取，模块执行序与注册序不同时反向序预测错误，对已完成 post_backward 的模块重复预取且不释放 gather，step 后该模块权重不换新也不报错
@@ -2662,11 +2673,11 @@
 
 ### TRN-0523 `dynamic_quant_arch35_bf16_range_overflow` DynamicQuant arch35 bf16 极差溢出
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：量化 / cann / dynamic_quant arch35 极差
 - **原因行为**：arch35 向量寄存器路径上非对称量化行极差 (max-min) 在 fp32 中间量溢出为 inf，scaleOut=inf、yOut 全饱和；与 A2 标量路径 #7533 同根因，未随 !13078 修复
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：950/A3 上 bf16 行内交替 ±极值（|x|>1.70e38）时 scale=inf、y 全饱和且两段返回 0；6-8 处 regbase 模板同病
 - **改进措施**：检测 量化输出对拍 fp32 参考；检查 scaleOut 是否 inf；修复 A2 标量路径修复 https://gitcode.com/cann/ops-nn/pull/13078（closed，注明未覆盖 arch35）；arch35 向量级 guard（Select/Greater 组合改两端分别除）待单独立项，issue open 无修复 PR
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7721；https://gitcode.com/cann/ops-nn/issues/7533
@@ -2674,12 +2685,12 @@
 
 ### TRN-0539 `quant_grouped_matmul_32core_precision` QuantGMM 32 核精度问题
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：量化 / cann / QuantGroupedMatMul 32核
 - **原因行为**：QuantGroupedMatMulAlltoAllv 在 32 核配置下存在精度问题（PR !14895 为 temp/repro：支持环境变量强制 blockDim 复现 32 核精度问题，尚无根因修复）
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：32 核 blockDim 下量化 grouped matmul 输出错值（复现 PR 载体，根因未知）；该算子是 MoE 量化训练/推理核心 GEMM
+- **影响详情**：32 核下量化 grouped matmul 输出错值，专家结果静默偏离参考，loss 曲线无显式异常但模型质量受损；强制其他核数（如 16）输出正常，可用 PR !14895 环境变量定向复现，根因未公开。该算子是 NPU MoE 量化训练（量化感知/低精度 MoE）核心 GEMM。
 - **改进措施**：检测 环境变量强制 32 核复现（PR !14895 提供复现开关）；与 16/8 核输出对拍；修复 待定（!14895 为 temp repro PR 非修复；另 !14822 同算子 apace 通路 AIC 核间同步改 CrossCore 屏障，open）
 - **来源**：https://gitcode.com/cann/ops-transformer/pull/14895；https://gitcode.com/cann/ops-transformer/pull/14822
 
@@ -2959,7 +2970,7 @@
 
 ### TRN-0531 `torchtitan_dsv4_swiglu_limit_missing` torchtitan DSV4 缺 swiglu_limit 偏差
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：模型定义 / torchtitan / DSV4 flavor MoE 激活
 - **原因行为**：deepseek_v4_flash/pro flavor 对两类专家用普通 SwiGLU，不带官方 config swiglu_limit=10.0 clamp，与参考推理代码及 HF transformers 行为不同
@@ -4187,29 +4198,29 @@
 
 ### TRN-0515 `deepspeed_zero_init_casts_rope_inv_freq_bf16` ZeRO-3 init 把 fp32 RoPE inv_freq 算成 bf16
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：优化器 / deepspeed / zero.Init 构造器包装
 - **原因行为**：zero.Init 的 fp tensor constructor 包装把显式 dtype=torch.float 的构造结果也 cast 到 bf16，RoPE inv_freq 计算落 bf16
-- **影响对象**：隐状态；梯度（静默错误）
-- **影响详情**：ZeRO-3 下 RoPE 角度=位置×频率，误差随位置线性放大；Qwen3.8-27B LoRA 65k 长度实测 grad norm 0.78 vs 单卡 7.91（差 10 倍），ZeRO-0/2 与单卡逐位一致
+- **影响对象**：数值结果；隐状态；梯度（静默错误）
+- **影响详情**：ZeRO-3 下 RoPE 角度=位置×频率，误差随位置增长；Qwen3.8-27B LoRA 单条 65k token 实测 grad norm 0.78 vs 单卡 7.91（差一个量级），ZeRO-0/2 与单卡 bit-identical
 - **改进措施**：检测 对比 ZeRO-3 与 ZeRO-0/2/单卡的 grad norm 与 loss；检查 inv_freq buffer dtype 是否 bf16；修复 部分规避：data_types.keep_in_fp32_modules=["rotary_emb"]（#8699，0.19.8 起 opt-in，默认 "auto" 不覆盖 RoPE）；修复 PR 未出（issue open，讨论是否 "auto" 应保留显式 fp32 非 persistent buffer）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8948
 
 ### TRN-0525 `deepspeed_zero12_boundary_drops_request_gradients` ZeRO-1/2 请求边界提前丢梯度
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：优化器 / deepspeed / stage_1_and_2 梯度生命周期
 - **原因行为**：非 offload 路径每个累积边界清空 all_grad_tensors 丢弃 step 前各请求梯度；offload 路径边界兼首 backward 不刷新 host 累积器混入上一步存量
 - **影响对象**：梯度；优化器状态（静默错误）
-- **影响详情**：调用方在多个请求后再 step() 的模式（Arctic 平台范式）下，更新缺梯度（丢请求）或混入上一步梯度（offload 路径），训练静默错
+- **影响详情**：调用方对多个请求各设梯度累积边界、把 engine.step() 推迟到所有请求贡献完毕时，非 offload 路径更新静默缺少部分请求的梯度，offload 路径静默混入上一步存量梯度；权重更新方向错但 loss 无异常、无报错；标准单边界即 step 的用法不受影响
 - **改进措施**：检测 多请求单 step 模式下对比单请求逐步 step 的权重轨迹；检查边界后梯度张量是否仍保留；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8949（open，未合入）：非 offload 保留累积张量到既有 step 清理点；offload 路径在每个边界首 backward 刷新 host 累积器
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8949；https://github.com/deepspeedai/DeepSpeed/pull/8749
 
 ### TRN-0526 `deepspeed_autoep_bf16_folding_rounds_fp32_before_accum` AutoEP BF16 折叠多一次舍入边界
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：优化器 / deepspeed / _update_hp_grad 折叠
 - **原因行为**：BF16 折叠+FP32 累积下 _update_hp_grad 把 FP32 折叠结果先写回 BF16 再 cast 回 FP32 参与累积，插入可避免的 BF16 舍入边界
@@ -4220,12 +4231,12 @@
 
 ### TRN-0528 `sparse_apply_proximal_adagrad_extreme_param_false_inf` SparseProximalAdagrad 极值虚假 inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：优化器 / cann / sparse_proximal_adagrad
-- **原因行为**：var 更新链按未缩放次序计算 f32 中间量，lr/sqrt(accum) 在 accum 下界时远超 1，grad 乘积越过 f32 上限输出虚假 ±inf
-- **影响对象**：优化器状态；模型权重（静默错误）
-- **影响详情**：lr/l1 位于 f32 上限邻域、accum 接近下界（~1e-6）时 var 通道成规模元素输出 ±inf（单用例数百元素），golden f64 真值有限；常规参数域不受影响
+- **原因行为**：var 更新链按未缩放次序计算 f32 中间量：accum 处于下界（~1e-6）且 lr 位于 f32 上限邻域（~3.4e38）时 lr/sqrt(accum) 远超 1，grad 乘积越过 f32 上限输出虚假 ±inf
+- **影响对象**：模型权重；优化器状态（数值异常）
+- **影响详情**：lr 位于 f32 上限邻域（~3.4e38）、accum 接近下界（~1e-6）时 var 通道成规模元素输出 ±inf（单用例数百元素），golden f64 真值有限；常规参数域不受影响，TTK e2e 比对可检出但训练日志无异常
 - **改进措施**：检测 TTK e2e 精度比对（eager 与 graph static 均可检出）；对极值参数域跑 f64 参考对比；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/13028（open）：var 更新链极值域虚假 ±inf 消除
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7682；https://gitcode.com/cann/ops-nn/pull/13028
 
@@ -4493,17 +4504,6 @@
 - **改进措施**：检测 高置信样本（margin>16.6）检查 per-token loss 是否精确 0、梯度是否和为零；修复 修复 PR https://github.com/pytorch/torchtitan/pull/5624 仍 open 未合入（2026-10-30 核对）
 - **来源**：https://github.com/pytorch/torchtitan/issues/5623；https://github.com/pytorch/torchtitan/pull/5624
 - **关联**：var:TRN-0451
-
-### TRN-0527 `meg_sft_moe_aux_loss_mask_normalization_mismatch` SFT MoE aux loss 系数随 mask 漂移
-
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：损失计算 / megatron-lm / router aux loss 归一化
-- **原因行为**：per_token_loss 模式 router aux loss 乘输入 token 数而 finalize 除以目标 token 数，SFT mask prompt 时 aux 系数随 mask 比例漂移
-- **影响对象**：训练信号；梯度（静默错误）
-- **影响详情**：两个同 200 输入 token、目标数 60/140 的 DP 副本，用户期望 (g0+g1)/2 的 aux 梯度实际得 g0+g1；路由正则强度随数据 mask 比例逐步漂移，无报错
-- **改进措施**：检测 对比不同 prompt mask 比例下 aux loss/梯度尺度；检查 router aux 梯度与 moe_grad_scale 的关系；修复 修复/提案 PR https://github.com/NVIDIA/Megatron-LM/pull/8662（open，opt-in flag --moe-aux-loss-input-token-normalization）：缓冲一步 CPU batch 计算全局 scored/input 比，经 moe_grad_scale_func 组合；要求 PP=1、独立 PAD/EOD ID、无序列调度器；内部报告者 aamjad-nvidia
-- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8662
 
 ## MoE路由
 
@@ -4779,15 +4779,26 @@
 
 ### TRN-0522 `moegating_topk_softmax_310p_tiling_ub_overflow` MoeGatingTopKSoftmax 310P tiling 路由错乱
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：MoE路由 / cann / MoeGating tiling 310P
 - **原因行为**：tiling 向上取整越过真实行数使输入塌缩为单尾块，非 8 倍数尾块走单整块 softmax 路径 UB 需求超限，输出被写坏产出垃圾专家索引
 - **影响对象**：数值结果；训练样本流（静默错误）
-- **影响详情**：row∈[145,159] 非 8 倍数 100% 中招：vLLM MoE GSM8K 约 21% 样本空输出（首 token 即 EOS）；EP 机型 blockNum=8 形状未踩中幸免，非平台差异
+- **影响详情**：col=256 且行数落 (144,159] 非 8 倍数时 router 输出垃圾专家索引；vLLM+MoE GSM8K 动态 batch 约 21% 样本空输出（首 token 即 EOS），空输出样本 input_tokens 全落该区间；EP 机型 blockNum=8 未踩中
 - **改进措施**：检测 对 row<16*blockNum 且非 8 倍数输入单算子对拍；监控 MoE 首 token EOS 率；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14811（open）：guard 310P 尾块防 softmax UB 溢出
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6910；https://gitcode.com/cann/ops-transformer/merge_requests/14811
 - **关联**：cross:INF-2259
+
+### TRN-0527 `meg_sft_moe_aux_loss_mask_normalization_mismatch` SFT MoE aux loss 系数随 mask 漂移
+
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：MoE路由 / megatron-lm / router aux loss 归一化
+- **原因行为**：per_token_loss 模式 router aux loss 乘输入 token 数而 finalize 除以目标 token 数，SFT mask prompt 时 aux 系数随 mask 比例漂移
+- **影响对象**：训练信号；梯度（静默错误）
+- **影响详情**：SFT 训练 MoE 模型（mask prompt、calculate_per_token_loss=True）时，目标 token 占比不同的 DP 副本贡献的 aux 梯度没有按预期平均而是相加；路由正则强度随每步 prompt/目标 token 比例漂移，专家负载均衡效果偏离配置，全程无报错
+- **改进措施**：检测 对比不同 prompt mask 比例下 aux loss/梯度尺度；检查 router aux 梯度与 moe_grad_scale 的关系；修复 修复/提案 PR https://github.com/NVIDIA/Megatron-LM/pull/8662（open，opt-in flag --moe-aux-loss-input-token-normalization）：缓冲一步 CPU batch 计算全局 scored/input 比，经 moe_grad_scale_func 组合；要求 PP=1、独立 PAD/EOD ID、无序列调度器；内部报告者 aamjad-nvidia
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8662
 
 ## 重计算/卸载
 
@@ -5889,20 +5900,9 @@
 - **改进措施**：检测 首步生成后打印 policy 参数 dtype 与优化器 state dtype；对比同配置非连续批路径 loss 曲线；修复 待定（issue open 2026-10-28，1.17.0.dev0；非连续批路径不受影响）
 - **来源**：https://github.com/huggingface/trl/issues/7965
 
-### TRN-0514 `verl_fused_kernels_skip_lm_head_logit_scaling` verl fused kernel 丢 lm_head logit 缩放
-
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：RL训练回路 / verl / fused 线性 CE 路径
-- **原因行为**：use_fused_kernels=True 时绕过 CausalLM.forward 直接把 lm_head 输出送融合核，不执行模型自带 post-lm_head logit scaling 与 bias
-- **影响对象**：训练信号；输出分布（静默错误）
-- **影响详情**：Granite（logits_scaling 3~16×）/Cohere（logit_scale 0.0625~0.8333）/Falcon-H1（1/25.6~1/51.2）等家族的 logprob、PPO/GRPO loss 与 KL 全部按错误尺度的 logits 计算，无报错
-- **改进措施**：检测 对比 fused 与非 fused 路径的 logprob/loss；检查模型 config 中 logits_scaling/logit_scale/lm_head_multiplier 是否非默认；修复 修复 PR https://github.com/verl-project/verl/pull/8441（open，未合入）：把缩放因子折进 fused 核的 temperature 并拒绝带 lm_head.bias 的模型
-- **来源**：https://github.com/verl-project/verl/pull/8441
-
 ### TRN-0516 `swift_grpo_masked_token_log_ratio_overflow_nan` swift GRPO 掩码 token log-ratio 溢出 NaN
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：RL训练回路 / ms-swift / GRPO per-token IS ratio
 - **原因行为**：per-token IS ratio 先 exp(Δlogp) 再在 reduce 时乘 completion_mask，被排除 token 的 log-ratio 溢出为 inf 后 inf*0 变 NaN 污染 loss 与梯度
@@ -5910,6 +5910,17 @@
 - **影响详情**：completion_mask 排除的 token（如 padding/截断段）Δlogp 大于 ~88（fp32 exp 上限）时 loss=NaN 且梯度 NaN；修复把掩码提到 exp 之前
 - **改进措施**：检测 监控 loss/梯度 NaN；检查被 mask token 的 Δlogp 分布；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10433（commit 3f6d7cde 已在 main，PR 关闭未标 merged，等价修复已入主干）：exp 之前先把被排除 token 的 log-ratio 置 0
 - **来源**：https://github.com/modelscope/ms-swift/issues/10431；https://github.com/modelscope/ms-swift/pull/10433
+
+### TRN-0532 `swift_v5_rl_precision_fp32_override_ignored` swift v5 RL FP32 计算精度被覆盖
+
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：RL训练回路 / ms-swift / v5 RL 共共 builder 精度解析
+- **原因行为**：FP32 参数加载覆盖与计算精度未独立处理，显式 FP32 配置的计算精度被加载覆盖静默降为混精
+- **影响对象**：训练轨迹；数值结果（质量退化）
+- **影响详情**：显式 FP32 配置的 RL 训练实际按非 FP32 计算精度运行，与用户配置意图不符；修复后 BF16/FP16 保留对应 mixed_precision、显式 FP32 保持 no
+- **改进措施**：检测 检查训练日志 mixed_precision 是否与显式 dtype 配置一致；对比半精/全精 loss 曲线；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10451（merged 至 dev-swift-v5 2026-10-29T02:49Z，目标分支 dev-swift-v5 非 main）：FP32 加载覆盖与计算精度独立，覆盖 GRPO/PPO/在线蒸馏公共 builder
+- **来源**：https://github.com/modelscope/ms-swift/pull/10451
 
 ## 观测/评测
 
@@ -6139,17 +6150,6 @@
 - **影响详情**：Megatron-FSDP v1 + use_precision_aware_optimizer=True（MCore 0.19.x）出现零梯度范数、参数不更新；训练继续跑、无报错，官方 Megatron-LM 入口同配置正常，swift 封装下静默失效
 - **改进措施**：检测 开启精度优化器时核对 megatron_fsdp_use_decoupled_grad 实际取值；观察 grad_norm 是否恒 0/参数指纹不变；修复 待定（issue open：最小示例已隔离 swift 配置构造缺陷，期望按官方入口把 decoupled-gradient 跟随 use_precision_aware_optimizer；swift 侧修复未提交）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10351
-
-### TRN-0532 `swift_v5_rl_precision_fp32_override_ignored` swift v5 RL FP32 计算精度被覆盖
-
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：配置/参数 / ms-swift / v5 RL 共共 builder 精度解析
-- **原因行为**：FP32 参数加载覆盖与计算精度未独立处理，显式 FP32 配置的计算精度被加载覆盖静默降为混精
-- **影响对象**：训练轨迹；数值结果（静默错误）
-- **影响详情**：显式 FP32 配置的 RL 训练实际按非 FP32 计算精度运行，与用户配置意图不符；修复后 BF16/FP16 保留对应 mixed_precision、显式 FP32 保持 no
-- **改进措施**：检测 检查训练日志 mixed_precision 是否与显式 dtype 配置一致；对比半精/全精 loss 曲线；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10451（merged 至 dev-swift-v5 2026-10-29T02:49Z，目标分支 dev-swift-v5 非 main）：FP32 加载覆盖与计算精度独立，覆盖 GRPO/PPO/在线蒸馏公共 builder
-- **来源**：https://github.com/modelscope/ms-swift/pull/10451
 
 ## 构建/发布
 

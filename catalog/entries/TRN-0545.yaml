@@ -4,17 +4,17 @@ slug: verl_nvfp4_qat_scale_export_mismatch
 aliases: []
 title: verl NVFP4 QAT 量表导出错配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 量化
     stack: verl
     component: NVFP4 QAT scale 导出
   behavior: NVFP4 量表收集器用首个数字型模块路径段当 layer ID（PP 上局部层号重置）、SequentialMLP 专家坍缩一份、Bridge 广播而各 rank 只留本 stage 量表——可导出错专家量表或 1.0 fallback
 effect:
   objects:
   - 模型权重
-  detail: QAT 已观测激活后导出的 compressed-tensors 权重仍带错误 NVFP4 激活 scale（错专家或 1.0），量化模型精度静默劣化；#8287 引入的 ModelOpt 导出路径
+  detail: verl Megatron QAT+NVFP4（#8287 ModelOpt 导出路径）、PP 多 stage/SequentialMLP 专家时，导出文件里的激活 scale 可能来自错误的专家/层或仍是未观测的 1.0 初值；加载与推理正常，精度静默劣化无报错，需逐专家对拍 scale 才发现
   visibility: 静默错误
 mitigation:
   detect: 导出后逐专家核对 activation scale 与观测记录一致；断言非 fallback 值
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 量化
+    rewritten:
+    - detail

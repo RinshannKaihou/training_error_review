@@ -4,7 +4,7 @@ slug: opsnn_bn3dtrainingreduce_fp16_kahan_loss
 aliases: []
 title: BN3DTrainingReduce FP16 归约丢补偿量
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 53×5 固定输入稳定超三方 L1 RMSE 门槛（修前 2.25~3.01）；相消输入 NPU=-1 vs CPU/GPU=-0.998；仓内 Golden 平方和另有独立累加误差；950PR 实测
+  detail: Ascend 950 FP16 下，53×5 固定输入稳定超三方 L1 RMSE 比值门槛（比值超判据 2~3 倍，相消求和差 2e-3 量级）；相消输入 NPU=-1 vs CPU/GPU=-0.998046875；仓内 Golden 平方和另有独立参考累加误差
   visibility: 静默错误
 mitigation:
   detect: FP16 相消输入（±1 对称）对拍 GPU；短行 N∈[53,64] RMSE 比值回归
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 564 条；状态：active 541、pending_audit 23
+共 564 条；状态：active 564
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 137 |
+| 算子/内核 | 140 |
 | 编译器 | 18 |
 | 运行时/执行 | 13 |
 | 集合通信 | 9 |
@@ -17,14 +17,14 @@
 | 调度/服务 | 1 |
 | 输出解析 | 1 |
 | 解码/采样 | 2 |
-| 量化 | 23 |
+| 量化 | 25 |
 | 位置编码 | 7 |
 | 分词/模板 | 8 |
 | 模型定义 | 11 |
-| 权重/检查点 | 34 |
+| 权重/检查点 | 33 |
 | 数据管线 | 39 |
-| 优化器 | 44 |
-| 损失计算 | 26 |
+| 优化器 | 42 |
+| 损失计算 | 24 |
 | MoE路由 | 26 |
 | 重计算/卸载 | 16 |
 | RL训练回路 | 84 |
@@ -1601,21 +1601,32 @@
 - **改进措施**：检测 同输入多次运行对比；构造跨张量重复 index 用例验证 WAW；修复 待定（issue open，建议加原子或按 dst 划分核；越界校验一并补）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4226
 
+### TRN-0552 `opsmath_kldiv_empty_input_none_out_unwritten` KlDiv 空输入 none 模式 out 未写
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：算子/内核 / cann / aclnn_kl_div 空输入早退分支
+- **原因行为**：输入为空 tensor 且 reduction=none 时走 aclnn_kl_div.cpp:190 早退分支，整段跳过 out 形状校验（仅存在于非空路径 :264），两段均返回 0 而 out 一个元素都不写
+- **影响对象**：数值结果；训练信号（静默错误）
+- **影响详情**：调用方按「返回 0 即成功」读 out 拿到未初始化/上次残留 device 内存（非 0 非 NaN 的任意值）；空 batch（尾批、动态切片）常见边界；非空对照正确返回 161002
+- **改进措施**：检测 空 batch 用例读回 out 并断言全零/与 CPU 一致；监控空批次后 loss 突变；修复 待定（issue open：早退分支应同样校验 out 形状或显式写零）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4331
+
 ### TRN-0553 `opsnn_squaredrelu_out_contract_missing` SquaredRelu out 契约缺失错写越界
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / squared_relu out 校验/布局
 - **原因行为**：out 与 input shape 不一致（[4x8]→[4x4]）不校验不拒绝，内核按 input 32 元素写完越界 16/24 元素；out 非连续（strides [8,1]）被放行且按连续写，逻辑视图 4 元素未写
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：越界写实测 16/24 元素；非连续 out 逻辑视图错值数 4（第二行保持哨兵）；两段接口均返回 0（应 161002）；与 TRN-0524（GeluMul）/TRN-0521 族同属 out 契约缺失面，910B3/CANN 9.2.0/master 59c0720c
+- **影响详情**：910B3/CANN 9.2.0/master 59c0720c：out=[4x4]（16 元素）时两段返回 0，内核写 32 元素越界 16（out=[1x8] 越界 24）；out [2,4]/strides [8,1] 返回 0，按连续写 8 元素，第二行 4 元素仍为初始化哨兵
 - **改进措施**：检测 out shape/strides 契约用例 + msSanitizer；非连续视图读回对拍；修复 待定（issue open：期望第一段 161002 或按 stride 写）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7756；https://gitcode.com/cann/ops-nn/issues/7757
 - **关联**：var:TRN-0524
 
 ### TRN-0554 `opsnn_swiglu_small_out_oob_write` SwiGlu 偏小 out 越界写 64B
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / swi_glu out 形状校验
 - **原因行为**：out 形状小于由 x 推导的输出形状时无任何校验：GetWorkspaceSize 与 Execute 均返回 0，kernel 仍按 x.numel()/2 写 out 的 GM 地址越过缓冲尾部
@@ -1625,9 +1636,21 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7760
 - **关联**：var:TRN-0524
 
+### TRN-0555 `opsnn_scewithlogits_mismatch_labels_oob_write` SCEWithLogits labels 不一致越界写
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：算子/内核 / cann / SCEWithLogits 入参校验
+- **原因行为**：features/labels 形状不一致时两段接口均返回 0（非法入参被接受），内核按 labels 的行数计算，向按 features 分配的 loss/backprop 缓冲越界写
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：labels=fp32[109x1]、features=fp32[1x47] 时向 4B/188B 的 loss/backprop buffer 越界写，msSanitizer 报 72 处 illegal_write（最大 564B）（P0）；相邻内存（其他张量）被静默破坏
+- **改进措施**：检测 msSanitizer memcheck；对 labels/features shape 断言一致；修复 待定（issue open，P0；期望第一段返回 161002）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7747
+- **关联**：cross:INF-2298
+
 ### TRN-0556 `opsnn_swiglu_odd_split_axis_flat_offset` SwiGlu 奇数切分轴静默扁平半切
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / swi_glu_tiling 奇偶校验
 - **原因行为**：切分轴奇偶校验判的是「切分轴×后续所有轴乘积」：切分轴奇数但乘积偶数被放行，kernel 按扁平化 numel/2 偏移切分（B 半起点落在行中间），与资料「按 dim 轴对半切」不符且返回 0
@@ -1638,7 +1661,7 @@
 
 ### TRN-0558 `opstransformer_prompt_fa_fp16_softmax_numerator_inf` PromptFA fp16 softmax 分子溢出 inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / PromptFA fp16 分子累加
 - **原因行为**：fp16 + HighPerformance 模式 softmax PxV 分子用 fp16 累加存储：Q/K 全零（logits≈0、softmax 均匀、exp=1）时分子=(i+1)*V 随序列长线性增长，超 65504 溢出 inf
@@ -1650,19 +1673,31 @@
 
 ### TRN-0559 `opsmath_reducesum_bool_int64_negative_axis_missing` ReduceSum bool→INT64 负轴丢末位
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / reduce_sum 负轴 promote
 - **原因行为**：BOOL→INT64 分支 reduceDims 累乘未做负轴归一，负索引 size_t 越界得错值 → 误判 <2^24 → promoteType 选 fp32 累加 1670 万级布尔计数，超 2^24 后丢末位
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：dims 用负轴（如 [-2,-1]）时和 16785409 实测 16785408（fp32 最近可表示值）；正轴/空/颠倒序全对；判别矩阵证明仅「负轴+和不可被 fp32 精确表示」命中；确定性可复现
+- **影响详情**：dims 用负轴（如 [-2,-1]）时和 16785409 实测 16785408；bool→int64 正轴对、负轴错；bool→int32、int32→int64 不走分支全对；和为偶数或 2^24 附近可精确表示时错误被掩盖；keepDims 无关；重复 3 次一致
 - **改进措施**：检测 bool→int64 归约用正/负轴双写对拍；和大数时断言精确；修复 待定（issue open：循环内对 (*dims)[i] 做 GetPosDim 归一）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4298
 - **关联**：cross:INF-2295
 
+### TRN-0562 `opsmath_amp_update_scale_fp16_growth_overflow_inf` AmpUpdateScale fp16 增长溢出输出 inf
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：算子/内核 / cann / amp_update_scale fp16 溢出
+- **原因行为**：fp16 增长分支（tracker+1==interval）currentScale*growthFactor 超 fp16 范围时 updatedScale 输出 inf；资料要求保持当前 scale（≥32768 一律 inf）
+- **影响对象**：数值结果；优化器状态；训练轨迹（数值异常）
+- **影响详情**：fp16 currentScale≥32768 且 tracker+1==interval 时 updatedScale 输出 inf，此后每步 scale 判定与梯度 skip 都在 inf scale 下运行，训练突然大面积丢梯度/回退且无明确报错，日志仅 scale 数值异常（A3 实测）
+- **改进措施**：检测 监控 updatedScale 有限性；growth 分支断言输出≠inf；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6903（open WIP：对存储用 half 转换后检查 finiteness，CPU 差分 6 用例通过、NPU 资格待做）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4344；https://gitcode.com/cann/ops-math/merge_requests/6903
+- **关联**：cross:INF-2307
+
 ### TRN-0563 `opstransformer_compressor_autograd_grad_all_garbage` compressor 公开入口反向梯度全错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / compressor autograd 中间量
 - **原因行为**：autograd.Function.forward 内 is_grad_enabled() 恒 False，判据结构性恒 False → kernel 不写 softmax_score/kv 中间量 → backward 消费未初始化显存
@@ -1674,12 +1709,12 @@
 
 ### TRN-0564 `opsnn_bn3dtrainingreduce_fp16_kahan_loss` BN3DTrainingReduce FP16 归约丢补偿量
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：算子/内核 / cann / BN3DTrainingReduce 归约
 - **原因行为**：FP16 短行（N≤64、R0=1）直接累加无补偿；分核路径只传 FP32 部分和、补偿量在根核合并前丢失——跨核相消输入下求和/平方和精度塌陷
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：53×5 固定输入稳定超三方 L1 RMSE 门槛（修前 2.25~3.01）；相消输入 NPU=-1 vs CPU/GPU=-0.998；仓内 Golden 平方和另有独立累加误差；950PR 实测
+- **影响详情**：Ascend 950 FP16 下，53×5 固定输入稳定超三方 L1 RMSE 比值门槛（比值超判据 2~3 倍，相消求和差 2e-3 量级）；相消输入 NPU=-1 vs CPU/GPU=-0.998046875；仓内 Golden 平方和另有独立参考累加误差
 - **改进措施**：检测 FP16 相消输入（±1 对称）对拍 GPU；短行 N∈[53,64] RMSE 比值回归；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13131（merged：短行复用 TwoSum 补偿、分核 K=8 双链并传主值+补偿量；扩展 32 条 30 PASS/2 FAIL（1 ULP 既有问题未解））
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7762；https://gitcode.com/cann/ops-nn/merge_requests/13131
 - **关联**：cross:INF-2308
@@ -2026,11 +2061,11 @@
 
 ### TRN-0546 `torch_npu_lazy_call_race_drops_callbacks` torch_npu _lazy_call 竞态静默丢回调
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：运行时/执行 / torch_npu / npu._lazy_call 初始化队列
 - **原因行为**：_lazy_call 先查 _initialized 再入队，与 _lazy_init 不共用 _initialization_lock：初始化线程遍历完队列后、置位前，另一线程回调被追加进已消费队列，此后无人消费
-- **影响对象**：训练样本流（静默错误）
+- **影响对象**：训练样本流（不可复现）
 - **影响详情**：manual_seed/set_rng_state 等经 _lazy_call 延迟执行：多线程首次初始化并发时随机种子或 RNG 状态设置被静默丢失，数据顺序/初始化偏离预期且不可复现；持有初始化锁的模拟复现可稳定构造
 - **改进措施**：检测 初始化后断言 _queued_calls 为空；对 seed 生效性做两次采样一致性检查；修复 待定（issue open：建议 _lazy_call 与 _lazy_init 共用 _initialization_lock，重入不死锁）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5744
@@ -2489,12 +2524,12 @@
 
 ### TRN-0550 `deepspeed_sequence_tiled_compute_inplace_grad_division` SequenceTiledCompute 原地除共享入梯度
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：并行切分 / deepspeed / TiledCompute backward
 - **原因行为**：SequenceTiledCompute.backward 对传入梯度原地 /= shards：tiled+other 复合 loss 下 autograd 把同一张量发给两分支，另一项梯度也被除 shards 倍
 - **影响对象**：梯度（静默错误）
-- **影响详情**：同 loss 中其他项梯度被静默缩小 shards 倍（实测 max diff 0.75）；TiledMLP/TiledFusedLogitsLoss 自除不受影响；CPU 新测试修前失败修后 26 通过
+- **影响详情**：把 sequence_tiled_compute 输出与任何其他项相加且 output_reduction=mean 时，另一项梯度被静默除以 shards；TiledMLP 不改写入梯度、TiledFusedLogitsLoss 只除自己的张量，无此缺陷；CPU 测试修前失败、修后 26 通过
 - **改进措施**：检测 对 tiled+other 复合 loss 与单卡参考对拍梯度；检查 autograd 传入梯度是否被原地修改；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8960（open，改为 out-of-place 除法，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8960
 
@@ -2539,12 +2574,12 @@
 
 ### TRN-0549 `trl_parse_response_qwen35_unclosed_think_region` TRL parse_response 未闭合 think 吞工具调用
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：输出解析 / trl / parse_response 前缀区解析
 - **原因行为**：Qwen3.5 模板预填 <think>\n；模型跳过思考直接输出正文+<tool_call> 且不闭合 </think> 时整段留在 reasoning_content：无 tool_calls、不抛异常
-- **影响对象**：训练信号（静默错误）
-- **影响详情**：RL 训练数据构造/评测里该类样本 tool_calls 解析为空：agent 任务 reward 按无工具调用打分、训练信号错；早期轮次无思考的对话（OpenAI 客户端剥离 reasoning 回传）常见
+- **影响对象**：输出内容；训练信号（静默错误）
+- **影响详情**：GRPO/agent RL 训练中，模型某轮跳过思考时 rollout 解析出的消息 tool_calls 为空，reward 按无工具调用给分，该批样本训练信号静默错误；解析不报错，需抽查解析结果才能发现；早期轮次无思考的对话常见（OpenAI 客户端回传历史时剥 reasoning）
 - **改进措施**：检测 对含预填 <think> 前缀的样本断言解析结果 reasoning_content 为空或闭合；统计无 tool_calls 比例突变；修复 待定（issue open：需解析器在 completion 未闭合 region 时按正文处理或报错）
 - **来源**：https://github.com/huggingface/trl/issues/8050
 
@@ -2813,21 +2848,44 @@
 - **改进措施**：检测 环境变量强制 32 核复现（PR !14895 提供复现开关）；与 16/8 核输出对拍；修复 待定（!14895 为 temp repro PR 非修复；另 !14822 同算子 apace 通路 AIC 核间同步改 CrossCore 屏障，open）
 - **来源**：https://gitcode.com/cann/ops-transformer/pull/14895；https://gitcode.com/cann/ops-transformer/pull/14822
 
+### TRN-0545 `verl_nvfp4_qat_scale_export_mismatch` verl NVFP4 QAT 量表导出错配
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：量化 / verl / NVFP4 QAT scale 导出
+- **原因行为**：NVFP4 量表收集器用首个数字型模块路径段当 layer ID（PP 上局部层号重置）、SequentialMLP 专家坍缩一份、Bridge 广播而各 rank 只留本 stage 量表——可导出错专家量表或 1.0 fallback
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：verl Megatron QAT+NVFP4（#8287 ModelOpt 导出路径）、PP 多 stage/SequentialMLP 专家时，导出文件里的激活 scale 可能来自错误的专家/层或仍是未观测的 1.0 初值；加载与推理正常，精度静默劣化无报错，需逐专家对拍 scale 才发现
+- **改进措施**：检测 导出后逐专家核对 activation scale 与观测记录一致；断言非 fallback 值；修复 修复 PR https://github.com/verl-project/verl/pull/8467（open，用全局 layer_number、保留 SequentialMLP 全局专家 ID、PP 组 gather 观测元数据，未合入）
+- **来源**：https://github.com/verl-project/verl/pull/8467
+
 ### TRN-0557 `opsnn_swigluquant_v2_rank1_dynamic_quant_wrong` SwiGluQuantV2 rank1 动态量化输出错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：量化 / cann / swi_glu_quant rank1 寻址
-- **原因行为**：smoothScales 传 rank1 [G]（资料支持）+ dynamic 量化被放行，但 kernel 按每组 basicColLen 个 float 搬运（[G,N] 寻址）越界读，rowmax/scale/y 全错
+- **原因行为**：smoothScales传rank1 [G]（per-tensor）+dynamic时量化输出错误；疑似（issue自述未改码验证）：kernel按basicColLen做向量乘，smooth仅G个float，越界读后rowmax
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：实测 y 仅 1 个元素非 0、scale=20.62（应 86.86，对应 amax 6.16 vs 1.46）；同 x 改 rank2 [1,32] 后 64/64 一致；与 V1 #7770 同机理（共用 op_kernel/swi_glu_quant.h），910B3/CANN 9.2.0
 - **改进措施**：检测 rank1 smooth + dynamic 组合与 CPU 标杆全量对拍；或第一段直接拒绝该组合；修复 待定（issue open：若 rank1 只允许静态量化应在 GetWorkspaceSize 拒绝；动态需按标量乘）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7774；https://gitcode.com/cann/ops-nn/issues/7770
 - **关联**：cross:INF-2311
 
+### TRN-0560 `opsnn_apply_adam_w_quant_zero_block_nan` ApplyAdamWQuant 零块 0/0 出 NaN
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+
+- **原因对象**：量化 / cann / apply_adam_w_quant 归一化
+- **原因行为**：量化归一化 Div(state, absmax) 在 block absmax=0 时 0/0=NaN（golden 有特判），NaN 进二分查找/CheckSign 后量化码值与 golden 分歧
+- **影响对象**：优化器状态；训练轨迹（数值异常）
+- **影响详情**：gnormScale=0（grad 全零）触发；TTK 169 用例修前 156 PASS、4 个 gnormScale=0 组 FAIL；mRef/vRef/absmax 输出错；arch35（950PR/DT）路径
+- **改进措施**：检测 gnormScale=0 / 全零梯度步回归；输出 NaN 断言；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13012（merged：Div 前除数取 max(absmax, FLT_MIN)，169→全 PASS；issue #7736 closed）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7736；https://gitcode.com/cann/ops-nn/pull/13012
+- **关联**：cross:INF-2320
+
 ### TRN-0561 `opsnn_fakequant_perchannel_inverted_equal_channel_semantics` FakeQuantPerChannel 倒置/相等通道语义异于 TF
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：量化 / cann / FakeQuantPerChannel 通道语义
 - **原因行为**：倒置通道（min>max）clamp 顺序与 TF 相反；相等通道（min==max≠0）kernel 输 0 而 TF 为 NaN（inv_scale=inf→0×inf）；round 0.5 边界 ±1 量化级失配
@@ -3000,7 +3058,7 @@
 
 ### TRN-0551 `verl_continuous_token_default_builder_no_check` verl Continuous Token 回退默认 builder 无校验
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：分词/模板 / verl / Token builder 回退
 - **原因行为**：未注册 model_type 回退默认 builder（不处理边界 token），训练中无 comparator 校验合并流与模板渲染一致性；sanity check 自 #4422 起 no-op
@@ -3499,7 +3557,7 @@
 
 ### TRN-0542 `deepspeed_zero_reexport_stale_index_loads_old_weights` DeepSpeed ZeRO 二次导出残留旧索引加载旧权重
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：权重/检查点 / deepspeed / zero_to_fp32 导出索引清理
 - **原因行为**：向已有输出目录再次导出 ZeRO 检查点时不清理旧 index/shard：先分片 FP32 后单文件 BF16 导出返回成功，目录加载器仍按残留旧索引读旧分片
@@ -3507,17 +3565,6 @@
 - **影响详情**：第二次转换本身写对，但 stale index 让 loader 读到旧权重：后续训练或推理静默使用旧模型，无报错；DeepSpeed master 8d4f29c7、含无 mock 复现脚本
 - **改进措施**：检测 导出后校验 index 文件时间戳与权重 dtype/数值指纹（如 tag 值断言）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8954（open，Retire stale checkpoint artifacts after replacing a ZeRO export，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8952；https://github.com/deepspeedai/DeepSpeed/pull/8954
-
-### TRN-0545 `verl_nvfp4_qat_scale_export_mismatch` verl NVFP4 QAT 量表导出错配
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：权重/检查点 / verl / NVFP4 QAT scale 导出
-- **原因行为**：NVFP4 量表收集器用首个数字型模块路径段当 layer ID（PP 上局部层号重置）、SequentialMLP 专家坍缩一份、Bridge 广播而各 rank 只留本 stage 量表——可导出错专家量表或 1.0 fallback
-- **影响对象**：模型权重（静默错误）
-- **影响详情**：QAT 已观测激活后导出的 compressed-tensors 权重仍带错误 NVFP4 激活 scale（错专家或 1.0），量化模型精度静默劣化；#8287 引入的 ModelOpt 导出路径
-- **改进措施**：检测 导出后逐专家核对 activation scale 与观测记录一致；断言非 fallback 值；修复 修复 PR https://github.com/verl-project/verl/pull/8467（open，用全局 layer_number、保留 SequentialMLP 全局专家 ID、PP 组 gather 观测元数据，未合入）
-- **来源**：https://github.com/verl-project/verl/pull/8467
 
 ## 数据管线
 
@@ -3953,7 +4000,7 @@
 
 ### TRN-0548 `msswift_disabled_augment_still_consumes_rng` ms-swift 关闭增强仍消耗共享 RNG
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：数据管线 / ms-swift / load_dataset 种子消耗时序
 - **原因行为**：load_dataset 在 init_decision_augment 前先求值 get_seed：增强关闭（config=None 立即返回）时也推进共享 NumPy RandomState，下游切分/shuffle 被改变
@@ -4429,7 +4476,7 @@
 
 ### TRN-0543 `deepspeed_onecycle_first_adam_min_momentum` DeepSpeed OneCycle 首步 Adam 用最小动量
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：优化器 / deepspeed / OneCycle 动量调度初始化
 - **原因行为**：OneCycle 开启动量循环时把 optimizer 初始 beta1 设为 cycle_min_mom，而调度器 get_mom() 报 cycle_max_mom：首个 Adam 更新消费的动量与反带动量计划相反
@@ -4437,30 +4484,6 @@
 - **影响详情**：首个更新的一阶矩按 min 动量累积，偏差修正可掩盖第一步，第二步起权重偏离调度参考（实测 actual 0.7388 vs reference 0.7878）；fp64 双优化器对照脚本稳定复现
 - **改进措施**：检测 断言 optimizer.param_groups beta1 与 scheduler.get_mom() 首步一致；双优化器对照训练；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8953（open，Initialize OneCycle momentum at the upper bound，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8951；https://github.com/deepspeedai/DeepSpeed/pull/8953
-
-### TRN-0560 `opsnn_apply_adam_w_quant_zero_block_nan` ApplyAdamWQuant 零块 0/0 出 NaN
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：优化器 / cann / apply_adam_w_quant 归一化
-- **原因行为**：量化归一化 Div(state, absmax) 在 block absmax=0 时 0/0=NaN（golden 有特判），NaN 进二分查找/CheckSign 后量化码值与 golden 分歧
-- **影响对象**：优化器状态；训练轨迹（数值异常）
-- **影响详情**：gnormScale=0（grad 全零）触发；TTK 169 用例修前 156 PASS、4 个 gnormScale=0 组 FAIL；mRef/vRef/absmax 输出错；arch35（950PR/DT）路径
-- **改进措施**：检测 gnormScale=0 / 全零梯度步回归；输出 NaN 断言；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13012（merged：Div 前除数取 max(absmax, FLT_MIN)，169→全 PASS；issue #7736 closed）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7736；https://gitcode.com/cann/ops-nn/pull/13012
-- **关联**：cross:INF-2320
-
-### TRN-0562 `opsmath_amp_update_scale_fp16_growth_overflow_inf` AmpUpdateScale fp16 增长溢出输出 inf
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：优化器 / cann / amp_update_scale fp16 溢出
-- **原因行为**：fp16 增长分支（tracker+1==interval）currentScale*growthFactor 超 fp16 范围时 updatedScale 输出 inf；资料要求保持当前 scale（≥32768 一律 inf）
-- **影响对象**：优化器状态；训练轨迹（数值异常）
-- **影响详情**：AMP loss scale 卡 inf：后续每步下溢回退或梯度全 skip，训练静默丢步/退速；A3 910_9362、CANN 9.2.0-beta.2 实测
-- **改进措施**：检测 监控 updatedScale 有限性；growth 分支断言输出≠inf；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6903（open WIP：对存储用 half 转换后检查 finiteness，CPU 差分 6 用例通过、NPU 资格待做）
-- **来源**：https://gitcode.com/cann/ops-math/issues/4344；https://gitcode.com/cann/ops-math/merge_requests/6903
-- **关联**：cross:INF-2307
 
 ## 损失计算
 
@@ -4729,37 +4752,14 @@
 
 ### TRN-0547 `deepspeed_opsd_jsd_lowprec_mask_count_loss_zero` DeepSpeed OPSD JSD 低精 logits 掩码计数错
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：损失计算 / deepspeed / generalized_jsd_loss 掩码计数
 - **原因行为**：OPSD JSD loss 把 response mask cast 成 logits dtype 再 sum：bf16 舍入 >256 计数（97992→97792），fp16 溢出 int64 max，loss 归 0
 - **影响对象**：训练信号（静默错误）
-- **影响详情**：bf16 下 token 计数偏差 200 起步、loss 分母错；fp16 下计数值溢出导致 JSD loss 恒 0——蒸馏信号完全丢失而训练继续；修前 22 用例失败、修后通过（CPU 验证）
+- **影响详情**：bf16 下有效 token 计数被舍入（97992→97792），loss 归一化分母错；fp16 下计数溢出为 int64 max，JSD loss 归 0，蒸馏信号静默消失而训练照常跑完；新增 bf16/fp16 用例修前失败、修后 22 通过（CPU，未覆盖 GPU/ZeRO）
 - **改进措施**：检测 对 bf16/fp16 logits 的 loss 路径断言 mask 计数与 int64 参考一致；监控 loss 是否异常趋 0；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8947（open，mask 以 int64 计数、逐 token JSD 至少 float32 求和，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8947
-
-### TRN-0552 `opsmath_kldiv_empty_input_none_out_unwritten` KlDiv 空输入 none 模式 out 未写
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：损失计算 / cann / aclnn_kl_div 空输入早退分支
-- **原因行为**：空 tensor + reduction=none 时走 op_api/aclnn_kl_div.cpp:190 早退分支，整段跳过 out 形状校验（只在非空路径 :264 存在），两段返回 0 但 out 一个元素都不写
-- **影响对象**：训练信号（静默错误）
-- **影响详情**：调用方按「返回 0 即成功」读 out 拿到未初始化/上次残留 device 内存（非 0 非 NaN 的任意值）；空 batch（尾批、动态切片）常见边界；非空对照正确返回 161002
-- **改进措施**：检测 空 batch 用例读回 out 并断言全零/与 CPU 一致；监控空批次后 loss 突变；修复 待定（issue open：早退分支应同样校验 out 形状或显式写零）
-- **来源**：https://gitcode.com/cann/ops-math/issues/4331
-
-### TRN-0555 `opsnn_scewithlogits_mismatch_labels_oob_write` SCEWithLogits labels 不一致越界写
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-10-30
-
-- **原因对象**：损失计算 / cann / SCEWithLogits 入参校验
-- **原因行为**：features/labels 形状不一致时两段接口均返回 0（应 161002），内核按 labels 行数计算并向按 features 分配的 loss/backprop 缓冲越界写
-- **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：labels=fp32[109x1]、features=fp32[1x47] 时向 4B/188B 的 loss/backprop buffer 越界写，msSanitizer 报 72 处 illegal_write（最大 564B）（P0）；相邻内存（其他张量）被静默破坏
-- **改进措施**：检测 msSanitizer memcheck；对 labels/features shape 断言一致；修复 待定（issue open，P0；期望第一段返回 161002）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7747
-- **关联**：cross:INF-2298
 
 ## MoE路由
 
@@ -6180,12 +6180,12 @@
 
 ### TRN-0544 `trl_iwopd_resume_skip_vllm_weight_sync` TRL IW-OPD resume 后跳过 vLLM 同步
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-10-30
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-10-30
 
 - **原因对象**：RL训练回路 / trl / IWOPDTrainer vllm 同步步计数
 - **原因行为**：IWOPDTrainer 的 _last_vllm_sync_step 初始 -1 且仅整倍数步同步：resume 到非整倍数步时首步同步被跳过，vLLM 引擎仍用构造时初始权重生成
 - **影响对象**：训练信号（静默错误）
-- **影响详情**：resume 后 vllm_sync_frequency-1 步 rollout 由初始旧策略生成而训练侧按新权重算损失，off-policy 程度静默扩大；需 jsd+use_vllm+frequency>1
+- **影响详情**：从 checkpoint resume 到非整倍数步（如 frequency=5 时 resume 到 37，则 37-39 步）时，头几步 rollout 由初始模型权重生成，训练侧却按新权重算损失，重要性偏离静默扩大、日志无异常；需 jsd+use_vllm+frequency>1
 - **改进措施**：检测 resume 后首步强制 sync 并断言引擎权重指纹与 trainer 一致；修复 修复 PR https://github.com/huggingface/trl/pull/7994（open，对齐 GOLDTrainer：初始值 -vllm_sync_frequency + >= 判定，未合入）
 - **来源**：https://github.com/huggingface/trl/pull/7994
 

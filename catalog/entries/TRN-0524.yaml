@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: cross
   target: INF-2261
+pattern: PAT-TRN-0058
 original:
   mechanism: 'CANN ops-nn aclnnGeluMul（activation/gelu_mul，910B3、CANN 9.2.0、master 754a2ee9）对 out 传非连续 Tensor（非连续 stride）时两段接口返回 0，但 kernel 按连续布局写入。资料参数表把 out 的「非连续Tensor」标为 ×（#6024 已从 √ 改 ×，声明不支持），实测行为是不拒绝、不转换、直接按连续写而非 161002。fp32[8x16] 输入（应写 8x8=64 元素）、out 逻辑形状 [8,8]：连续 stride=[8,1] 全对；非连续 stride=[16,2]（storage 128）返回 0/0 但写入落连续前 64 位，按 stride 读回 max|diff|=1.55579054；错位模式 strided[1]==contig[2]、strided[2]==contig[4] 证明写入完全忽略 stride。同族 #7654（out 声明元素数小于推导值时越界写 128-240B）已在推理库 INF-2261 覆盖。issue 期望：第一段返回 161002 或先转连续算完回写。'
   source: https://gitcode.com/cann/ops-nn/issues/7668
@@ -50,3 +51,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - pattern

@@ -4,13 +4,13 @@ slug: opsnn_swigluquant_v2_rank1_dynamic_quant_wrong
 aliases: []
 title: SwiGluQuantV2 rank1 动态量化输出错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: swi_glu_quant rank1 寻址
-  behavior: smoothScales 传 rank1 [G]（资料支持）+ dynamic 量化被放行，但 kernel 按每组 basicColLen 个 float 搬运（[G,N] 寻址）越界读，rowmax/scale/y 全错
+  behavior: smoothScales传rank1 [G]（per-tensor）+dynamic时量化输出错误；疑似（issue自述未改码验证）：kernel按basicColLen做向量乘，smooth仅G个float，越界读后rowmax
 effect:
   objects:
   - 数值结果
@@ -43,3 +43,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

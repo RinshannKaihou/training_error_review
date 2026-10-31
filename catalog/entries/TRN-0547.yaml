@@ -4,7 +4,7 @@ slug: deepspeed_opsd_jsd_lowprec_mask_count_loss_zero
 aliases: []
 title: DeepSpeed OPSD JSD 低精 logits 掩码计数错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 损失计算
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 训练信号
-  detail: bf16 下 token 计数偏差 200 起步、loss 分母错；fp16 下计数值溢出导致 JSD loss 恒 0——蒸馏信号完全丢失而训练继续；修前 22 用例失败、修后通过（CPU 验证）
+  detail: bf16 下有效 token 计数被舍入（97992→97792），loss 归一化分母错；fp16 下计数溢出为 int64 max，JSD loss 归 0，蒸馏信号静默消失而训练照常跑完；新增 bf16/fp16 用例修前失败、修后 22 通过（CPU，未覆盖 GPU/ZeRO）
   visibility: 静默错误
 mitigation:
   detect: 对 bf16/fp16 logits 的 loss 路径断言 mask 计数与 int64 参考一致；监控 loss 是否异常趋 0
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

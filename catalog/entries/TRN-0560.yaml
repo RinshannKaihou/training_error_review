@@ -4,10 +4,10 @@ slug: opsnn_apply_adam_w_quant_zero_block_nan
 aliases: []
 title: ApplyAdamWQuant 零块 0/0 出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 量化
     stack: cann
     component: apply_adam_w_quant 归一化
   behavior: 量化归一化 Div(state, absmax) 在 block absmax=0 时 0/0=NaN（golden 有特判），NaN 进二分查找/CheckSign 后量化码值与 golden 分歧
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 量化

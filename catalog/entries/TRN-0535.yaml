@@ -31,6 +31,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-transformer/merge_requests/14827
   kind: gitcode_pr
 relations: []
+pattern: PAT-TRN-0059
 original:
   mechanism: CANN ops-transformer PromptFlashAttention 310P（x310）fp16 HighPerformance 场景（tiling key QINT8_KVFP16_OUTBF16_BSH_HIGHLEVELAPI_MDL_310TILING）派发到 PromptAttentionPrefill -> UnpadFlashAttentionCommon。原 UpdateOutput 先把未归一化的 fp32 累加结果 O 直接 cast 成 fp16，再在 fp16 域做除法（除以 softmax 行和 l）。softmax 均匀时 O=n*35（每元素值 35 的均匀分布），n=1872 时 65520 > fp16 上限 65504，cast 时溢出为 +Inf，归一化后输出 Inf。修复 PR !14827（open）：先广播 l 并在 fp32 域完成 O/l 归一化，最后 cast 回 fp16，消除中途溢出。
   source: https://gitcode.com/cann/ops-transformer/merge_requests/14827
@@ -50,3 +51,7 @@ migration:
       effect:
         from: 隐状态
         to: 数值结果
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - pattern

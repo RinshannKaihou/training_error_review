@@ -4,7 +4,7 @@ slug: opsnn_squaredrelu_out_contract_missing
 aliases: []
 title: SquaredRelu out 契约缺失错写越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 越界写实测 16/24 元素；非连续 out 逻辑视图错值数 4（第二行保持哨兵）；两段接口均返回 0（应 161002）；与 TRN-0524（GeluMul）/TRN-0521 族同属 out 契约缺失面，910B3/CANN 9.2.0/master 59c0720c
+  detail: 910B3/CANN 9.2.0/master 59c0720c：out=[4x4]（16 元素）时两段返回 0，内核写 32 元素越界 16（out=[1x8] 越界 24）；out [2,4]/strides [8,1] 返回 0，按连续写 8 元素，第二行 4 元素仍为初始化哨兵
   visibility: 静默错误
 mitigation:
   detect: out shape/strides 契约用例 + msSanitizer；非连续视图读回对拍
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0524
+pattern: PAT-TRN-0058
 original:
   mechanism: 'cann/ops-nn #7756 + #7757（2026-10-30，Atlas A2 910B3、CANN 9.2.0、master 59c0720c）：aclnnSquaredRelu 的 GetWorkspaceSize 不校验 out 与 input 的 shape 一致，也不拒绝非连续 out。#7756：input=fp32[4x8]、out=fp32[4x4]（16 元素）时两段返回 0、内核写 32 元素越界 16 个（out=[1x8] 时越界 24）；#7757：out shape [2,4]、strides [8,1]（storage [2,8]）返回 0、内核按连续写 8 元素，按 out 逻辑 stride 读回第二行 4 元素仍是初始化哨兵。资料参数表 out 要求「与输入 shape/格式一致」且非连续标 ×。两 issue 均含完整 C++ 复现与对照表。同族：TRN-0524（GeluMul 非连续 out 错写）、#7654/#7647（越界写，INF-2261 覆盖）、#7760（SwiGlu 偏小 out 越界写 64B）。'
   source: https://gitcode.com/cann/ops-nn/issues/7756 + https://gitcode.com/cann/ops-nn/issues/7757
@@ -43,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

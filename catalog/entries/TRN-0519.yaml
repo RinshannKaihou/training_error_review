@@ -37,6 +37,8 @@ original:
   source: https://gitcode.com/cann/ops-nn/issues/7727 + 修复 https://gitcode.com/cann/ops-nn/pull/13091
   behavior: NPU 训练中 FastGelu 激活的反向在激活值极大的样本上梯度变 NaN（如 x=±3.4e38 时 dy/dx 应为 1/0 却返回 NaN），训练 loss 突然 NaN 或被 NaN 污染；常规数值域正常，只有大有限值触发，331 元素实测 150 个不符，且自带 golden 因同样运算顺序漏检，常规 UT 防不住
   discovery: 2026-10-30 每日扫描
+  notes:
+  - 2026-10-31 2026-10-31 回访：#7727/!13091 仍 open，无状态变化。
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -47,3 +49,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - original.notes

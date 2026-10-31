@@ -38,6 +38,7 @@ original:
   discovery: 2026-10-29 每日扫描
   notes:
   - '2026-10-30 2026-10-30 回访：OpenRLHF #1383 仍 open'
+  - 2026-10-31 2026-10-31 回访：#1383 仍 open 无变化。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -53,5 +54,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-10-30'
+    fields:
+    - original.notes
+  - date: '2026-10-31'
     fields:
     - original.notes

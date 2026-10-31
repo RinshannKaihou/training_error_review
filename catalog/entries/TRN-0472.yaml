@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 对比 TP>1 与单卡的 c_attn K/V 行梯度；各 rank K/V 行参数逐 step all-gather 对比
-  fix: 待定（issue open 2026-10-27，带 TP2 最小复现脚本）
+  fix: 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8928（merged 2026-10-30T01:04:53Z，issue 同刻 closed）；发布版本未核实
 labels:
   stage:
   - shared
@@ -39,6 +39,7 @@ original:
   discovery: 2026-10-28 每日扫描
   notes:
   - '2026-10-30 2026-10-30 回访：DeepSpeed #8927 open；共享 KV 梯度归约修复 PR 未出现（搜索窗口内无）'
+  - '2026-10-31 2026-10-31 回访：issue #8927 closed（2026-10-30T01:04:53Z）、修复 PR #8928 (Sum GPTBigCode''s shared key/value gradient across tensor-parallel ranks) 同刻 merged。修复合入主库；发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -56,3 +57,9 @@ migration:
   - date: '2026-10-30'
     fields:
     - original.notes
+  - date: '2026-10-31'
+    fields:
+    - original.notes
+  - date: '2026-10-31'
+    fields:
+    - mitigation.fix

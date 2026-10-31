@@ -42,6 +42,7 @@ original:
   discovery: 2026-10-28 每日扫描
   notes:
   - '2026-10-30 2026-10-30 回访：修复 PR !13086（open）覆盖 4 个 issue（#7446 V=0 静默错值 + #7447 vocab/logitsMax 行数不一致静默少写越界写 + #7472 可选输入非空被静默忽略 + #7473 文档）；op_api CheckShape 三项校验 161002 + kernel vLen<=0 补 buffer 根因修复 + 6 负向 UT；910B3/CANN 9.3.0 上板验证。#7447 越界写面并入本条（同算子同修复载体）'
+  - 2026-10-31 2026-10-31 回访：!13086 仍 open，无状态变化。
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -69,5 +70,8 @@ migration:
     fields:
     - evidence
   - date: '2026-10-30'
+    fields:
+    - original.notes
+  - date: '2026-10-31'
     fields:
     - original.notes

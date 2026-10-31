@@ -37,6 +37,8 @@ original:
   source: https://gitcode.com/cann/ops-transformer/pull/14895（相关 https://gitcode.com/cann/ops-transformer/pull/14822）
   behavior: NPU MoE 量化训练使用 QuantGroupedMatMulAlltoAllv 且 tiling 派发到 32 核时，GEMM 输出错值：专家计算结果静默偏离参考，loss 曲线无显式异常但模型质量受损；强制其他核数（如 16）输出正常，可用 PR 提供的环境变量开关定向复现
   discovery: 2026-10-30 每日扫描
+  notes:
+  - 2026-10-31 2026-10-31 回访：!14895（temp repro 强制 blockDim 复现 32 核精度问题）仍 open，无状态变化。
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -54,3 +56,7 @@ migration:
     - detail
     uncertain:
     - subsystem
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - original.notes

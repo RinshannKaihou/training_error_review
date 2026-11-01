@@ -4,7 +4,7 @@ slug: ops_math_silent_check_step0_and_zero_state_freeze
 aliases: []
 title: aclnnSilentCheck 首步漏报与零值状态冻结
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 指标/日志
-  detail: 910B3：stepRef=0 时 val=5000（阈 1000）应 L1 得 result=0，inf/nan 同放行；121 条 stepRef=0 用例 16 条不符、664 条 stepRef≥1 无一不符。val=0.0 时 sfda/step 出参原样冻结。
+  detail: 910B3：stepRef=0 时 val=5000（阈1000）应 L1 得 result=0，inf/nan/1e9 阈全放行，stepRef=1 时恢复；val=0.0（含 -0.0）时入参 [70,70,400]/7 出参原样未变（资料要求 [0,0,400]/8），1e-45 正常更新。
   visibility: 静默错误
 mitigation:
   detect: 首步注入已知超阈/NaN 值验证 result 是否仍 0；stepRef=0/1 同输入对照；检查 val=0 调用后 sfdaRef/stepRef 是否前进。
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

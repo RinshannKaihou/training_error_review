@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 577 条；状态：active 564、pending_audit 13
+共 577 条；状态：active 577
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -666,6 +666,7 @@
 - **影响详情**：eps=x+ulp32/8（double 下严格大于 x）时按资料应输出 0，实测输出与 eps==x 完全相同；eps=1e-320 输出与 eps=0.0 逐字节相同，x=0 时输出 inf 而非 0，返回码 0
 - **改进措施**：检测 对 eps 邻近 x 的边界点做 fp64 标杆对拍（x+ulp32/8 / 1e-320 两档）；修复 待定（issue 建议 eps 全程 double 或把原型/资料改 float 二选一）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7163
+- **关联**：cross:INF-2342
 
 ### TRN-0375 `opsnn_thnn_fused_lstm_cell_global_state_mt_race` ThnnFusedLstmCell 全局状态多线程竞态错果崩进程
 
@@ -1721,31 +1722,31 @@
 
 ### TRN-0565 `ascend_310p_fp32_gemm_silent_fp16_input_path` 310P fp32 GEMM/conv 静默按 fp16 输入精度计算
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / torch_npu / 310P Cube 路径 fp32 精度降级
 - **原因行为**：310P3 上 fp32 声明的 matmul/addmm/linear/einsum/conv2d 在 Cube 路径被降为 fp16 输入+fp32 累加；allow_hf32=False 确认生效后输出逐位不变，无警告。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：310P3：matmul vs 真 fp32 误差 1.995e-4、addmm 4.2e-4、linear 2.6e-4、conv2d 2.9e-4（容差 5e-5 超 4~6 倍），与 fp16in 参照吻合（1.5e-7）；einsum 13/16 案超差。开关失效无法关闭。
+- **影响详情**：310P3：fp32 matmul/addmm/linear/conv2d 对真 fp32 参照误差 1.995e-4~4.215e-4，超容差 4~6 倍且无报错；matmul vs fp16in 参照仅 1.471e-7，余者同形态；einsum 13/16 超差 1.9e-3~8.0e-3。
 - **改进措施**：检测 fp32 GEMM 与 CPU 真 fp32 参照对拍（fp16in 参照=输入降 fp16 再升回 fp32 精算）；观察输出是否恰为 fp16 舍入值。；修复 待定（issue open：无修复 MR；A3 上 allow_hf32 开关有效、310P 失效，用户侧无规避手段）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5785
 - **关联**：cross:INF-2323
 
 ### TRN-0566 `torch_npu_950pr_index_put_oob_silent_memory_corruption` 950PR index_put_/scatter_ 越界写静默腐蚀邻接内存
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / torch_npu / index_put_/scatter_ 越界无校验
 - **原因行为**：950PR 上 index_put_/scatter_ 的越界索引写全程无异常（call/sync/read 三相静默，8/8 档零 raise），写指针按线性偏移裸走出界、真实落到目标张量之外的物理内存。
-- **影响对象**：跨请求/跨样本数据；数值结果（静默错误）
-- **影响详情**：哨兵实证：越界偏移精确落到邻接缓冲（S3[871]/[65407]，值逐位相同）；scatter_ 列越界回卷覆盖靶内 63 个未触碰行；落点恰进 512B 分配隙时完全无痕。复机重跑逐位复现，同进程张量 B 被无声毁掉。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：哨兵实证：越界偏移精确落到邻接缓冲（S3[871]/[65407]，值逐位相同）；scatter_ 列越界回卷覆盖靶内 63 个未触碰行；落点恰进 512B 分配隙时完全无痕。复机重跑逐位复现，紧邻目标张量（1MB 内）布置的其他张量被逐位写入用户值而无声毁掉。
 - **改进措施**：检测 对 index/target 做范围断言（host 侧）；目标张量邻接布哨兵缓冲区检测写穿透；CPU 同码对照（CPU 7/7 立即 raise）。；修复 待定（issue open：期望对齐 CPU/CUDA 抛 IndexError；跨芯谱系 A3/910B3 延迟抛、310P3 全抛，唯 950PR 全静默，未见修复 MR）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5786
 - **关联**：cross:INF-2324
 
 ### TRN-0567 `ops_nn_embeddingbag_includelastoffset_boundary` aclnnEmbeddingBag includeLastOffset 聚合越界
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / embedding_bag offsets 边界
 - **原因行为**：includeLastOffset=true 时最后一个 offset 未被当作 bag 结束边界，bag 一直聚合到 indices 末尾，把应被标记掉的尾部索引也算进去；同二进制只改该 bool 即触发。
@@ -1757,7 +1758,7 @@
 
 ### TRN-0568 `ops_math_reduce_log_sum_empty_zero_not_neginf` aclnnReduceLogSum 空输入输出 0 而非 -inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / reduce_log_sum 空输入早退
 - **原因行为**：空 tensor（numel=0）早退分支 FillScalar(reduce, 0.0f) 把 sum 的零元当最终结果写出、跳过 log；数学语义应为 log(0)=-inf，同仓 aclnnLogSumExp 填 -INFINITY。
@@ -1769,19 +1770,19 @@
 
 ### TRN-0569 `ops_nn_index_int_out_shape_unvalidated` aclnnIndex 整型索引不校验 out 形状
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / aclnnIndex out 形状校验缺失
 - **原因行为**：整型 indices 下 CheckShape 只对输入做 OP_LOGW 日志级提示（void 返回值被丢弃），从头到尾不校验 out 形状；out 偏小写出后静默截断，偏大返回未初始化，全部返回 0。
 - **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
-- **影响详情**：910B 实测：3 索引真实输出 (3,4)，out 给 (1,4)/(2,4)/(0,4)/(3,5) 全部返回 0——偏小丢行、偏大尾部未初始化；BOOL 通路同输入却返回 507018，通路校验强度不一致。
+- **影响详情**：910B 实测：3 索引真实输出 (3,4)，out 给 (0,4)/(1,4)/(2,4)/(3,5) 两段均返回 0——偏小丢行、偏大尾部未初始化；对照同一 self 的 BOOL 索引（3 个 True）在 out 失配时同样返回 0，但流同步报 507018，整型通路无任何暴露。
 - **改进措施**：检测 调用后断言 out.shape 与按 indices 推导的真实形状一致；与 BOOL 索引通路或 CPU 参照对拍。；修复 待定（issue open：期望第一段返回 161002；源码锚点 index/index/op_api/aclnn_index.cpp:164，未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7853
 - **关联**：var:TRN-0524；cross:INF-2330
 
 ### TRN-0570 `ops_nn_gatherv3_fp64_highrank_zero_output` aclnnGatherV3 fp64 高秩输出整块全 0
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / GatherV2AiCPU fp64 高秩兜底
 - **原因行为**：fp64 且 self 秩≥6 时走 AICPU 兜底路径，两段返回 0 但输出整块写 0（确定性计算错误）；fp32 全秩逐位正确，fp64 秩≤4 正确、秩≥6 全 0。
@@ -1793,7 +1794,7 @@
 
 ### TRN-0572 `ops_nn_scatter_nd_update_shape_unvalidated` aclnnScatterNdUpdate 形状约束不校验越界读静默写入
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / scatter_nd_update 约束校验缺失
 - **原因行为**：对资料明写的 updates 形状与索引深度 a≤rank 两条约束不做任何校验：updates 偏小时把越界读到的值写进 varRef（静默脏写），a 超限下沉为执行期 507057。
@@ -1805,7 +1806,7 @@
 
 ### TRN-0573 `ops_nn_bn3d_training_reduce_fp16_fused_kahan_loss` BN3DTrainingReduce FP16 融合归约平方和精度超差
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / BN3DTrainingReduce 归约
 - **原因行为**：FP16 单 tile 融合路径每 8 个向量块先做朴素累加，块内已舍弃的低位不能由后续 Kahan 恢复；平方和输出相对 FP64 正确舍入值在部分通道低 1 ULP。
@@ -1817,10 +1818,10 @@
 
 ### TRN-0574 `ops_nn_normalize_bbox_fp16_large_divisor` NormalizeBBox FP16 大除数精度错误
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / NormalizeBBox FP16 转换溢出
-- **原因行为**：FP16 坐标、高宽（合法 INT32）超 FP16 最大有限值时，旧实现先把高宽转 FP16 溢出成 inf/0 再相除，输出全 0；测试 GPU 参考重复同样转换，把错误结果误判 PASS。
+- **原因行为**：FP16 坐标、高宽（合法 INT32）超 FP16 最大有限值（65536>65504）时，旧实现先把高宽转 FP16 溢出后再相除，输出全 0；仓内 GPU 测试参考重复同样转换，把错误结果判为 PASS。
 - **影响对象**：数值结果；测试判定（静默错误）
 - **影响详情**：950PR 实测：boxes=FP16[1,3,4] 全 1000、shape_hw=INT32 高宽 65536，12 输出应 0.01526 实得全 0（12/12 错）；FP32 对照通过；旧 GPU 参考也输出 0 致 cross_check 误判 PASS。修复参考后旧内核 FAIL。
 - **改进措施**：检测 提升精度数学参考对照（勿复刻 kernel 的 dtype 转换路径）；FP32 对照组。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13275 （open）：修 FP16 大除数精度并补 Host 推导校验；26 条小用例三 Kernel 路径 + 26 条 GE 用例 PASS。未核实发布。
@@ -1829,10 +1830,10 @@
 
 ### TRN-0575 `ops_nn_unique_valueout_dtype_unvalidated` aclnnUnique/Unique2 不校验 valueOut dtype
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-01
 
 - **原因对象**：算子/内核 / cann / unique valueOut 校验缺失
-- **原因行为**：CheckDtypeValid 不校验 valueOut：dtype 与 self 不一致时两段返回 0，输出为位模式错读的脏数据；同族 UniqueConsecutive/UniqueDim 正确 161002。
+- **原因行为**：CheckDtypeValid 不校验 valueOut：dtype 与 self 不一致时两段式接口返回 0，输出为位模式错读的脏数据；同族 aclnnUniqueConsecutive 同输入正确返回 161002，行为不一致。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：910B2 实测：self=FP32[8]、valueOut=FP16 两段均返回 0，拿到脏数据无错误码；资料错误码表明写 self 或 valueOut dtype 非法应 161002；四接口行为不一致。
 - **改进措施**：检测 调用前断言 valueOut.dtype==self.dtype；与同族 UniqueConsecutive（会正确拒绝）或 CPU 参照对拍。；修复 待定（issue open：期望补齐 valueOut dtype 校验，未见修复 MR）
@@ -2296,12 +2297,12 @@
 
 ### TRN-0577 `hcomm_comminitrootinfo_groupmap_unlocked_race` hcomm CommInitRootInfo 竞态访问 hcclGroupMap
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：集合通信 / cann / CommInitRootInfo 线程安全缺失
 - **原因行为**：CommInitRootInfo 直接 find/read opbasedCommInfoV2.hcclGroupMap 未按数据结构定义加 groupParamsLock；分级建链多 root 并发调用时 map 访问竞争。
 - **影响对象**：可用性/进度（不可复现）
-- **影响详情**：Ascend 950/960 分级建链过程中多 root 同时调用 CommInitRootInfo 导致 hcclGroupMap 访问竞争；数据结构自带 std::mutex groupParamsLock 但该路径未用——竞态下通信域初始化结果不确定。
+- **影响详情**：Ascend 950/960 分级建链场景（多 root 并发初始化通信域，如多机多卡启动的通信域建立阶段）可能出现通信域初始化异常、建链失败或偶发 hang/崩溃等不确定行为；复现取决于线程时序，相同配置重跑结果可能不同；未见静默错值实测报告，主要风险在建链阶段稳定性。
 - **改进措施**：检测 多线程/多 root 并发建链压测（TSAN）；审查通信域初始化调用方的并发拓扑。；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6394 （open，2026-10-31）：补齐线程安全访问封装。未核实发布。
 - **来源**：https://gitcode.com/cann/hcomm/issues/1182；https://gitcode.com/cann/hcomm/merge_requests/6394
 
@@ -6503,19 +6504,19 @@
 
 ### TRN-0571 `ops_math_silent_check_step0_and_zero_state_freeze` aclnnSilentCheck 首步漏报与零值状态冻结
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：观测/评测 / cann / SilentCheckV2 判定与状态更新
 - **原因行为**：stepRef==0 分支（V2 语义错误下沉到 V1 kernel）跳过全部阈值判定一律返回正常并抹平 sfdaRef 历史；val==0.0 时跳过状态更新返回成功但状态冻结。
 - **影响对象**：指标/日志（静默错误）
-- **影响详情**：910B3：stepRef=0 时 val=5000（阈 1000）应 L1 得 result=0，inf/nan 同放行；121 条 stepRef=0 用例 16 条不符、664 条 stepRef≥1 无一不符。val=0.0 时 sfda/step 出参原样冻结。
+- **影响详情**：910B3：stepRef=0 时 val=5000（阈1000）应 L1 得 result=0，inf/nan/1e9 阈全放行，stepRef=1 时恢复；val=0.0（含 -0.0）时入参 [70,70,400]/7 出参原样未变（资料要求 [0,0,400]/8），1e-45 正常更新。
 - **改进措施**：检测 首步注入已知超阈/NaN 值验证 result 是否仍 0；stepRef=0/1 同输入对照；检查 val=0 调用后 sfdaRef/stepRef 是否前进。；修复 待定（两 issue open：#4364/#4367；修复 PR !6956 仅修 result 空指针，判定分支与状态冻结未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4364；https://gitcode.com/cann/ops-math/issues/4367
 - **关联**：cross:INF-2328
 
 ### TRN-0576 `msprobe_cosine_compare_overflow_underflow_misjudge` msprobe Cosine 比对大数溢出与微小值误判
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-01
 
 - **原因对象**：观测/评测 / cann / cosine 相似度数值稳定性
 - **原因行为**：直接用原始数值算点积与 L2 范数（float64 机器精度判零向量）：有限大数平方/点积溢出产生 inf/inf、0/inf；很小的非零向量因范数下溢被当全零，正交/反向微小向量返回 1.0。

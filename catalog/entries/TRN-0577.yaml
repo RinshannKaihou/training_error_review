@@ -4,7 +4,7 @@ slug: hcomm_comminitrootinfo_groupmap_unlocked_race
 aliases: []
 title: hcomm CommInitRootInfo 竞态访问 hcclGroupMap
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: Ascend 950/960 分级建链过程中多 root 同时调用 CommInitRootInfo 导致 hcclGroupMap 访问竞争；数据结构自带 std::mutex groupParamsLock 但该路径未用——竞态下通信域初始化结果不确定。
+  detail: Ascend 950/960 分级建链场景（多 root 并发初始化通信域，如多机多卡启动的通信域建立阶段）可能出现通信域初始化异常、建链失败或偶发 hang/崩溃等不确定行为；复现取决于线程时序，相同配置重跑结果可能不同；未见静默错值实测报告，主要风险在建链阶段稳定性。
   visibility: 不可复现
 mitigation:
   detect: 多线程/多 root 并发建链压测（TSAN）；审查通信域初始化调用方的并发拓扑。
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

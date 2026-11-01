@@ -4,7 +4,7 @@ slug: ops_nn_scatter_nd_update_shape_unvalidated
 aliases: []
 title: aclnnScatterNdUpdate 形状约束不校验越界读静默写入
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -35,6 +35,7 @@ relations:
   target: TRN-0524
 - kind: cross
   target: INF-2331
+pattern: PAT-TRN-0058
 original:
   mechanism: 'cann/ops-nn #7858（2026-10-31，open；Ascend 910B3、CANN 9.2.0、ACLNN 两段式直调、master 稀疏检出 index/scatter_nd_update）：aclnnScatterNdUpdate 第一段 GetWorkspaceSize 对资料明写的「updates 形状必须等于 indices.shape[:-1] + varRef.shape[a:]」与「a ≤ varRef.rank」两条约束不校验。实测：varRef=FP32[7]（1..7）、indices=INT64[3,1]={0,1,2}——updates=[3] 合法正确；[19]（偏大）与 [2]（偏小）两段均返回 0；偏小场景把越界读到的值静默写进 varRef（updates 数据被错误解释，varRef 内容变成非预期脏值，无任何错误码）；indices=INT64[3,2]（a=2 > varRef.rank=1）两段返回 0 直到流同步才暴露设备侧 507057。'
   source: https://gitcode.com/cann/ops-nn/issues/7858 （open，2026-10-31；含自包含 C++ 探针与三种 updates 形状对照）
@@ -44,3 +45,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

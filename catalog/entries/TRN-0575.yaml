@@ -4,13 +4,13 @@ slug: ops_nn_unique_valueout_dtype_unvalidated
 aliases: []
 title: aclnnUnique/Unique2 不校验 valueOut dtype
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: unique valueOut 校验缺失
-  behavior: CheckDtypeValid 不校验 valueOut：dtype 与 self 不一致时两段返回 0，输出为位模式错读的脏数据；同族 UniqueConsecutive/UniqueDim 正确 161002。
+  behavior: CheckDtypeValid 不校验 valueOut：dtype 与 self 不一致时两段式接口返回 0，输出为位模式错读的脏数据；同族 aclnnUniqueConsecutive 同输入正确返回 161002，行为不一致。
 effect:
   objects:
   - 数值结果
@@ -34,6 +34,7 @@ relations:
   target: TRN-0524
 - kind: cross
   target: INF-2339
+pattern: PAT-TRN-0058
 original:
   mechanism: 'cann/ops-nn #7867（2026-10-31，open；Ascend910B2、CANN 9.2.0、ACLNN 两段式直调、master index/unique/op_api）：aclnnUnique/aclnnUnique2 的 CheckDtypeValid 只校验 self/inverseOut（Unique2 另加 countsOut），完全不校验 valueOut 的 dtype。实测 self=FP32[8]={1,2,2,3,3,3,4,5}、valueOut=FP16[8]（与 self 不一致）、inverseOut=INT64：两段式接口均返回 0，调用方拿到 self 位模式按另一 dtype 解释后的脏数据；对照组同违约输入调 aclnnUniqueConsecutive（dim=1000）正确返回 161002——同族四个接口行为不一致。资料 aclnnUnique.md/aclnnUnique2.md 错误码表明写「self 或 valueOut 的数据类型不在支持范围 → 161002」且 valueOut 参数行注明「数据类型同 self」。'
   source: https://gitcode.com/cann/ops-nn/issues/7867 （open，2026-10-31；含自包含 C++ 探针与同族对照）
@@ -43,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

@@ -31,6 +31,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-math/issues/4331
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0061
 original:
   mechanism: 'cann/ops-math #4331（2026-10-30，Ascend 910B2、CANN 9.2.0）：aclnnKlDivGetWorkspaceSize 在输入为空 tensor 且 reduction=none(0) 时走 aclnn_kl_div.cpp:190 早退分支，整段跳过 out 形状校验（仅存在于非空路径 :264），第一段返回 ACLNN_SUCCESS、第二段也返回 0、out 一个元素都没写。实测 self=target=[0,4]、out=[2,4]（不可广播）应 161002，实际 phase1=0/phase2=0、out 8 元素全保持预填值；out=[1,4] 同样未写；非空对照（[3,2]/[6]）正确 161002；reduction=mean 时空输入被拒（561103）。影响：调用方以返回 0 为成功读 out，拿到未初始化/上次残留 device 内存；空 batch（尾批为空、动态切片为空）是训练与推理常见边界。'
   source: https://gitcode.com/cann/ops-math/issues/4331
@@ -59,3 +60,7 @@ migration:
         to: 数值结果
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - pattern

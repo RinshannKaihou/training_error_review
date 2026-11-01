@@ -4,7 +4,7 @@ slug: torch_npu_950pr_index_put_oob_silent_memory_corruption
 aliases: []
 title: 950PR index_put_/scatter_ 越界写静默腐蚀邻接内存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,9 +13,9 @@ cause:
   behavior: 950PR 上 index_put_/scatter_ 的越界索引写全程无异常（call/sync/read 三相静默，8/8 档零 raise），写指针按线性偏移裸走出界、真实落到目标张量之外的物理内存。
 effect:
   objects:
-  - 跨请求/跨样本数据
   - 数值结果
-  detail: 哨兵实证：越界偏移精确落到邻接缓冲（S3[871]/[65407]，值逐位相同）；scatter_ 列越界回卷覆盖靶内 63 个未触碰行；落点恰进 512B 分配隙时完全无痕。复机重跑逐位复现，同进程张量 B 被无声毁掉。
+  - 跨请求/跨样本数据
+  detail: 哨兵实证：越界偏移精确落到邻接缓冲（S3[871]/[65407]，值逐位相同）；scatter_ 列越界回卷覆盖靶内 63 个未触碰行；落点恰进 512B 分配隙时完全无痕。复机重跑逐位复现，紧邻目标张量（1MB 内）布置的其他张量被逐位写入用户值而无声毁掉。
   visibility: 静默错误
 mitigation:
   detect: 对 index/target 做范围断言（host 侧）；目标张量邻接布哨兵缓冲区检测写穿透；CPU 同码对照（CPU 7/7 立即 raise）。
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: 数值结果
+    rewritten:
+    - detail

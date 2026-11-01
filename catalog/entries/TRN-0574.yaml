@@ -4,13 +4,13 @@ slug: ops_nn_normalize_bbox_fp16_large_divisor
 aliases: []
 title: NormalizeBBox FP16 大除数精度错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: NormalizeBBox FP16 转换溢出
-  behavior: FP16 坐标、高宽（合法 INT32）超 FP16 最大有限值时，旧实现先把高宽转 FP16 溢出成 inf/0 再相除，输出全 0；测试 GPU 参考重复同样转换，把错误结果误判 PASS。
+  behavior: FP16 坐标、高宽（合法 INT32）超 FP16 最大有限值（65536>65504）时，旧实现先把高宽转 FP16 溢出后再相除，输出全 0；仓内 GPU 测试参考重复同样转换，把错误结果判为 PASS。
 effect:
   objects:
   - 数值结果
@@ -46,3 +46,12 @@ migration:
   - date: '2026-11-01'
     fields:
     - relations
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: cross
   target: INF-2308
+pattern: PAT-TRN-0062
 original:
   mechanism: 'cann/ops-nn #7762（2026-10-30，closed）+ 修复 MR !13131（merged）：BN3DTrainingReduce 在 Ascend 950 上的 FP16 短行平方和与分核归约精度损失。短行分支 N≤64、R0=1 时直接累加，53×5 固定输入稳定超三方 L1 RMSE 比值门槛；分核路径只传 FP32 部分和，补偿量在根核合并前丢失，同 shape 相消输入（[2,1,4682181,2]，前 65536 元素 1、中段 -1、首元 2^-9）NPU=-1、CPU/GPU=-0.998046875。仓内 Golden 的 Promote 平方和另有独立参考累加误差（[2047,1]×5 原 FP32 并行和 20951048 vs 精确 20951050）。修复：短行复用 TwoSum 补偿路径、分核 K=8 平方和双链、每核主值+补偿量一起传根核；Golden 复用 Torch 排序 cumsum。验证 GEIR14/14、Host UT 60/60、跨核相消 RMSE 比值 32/16/16→1；扩展 32 条冻结输入 30 PASS/2 FAIL（shape (1,1,1048575)/(1,4,1048575) 平方和 1 ULP 既有问题，基线同错，未解）。BN3DTrainingReduce 是视觉 BN3D 训练归约算子，训练侧统计量（mean/var）直接受害。'
   source: https://gitcode.com/cann/ops-nn/issues/7762 + 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13131（merged）
@@ -63,3 +64,6 @@ migration:
   - date: '2026-11-01'
     fields:
     - original.notes
+  - date: '2026-11-01'
+    fields:
+    - pattern

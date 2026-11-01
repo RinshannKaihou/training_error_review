@@ -4,7 +4,7 @@ slug: ops_nn_bn3d_training_reduce_fp16_fused_kahan_loss
 aliases: []
 title: BN3DTrainingReduce FP16 融合归约平方和精度超差
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0564
+pattern: PAT-TRN-0062
 original:
   mechanism: 'cann/ops-nn #7831（2026-10-31，open；Ascend950PR_9579、CANN 9.3.0、ops-nn ee9e5159）：BN3DTrainingReduce_L1_531 FP16 NDHWC [12,17,12,20,10]、范围 [-1,1] 三方精度比对 PASS,FAIL——平方和 RMSE 比值 1.7320508 超 cross_check L1 门槛 1.5，相同冻结输入三次稳定失败。根因：内部单 tile 融合路径每 8 个向量块先做朴素累加，块内已舍弃的低位不能由后续 Kahan 补偿恢复（NPU DumpTensor 导出 10 通道主值与补偿值与逐阶段 FP32 模型逐位一致，定位到块参数）；实际输出相对 FP64 参考正确舍入值在平方和通道 0/3/5 各低 1 ULP。修复 MR !13229：FP16 融合路径块参数 8→2，3/3 PASS（RMSE 比值 1.414<1.5）；原冻结批次等值布局对照 24/24、极值/subnormal/NaN/Inf/空通道/尾块 19/19、仓内图布局 15/15。全量复测 588 条正向精度失败 0（2 条 2^32 元素单通道用例因 32GiB 资源上限未完成，不记 PASS）。'
   source: https://gitcode.com/cann/ops-nn/issues/7831 （open，2026-10-31；含 golden 复现步骤、冻结输入 SHA256、全量复测补充）
@@ -48,3 +49,16 @@ migration:
   - date: '2026-11-01'
     fields:
     - relations
+  - date: '2026-11-01'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

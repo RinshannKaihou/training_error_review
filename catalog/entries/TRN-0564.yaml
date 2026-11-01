@@ -40,6 +40,8 @@ original:
   behavior: NPU（Ascend 950）FP16 BN3D 训练里，短行（每核元素 ≤64）与跨核相消输入（正负对称、和接近 0）的均值/方差统计量精度显著差于 GPU（RMSE 比值超判据 2~3 倍，相消求和差 2e-3 量级）；BN 归一化用错统计量，训练 loss 无报错但数值偏离参考，FP32/BF16 正常。
   trigger_surface: CANN BN3DTrainingReduce + FP16 + Ascend 950 + 短行(N≤64,R0=1)或跨核相消输入
   discovery: 2026-10-31 每日扫描
+  notes:
+  - '2026-11-01 回访 2026-11-01：同算子另一触发面 #7831（FP16 单 tile 融合路径块参数 8 丢低位，RMSE 比值 1.732 超 1.5 门槛，修复 MR !13229 open 块参数 8→2）本轮独立判定为 var→TRN-0573；!13131 merged 状态不变，发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -57,3 +59,7 @@ migration:
     - detail
     uncertain:
     - behavior
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - original.notes

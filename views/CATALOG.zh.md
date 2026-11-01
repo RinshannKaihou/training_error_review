@@ -3,15 +3,15 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 564 条；状态：active 564
+共 577 条；状态：active 564、pending_audit 13
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 140 |
+| 算子/内核 | 150 |
 | 编译器 | 18 |
 | 运行时/执行 | 13 |
-| 集合通信 | 9 |
+| 集合通信 | 10 |
 | 并行切分 | 32 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
@@ -28,7 +28,7 @@
 | MoE路由 | 26 |
 | 重计算/卸载 | 16 |
 | RL训练回路 | 84 |
-| 观测/评测 | 16 |
+| 观测/评测 | 18 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -809,8 +809,8 @@
 - **原因行为**：官方 example 输入完全合法却输出 nan：最小用例 y=[2.0]、Y=[1.0]、K=1 期望 ≈-0.81 实测 nan；dtype/K/B/eps/weightType/确定性开关全维度排查均 nan，金丝雀排除未初始化内存。
 - **影响对象**：训练信号（数值异常）
 - **影响详情**：Lightning Indexer（Kimi K2 类 MoE 深层索引器）KL loss 训练损失恒为 nan，训练起步即坏；截至 2026-10-13 master 未见修复提交，若已修待告知 PR。
-- **改进措施**：检测 首 step loss 断言有限；官方 example 作为冒烟金丝雀。；修复 待定（issue open 2026-10-23；报告者请求告知修复 PR 后重验）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6614
+- **改进措施**：检测 首 step loss 断言有限；官方 example 作为冒烟金丝雀。；修复 修复 MR !15015（merged 2026-10-31）：根因定位为 ACLNN eps(double) 与 op_def 注册 Float 类型错配——OP_ATTR 传 double 按 float 读位模式错误致 kernel 用异常 eps 输出 NaN。修复=入口 static_cast<float>(eps) 并统一 INFER_SHAPE/launcher 两处 + Torch C++ eps 改 double 对齐签名 + eps>0/空指针校验（非法返回 161002）。修复后官方 example 549.777222 与 Torch 一致，UT 20 项全过。发布版本未核实
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6614；https://gitcode.com/cann/ops-transformer/merge_requests/15015
 
 ### TRN-0402 `opstransformer_fa_grad_v3_deterministic_dsink_unwritten` FA-Grad V3 确定性路径 dsink 输出未写出
 
@@ -1704,7 +1704,7 @@
 - **影响对象**：梯度（静默错误）
 - **影响详情**：经公开入口训练态梯度为垃圾值/NaN（实测 rel 1.1~2.8 或大形状 nan；直调内部 op rel 2.5e-3~3.5e-3 正常）；引入于 MR !13855；A3/910_93 bf16
 - **改进措施**：检测 公开入口 vs 内部 op 双调用梯度对拍；backward 输出有限性断言；修复 待定（issue open：一行补丁验证通过；建议为公开入口 autograd 路径补测试——现有 pytest 三通路均直调内部 op 未覆盖）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6962
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6962；https://gitcode.com/cann/ops-transformer/merge_requests/15041
 - **关联**：cross:INF-2316
 
 ### TRN-0564 `opsnn_bn3dtrainingreduce_fp16_kahan_loss` BN3DTrainingReduce FP16 归约丢补偿量
@@ -1718,6 +1718,126 @@
 - **改进措施**：检测 FP16 相消输入（±1 对称）对拍 GPU；短行 N∈[53,64] RMSE 比值回归；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13131（merged：短行复用 TwoSum 补偿、分核 K=8 双链并传主值+补偿量；扩展 32 条 30 PASS/2 FAIL（1 ULP 既有问题未解））
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7762；https://gitcode.com/cann/ops-nn/merge_requests/13131
 - **关联**：cross:INF-2308
+
+### TRN-0565 `ascend_310p_fp32_gemm_silent_fp16_input_path` 310P fp32 GEMM/conv 静默按 fp16 输入精度计算
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / torch_npu / 310P Cube 路径 fp32 精度降级
+- **原因行为**：310P3 上 fp32 声明的 matmul/addmm/linear/einsum/conv2d 在 Cube 路径被降为 fp16 输入+fp32 累加；allow_hf32=False 确认生效后输出逐位不变，无警告。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：310P3：matmul vs 真 fp32 误差 1.995e-4、addmm 4.2e-4、linear 2.6e-4、conv2d 2.9e-4（容差 5e-5 超 4~6 倍），与 fp16in 参照吻合（1.5e-7）；einsum 13/16 案超差。开关失效无法关闭。
+- **改进措施**：检测 fp32 GEMM 与 CPU 真 fp32 参照对拍（fp16in 参照=输入降 fp16 再升回 fp32 精算）；观察输出是否恰为 fp16 舍入值。；修复 待定（issue open：无修复 MR；A3 上 allow_hf32 开关有效、310P 失效，用户侧无规避手段）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5785
+- **关联**：cross:INF-2323
+
+### TRN-0566 `torch_npu_950pr_index_put_oob_silent_memory_corruption` 950PR index_put_/scatter_ 越界写静默腐蚀邻接内存
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / torch_npu / index_put_/scatter_ 越界无校验
+- **原因行为**：950PR 上 index_put_/scatter_ 的越界索引写全程无异常（call/sync/read 三相静默，8/8 档零 raise），写指针按线性偏移裸走出界、真实落到目标张量之外的物理内存。
+- **影响对象**：跨请求/跨样本数据；数值结果（静默错误）
+- **影响详情**：哨兵实证：越界偏移精确落到邻接缓冲（S3[871]/[65407]，值逐位相同）；scatter_ 列越界回卷覆盖靶内 63 个未触碰行；落点恰进 512B 分配隙时完全无痕。复机重跑逐位复现，同进程张量 B 被无声毁掉。
+- **改进措施**：检测 对 index/target 做范围断言（host 侧）；目标张量邻接布哨兵缓冲区检测写穿透；CPU 同码对照（CPU 7/7 立即 raise）。；修复 待定（issue open：期望对齐 CPU/CUDA 抛 IndexError；跨芯谱系 A3/910B3 延迟抛、310P3 全抛，唯 950PR 全静默，未见修复 MR）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5786
+- **关联**：cross:INF-2324
+
+### TRN-0567 `ops_nn_embeddingbag_includelastoffset_boundary` aclnnEmbeddingBag includeLastOffset 聚合越界
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / embedding_bag offsets 边界
+- **原因行为**：includeLastOffset=true 时最后一个 offset 未被当作 bag 结束边界，bag 一直聚合到 indices 末尾，把应被标记掉的尾部索引也算进去；同二进制只改该 bool 即触发。
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：910B：indices={0,5,9,5,5,77,3}、offsets={0,4}，true 时 out[0]=110.28（7 个全算），期望 62.11；false 正确。800 级矩阵 133 条 true 用例全 FAIL，每条恰差一整行。
+- **改进措施**：检测 includeLastOffset=true/false 双跑对照（同权重/索引/偏移，差异即暴露）；与 CPU EmbeddingBag 参照对拍。；修复 待定（issue open：按资料语义最后一个 offset 应为结束位置，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7822
+- **关联**：var:TRN-0279
+
+### TRN-0568 `ops_math_reduce_log_sum_empty_zero_not_neginf` aclnnReduceLogSum 空输入输出 0 而非 -inf
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / reduce_log_sum 空输入早退
+- **原因行为**：空 tensor（numel=0）早退分支 FillScalar(reduce, 0.0f) 把 sum 的零元当最终结果写出、跳过 log；数学语义应为 log(0)=-inf，同仓 aclnnLogSumExp 填 -INFINITY。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B2 实测：data=fp32[0,3]、axes=[0] 期望 [-inf,-inf,-inf] 实得 [0,0,0]，两段均返回 0 无告警；非空输入逐位正确；master a6d37f00 复核仍在。
+- **改进措施**：检测 空 batch/空归约轴场景与 torch.log(torch.zeros(n)) 参照对拍；同族 LogSumExp 对照。；修复 待定（issue open：期望空输入填 -inf 与 aclnnLogSumExp 统一，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4366
+- **关联**：var:TRN-0552；cross:INF-2332
+
+### TRN-0569 `ops_nn_index_int_out_shape_unvalidated` aclnnIndex 整型索引不校验 out 形状
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / aclnnIndex out 形状校验缺失
+- **原因行为**：整型 indices 下 CheckShape 只对输入做 OP_LOGW 日志级提示（void 返回值被丢弃），从头到尾不校验 out 形状；out 偏小写出后静默截断，偏大返回未初始化，全部返回 0。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：910B 实测：3 索引真实输出 (3,4)，out 给 (1,4)/(2,4)/(0,4)/(3,5) 全部返回 0——偏小丢行、偏大尾部未初始化；BOOL 通路同输入却返回 507018，通路校验强度不一致。
+- **改进措施**：检测 调用后断言 out.shape 与按 indices 推导的真实形状一致；与 BOOL 索引通路或 CPU 参照对拍。；修复 待定（issue open：期望第一段返回 161002；源码锚点 index/index/op_api/aclnn_index.cpp:164，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7853
+- **关联**：var:TRN-0524；cross:INF-2330
+
+### TRN-0570 `ops_nn_gatherv3_fp64_highrank_zero_output` aclnnGatherV3 fp64 高秩输出整块全 0
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / GatherV2AiCPU fp64 高秩兜底
+- **原因行为**：fp64 且 self 秩≥6 时走 AICPU 兜底路径，两段返回 0 但输出整块写 0（确定性计算错误）；fp32 全秩逐位正确，fp64 秩≤4 正确、秩≥6 全 0。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B 实测 rank 扫描：fp32 rank2-8 全部 neq=0；fp64 rank6/7/8 输出 2048/8192/32768 元素全 0.0，三次重复完全一致（确定性错误非竞争）；同 rank-10 out fp32 正常而 fp64 报 561000。
+- **改进措施**：检测 fp64 gather 与 CPU 参照对拍（高秩小张量即可暴露全 0）；检查输出是否全零而输入非零。；修复 待定（issue open：AICPU 兜底有 rank/精度两处缺口，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7848
+- **关联**：cross:INF-2321
+
+### TRN-0572 `ops_nn_scatter_nd_update_shape_unvalidated` aclnnScatterNdUpdate 形状约束不校验越界读静默写入
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / scatter_nd_update 约束校验缺失
+- **原因行为**：对资料明写的 updates 形状与索引深度 a≤rank 两条约束不做任何校验：updates 偏小时把越界读到的值写进 varRef（静默脏写），a 超限下沉为执行期 507057。
+- **影响对象**：数值结果；模型权重（静默错误）
+- **影响详情**：910B3 实测：updates 合法时正确；[2]（偏小）时 varRef 被写入越界读到的值（静默脏写）；indices [3,2]（a=2>rank=1）两段返回 0 直到流同步才 507057。
+- **改进措施**：检测 调用前手动断言 updates.shape 与 indices/varRef 推导一致；写后读回与 CPU scatter_nd 参照对拍。；修复 待定（issue open：期望第一段 161002 拒绝，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7858
+- **关联**：var:TRN-0524；cross:INF-2331
+
+### TRN-0573 `ops_nn_bn3d_training_reduce_fp16_fused_kahan_loss` BN3DTrainingReduce FP16 融合归约平方和精度超差
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / BN3DTrainingReduce 归约
+- **原因行为**：FP16 单 tile 融合路径每 8 个向量块先做朴素累加，块内已舍弃的低位不能由后续 Kahan 恢复；平方和输出相对 FP64 正确舍入值在部分通道低 1 ULP。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：950PR 实测：FP16 NDHWC [12,17,12,20,10]（[-1,1]）平方和 RMSE 比值 1.732>1.5 门槛，冻结输入三次稳定失败；块参数 8→2 后 3/3 PASS（比值 1.414）；全量复测 588 条正向精度失败 0。
+- **改进措施**：检测 三方精度比对（cross_check L1 判据）+ FP64 参考正确舍入值；冻结输入回归。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13229 （open）：FP16 融合路径块参数 8→2，恢复 Kahan 补偿有效性；132 条回归全过。未核实发布。
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7831
+- **关联**：var:TRN-0564
+
+### TRN-0574 `ops_nn_normalize_bbox_fp16_large_divisor` NormalizeBBox FP16 大除数精度错误
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / NormalizeBBox FP16 转换溢出
+- **原因行为**：FP16 坐标、高宽（合法 INT32）超 FP16 最大有限值时，旧实现先把高宽转 FP16 溢出成 inf/0 再相除，输出全 0；测试 GPU 参考重复同样转换，把错误结果误判 PASS。
+- **影响对象**：数值结果；测试判定（静默错误）
+- **影响详情**：950PR 实测：boxes=FP16[1,3,4] 全 1000、shape_hw=INT32 高宽 65536，12 输出应 0.01526 实得全 0（12/12 错）；FP32 对照通过；旧 GPU 参考也输出 0 致 cross_check 误判 PASS。修复参考后旧内核 FAIL。
+- **改进措施**：检测 提升精度数学参考对照（勿复刻 kernel 的 dtype 转换路径）；FP32 对照组。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13275 （open）：修 FP16 大除数精度并补 Host 推导校验；26 条小用例三 Kernel 路径 + 26 条 GE 用例 PASS。未核实发布。
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7869
+- **关联**：cross:INF-2335
+
+### TRN-0575 `ops_nn_unique_valueout_dtype_unvalidated` aclnnUnique/Unique2 不校验 valueOut dtype
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / unique valueOut 校验缺失
+- **原因行为**：CheckDtypeValid 不校验 valueOut：dtype 与 self 不一致时两段返回 0，输出为位模式错读的脏数据；同族 UniqueConsecutive/UniqueDim 正确 161002。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B2 实测：self=FP32[8]、valueOut=FP16 两段均返回 0，拿到脏数据无错误码；资料错误码表明写 self 或 valueOut dtype 非法应 161002；四接口行为不一致。
+- **改进措施**：检测 调用前断言 valueOut.dtype==self.dtype；与同族 UniqueConsecutive（会正确拒绝）或 CPU 参照对拍。；修复 待定（issue open：期望补齐 valueOut dtype 校验，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7867
+- **关联**：var:TRN-0524；cross:INF-2339
 
 ## 编译器
 
@@ -2173,6 +2293,17 @@
 - **改进措施**：检测 规约结果与单卡参考对比；对 64 位/PROD 场景跑一致性自检；修复 修复 PR https://gitcode.com/cann/hccl/merge_requests/3805（open，未合入）：与非 V 版 !154 对齐补 HcommBatchModeEnd+Start+HcommThreadJoin barrier 并补 UINT64/FP64 判断
 - **来源**：https://gitcode.com/cann/hccl/merge_requests/3805
 - **关联**：cross:INF-2263
+
+### TRN-0577 `hcomm_comminitrootinfo_groupmap_unlocked_race` hcomm CommInitRootInfo 竞态访问 hcclGroupMap
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：集合通信 / cann / CommInitRootInfo 线程安全缺失
+- **原因行为**：CommInitRootInfo 直接 find/read opbasedCommInfoV2.hcclGroupMap 未按数据结构定义加 groupParamsLock；分级建链多 root 并发调用时 map 访问竞争。
+- **影响对象**：可用性/进度（不可复现）
+- **影响详情**：Ascend 950/960 分级建链过程中多 root 同时调用 CommInitRootInfo 导致 hcclGroupMap 访问竞争；数据结构自带 std::mutex groupParamsLock 但该路径未用——竞态下通信域初始化结果不确定。
+- **改进措施**：检测 多线程/多 root 并发建链压测（TSAN）；审查通信域初始化调用方的并发拓扑。；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6394 （open，2026-10-31）：补齐线程安全访问封装。未核实发布。
+- **来源**：https://gitcode.com/cann/hcomm/issues/1182；https://gitcode.com/cann/hcomm/merge_requests/6394
 
 ## 并行切分
 
@@ -6369,6 +6500,30 @@
 - **影响详情**：构造 input_sizes=(2,) 与 (3,) 的两个 Op 返回 FULLY_MATCHED；Float 与 Half 同样；hccl:send 0->1 事件 src=dst=-1。排障分布式训练挂起的开发者拿到假阴性干净结果
 - **改进措施**：检测 用已知 size/dtype 不同的两个 collective 事件构造单测断言必须 mismatch；修复 修复 MR https://gitcode.com/Ascend/pytorch/merge_requests/48400（open，2026-10-22）：用 profiling_name 识别 HCCL 操作、解析 P2P 端点、比较两个操作的 size/dtype，不一致报 mismatch（关联 issue 自带 CPU-only 复现探针）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5616；https://gitcode.com/Ascend/pytorch/merge_requests/48400
+
+### TRN-0571 `ops_math_silent_check_step0_and_zero_state_freeze` aclnnSilentCheck 首步漏报与零值状态冻结
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：观测/评测 / cann / SilentCheckV2 判定与状态更新
+- **原因行为**：stepRef==0 分支（V2 语义错误下沉到 V1 kernel）跳过全部阈值判定一律返回正常并抹平 sfdaRef 历史；val==0.0 时跳过状态更新返回成功但状态冻结。
+- **影响对象**：指标/日志（静默错误）
+- **影响详情**：910B3：stepRef=0 时 val=5000（阈 1000）应 L1 得 result=0，inf/nan 同放行；121 条 stepRef=0 用例 16 条不符、664 条 stepRef≥1 无一不符。val=0.0 时 sfda/step 出参原样冻结。
+- **改进措施**：检测 首步注入已知超阈/NaN 值验证 result 是否仍 0；stepRef=0/1 同输入对照；检查 val=0 调用后 sfdaRef/stepRef 是否前进。；修复 待定（两 issue open：#4364/#4367；修复 PR !6956 仅修 result 空指针，判定分支与状态冻结未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4364；https://gitcode.com/cann/ops-math/issues/4367
+- **关联**：cross:INF-2328
+
+### TRN-0576 `msprobe_cosine_compare_overflow_underflow_misjudge` msprobe Cosine 比对大数溢出与微小值误判
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：观测/评测 / cann / cosine 相似度数值稳定性
+- **原因行为**：直接用原始数值算点积与 L2 范数（float64 机器精度判零向量）：有限大数平方/点积溢出产生 inf/inf、0/inf；很小的非零向量因范数下溢被当全零，正交/反向微小向量返回 1.0。
+- **影响对象**：测试判定；指标/日志（静默错误）
+- **影响详情**：实测：相同大数向量报「Nan 数据含 NaN」（应 1.0）；大数 vs 非平行向量得 0.0（应 0.707）；正交微小向量得 1.0（应 0）；反向微小向量得 1.0（应 -1.0）——相同数据被误报或真实方向差异被掩盖。
+- **改进措施**：检测 用 issue 附带 4 组边界用例（±1e200/±1e308/1e-200）做比对器自测。；修复 修复方案已在 issue 给出（按最大绝对值预缩放再算点积/范数、仅真零走全零分支、原地缩放不动调用方输入）；未见独立修复 MR 合入记录，未核实。
+- **来源**：https://gitcode.com/Ascend/msprobe/issues/665
+- **关联**：cross:INF-2327
 
 ## 配置/参数
 

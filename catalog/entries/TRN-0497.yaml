@@ -40,6 +40,7 @@ original:
   discovery: 2026-10-29 每日扫描
   notes:
   - '2026-10-30 2026-10-30 回访：#8632 closed（无关联修复 PR）；第二报告 #8622 仍 open（2 评论无变化）。修复动态继续下轮跟踪'
+  - 2026-11-01 回访 2026-11-01：#8632 closed、#8622 open 状态不变（10-30/10-31 已核）；未见关联修复 PR。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -56,5 +57,8 @@ migration:
         to: 重计算/卸载
   updates:
   - date: '2026-10-30'
+    fields:
+    - original.notes
+  - date: '2026-11-01'
     fields:
     - original.notes

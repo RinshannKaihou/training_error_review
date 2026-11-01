@@ -40,6 +40,8 @@ original:
   behavior: NPU QAT 训练用 FakeQuantWithMinMaxVarsPerChannel 伪量化、校准统计出现倒置通道（min>max）或相等通道（min==max≠0，常见于死亡通道/极端裁剪）时：伪量化输出与 TF 参考实现语义相反/输出 0 而非 NaN——QAT 模拟的量化噪声全错，训练仍正常跑完，最终量化模型精度劣化且难以归因。
   trigger_surface: CANN FakeQuantWithMinMaxVarsPerChannel + 倒置通道（min>max）或相等通道（min==max≠0）+ QAT 训练；950PR 实测
   discovery: 2026-10-31 每日扫描
+  notes:
+  - '2026-11-01 回访 2026-11-01：修复 MR !13097（fix(fake_quant_with_min_max_vars_per_channel)：修复精度/健壮性问题并新增 ascend350 平台）已 merged（批次快照 2026-10-31T06:25Z），issue #7791 已 closed。发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -55,3 +57,7 @@ migration:
     - qwen3.8-max
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - original.notes

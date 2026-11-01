@@ -29,6 +29,8 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6962
   kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/merge_requests/15041
+  kind: gitcode_pr
 relations:
 - kind: cross
   target: INF-2316
@@ -38,6 +40,8 @@ original:
   behavior: NPU 训练经 cann_ops_transformer.compressor() 公开 Python 入口（长上下文压缩注意力）做前反向时：backward 返回的三个梯度是垃圾值或 NaN（相对误差 1.1~2.8 甚至 nan，正常应为 1e-3 量化噪声级），无任何报错；改回直调内部 op 就正常，一行补丁可修——训练在错误梯度上持续更新。
   trigger_surface: cann_ops_transformer.compressor() 公开入口（MR !13855 起）+ 训练态 backward；A3/910_93 bf16 实测
   discovery: 2026-10-31 每日扫描
+  notes:
+  - 2026-11-01 回访 2026-11-01：修复 MR !15041（open）到位且深读揭示第二缺陷——arch35/arch92 compressor tiling GenTilingKey 判 gradEnabled 指针非空（OPTIONAL.Bool 恒非空）→ GRAD_ENABLED 位恒 1，属性完全失效（推理态白写 ~536MB 中间量）；两缺陷互相掩盖（950PR 上 tiling 恒 1 使 Python 判据缺陷表现为不复现），必须同一笔修复。PR 实测修复后公开入口 vs 直调梯度 max_abs_diff=0。
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -53,3 +57,10 @@ migration:
     - qwen3.8-max
     uncertain:
     - visibility
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - evidence
+  - date: '2026-11-01'
+    fields:
+    - original.notes

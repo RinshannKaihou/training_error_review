@@ -41,6 +41,8 @@ original:
   behavior: NPU（950PR/950DT arch35）上用 ApplyAdamWQuant 量化优化器训练，遇到梯度全零步（gnormScale=0、梯度被完全 clip、空 micro-batch 聚合）时：全零 block 的归一化 0/0 产生 NaN，量化码值与 m/v/absmax 输出错乱，训练从该步起优化器状态被污染；日志可见 NaN 扩散或精度突然劣化，需要 gnormScale=0 用例才能复现。
   trigger_surface: CANN aclnnApplyAdamWQuant arch35（950PR/950DT）+ gnormScale=0 或 block 内 state 全零；CANN 9.2.0 族
   discovery: 2026-10-31 每日扫描
+  notes:
+  - '2026-11-01 回访 2026-11-01：批次快照显示 issue #7736 closed、修复 !13012 merged 状态不变；未核实发布版本。'
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -55,3 +57,7 @@ migration:
       subsystem:
         from: 优化器
         to: 量化
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - original.notes

@@ -4,13 +4,13 @@ slug: torchnpu_310p_inner_abort_poisons_process
 aliases: []
 title: 310P INNER-ABORT 后同进程 NPU 算子静默返回垃圾值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: torch_npu
     component: CANN error-manager 内错中止
-  behavior: INNER-ABORT 抛异常后进程未终止，设备上下文已死但后续算子继续执行，返回未初始化显存垃圾（全有限非 NaN）；7 类触发（fp64 matmul/bmm/conv/LayerNorm、bf16 conv/LayerNorm）
+  behavior: INNER-ABORT 抛异常后进程继续运行，同进程后续 NPU 算子静默返回未初始化垃圾，属进程态毒化；触发面 7 格：fp64 matmul/addmm/bmm/conv/LayerNorm、bf16 conv/LayerNorm
 effect:
   objects:
   - 数值结果
@@ -43,3 +43,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

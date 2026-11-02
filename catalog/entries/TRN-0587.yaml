@@ -4,7 +4,7 @@ slug: hcomm_rtsqa5_stale_sqtail_cross_engine_regression
 aliases: []
 title: RtsqA5 陈旧 sqTail_ 镜像回退硬件 SQ tail
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: 混合运行序列首个 collective 提交失败；POD 上下文、RtsqA5、硬件寄存器三套 head/tail 账本互不同步，单写者场景安全、跨引擎共享即坏
+  detail: 950/960 平台上 POD 引擎与 RtsqA5 共用通信域线程时，第一次 collective 提交即报 errorType:9 失败；日志可见 ConfigSqTail 把硬件 tail 从 9 拉回 7 的回退动作；禁用第二提交者后一切正常，二分可稳定定位。
   visibility: 报错
 mitigation:
   detect: 二分法禁用第二提交者对照；hcomm 侧日志出现 CopySqeBufToSq 后硬件快照 sqHead>sqTail 即命中
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

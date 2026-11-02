@@ -4,15 +4,16 @@ slug: deepspeed_zero_partial_offload_backup_optimizer
 aliases: []
 title: ZeRO-3 部分卸载设备子组优化器五项静默错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 重计算/卸载
     stack: deepspeed
     component: backup_optimizer 设备子组
-  behavior: ratio<1 时设备子组由独立 torch optimizer 步进：忽略 LR 调度与超参、ckpt 无 Adam 状态、param group 共享致设备步多更新 CPU 子组、weight decay 语义用错
+  behavior: ratio<1时设备子组由独立torch优化器步进：忽略LR调度与超参变更、ckpt不含设备子组Adam状态、ckpt加载后param group共享致设备步多更新CPU子组、关adam_w_mode时用解耦weight decay
 effect:
   objects:
+  - 模型权重
   - 优化器状态
   - 训练轨迹
   detail: 无报错改变训练结果：首步 lr=0 权重仍移动 3.0e-3、resume 一步后偏 4.9e-3、每步多更新 3.0e-3、4 步偏 2.4e-2
@@ -41,3 +42,24 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 重计算/卸载
+      effect:
+        from: 优化器状态
+        to: 模型权重
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

@@ -2,9 +2,9 @@ id: TRN-0588
 legacy_ids: []
 slug: mindspeed_ms_all_to_all_forward_splits
 aliases: []
-title: MSAdapter all_to_all split_sizes 处理错误
+title: MindSpeed 适配层 all_to_all split_sizes 缺陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: MindSpeed on MindSpore 的 TP all_to_all 路径调用即崩（AttributeError/NoneType）；修复版 120 次全过。2.3.0 与 26.1.0 分支均存在，26.2.0 起适配文件移除
+  detail: 传 list 形式 split_sizes 调 all_to_all_forward 抛 AttributeError；input_split_sizes=None 时可能调 None.tolist()。240 次对照中 60 次触发。2.3.0/26.1.0 存在，26.2.0 已移除适配文件。
   visibility: 报错
 mitigation:
   detect: 传入合法 list 的 split_sizes 调用 all_to_all_forward 直接暴露 AttributeError
@@ -38,3 +38,18 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    - title
+    uncertain:
+    - subsystem

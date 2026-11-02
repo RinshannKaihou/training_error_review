@@ -4,7 +4,7 @@ slug: trl_grpo_tp_ranks_different_completions
 aliases: []
 title: GRPO 张量并行各 rank 采样不同 completions
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -13,6 +13,7 @@ cause:
   behavior: GRPOTrainer 用 set_seed(seed, device_specific=True)（加进程索引）重播种，但 TP 组各 rank 本应共用同一模型/同一 batch，组内各 rank 因此各自采样 completions
 effect:
   objects:
+  - 训练信号
   - 训练样本流
   detail: TP>1 时同组 rank 的 completions 不一致（all_gather 实测 agreement=False），reward/advantage 组统计建立在互相矛盾的样本视图上
   visibility: 静默错误
@@ -38,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 训练样本流
+        to: 训练信号

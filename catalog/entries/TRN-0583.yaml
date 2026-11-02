@@ -4,7 +4,7 @@ slug: opsnn_adaptive_avg_pool2d_h0_success_unwritten
 aliases: []
 title: AdaptiveAvgPool2d 空 H 维成功返回但输出未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 空输入路径返回成功但输出为缓冲区残留值；下游拿到看似合法的成功状态消费脏数据
+  detail: 给 aclnnAdaptiveAvgPool2d 传 H 维为 0 的输入（如 self=[1,2,0,8]、outputSize=[4,4]）时接口返回成功，但输出张量一个字节都未写，预填的 0x5A 哨兵原样保留；H=8 的对照组同代码路径写入正常。
   visibility: 静默错误
 mitigation:
   detect: 输出预填哨兵检测是否写入；调用前显式校验非第一维>0
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

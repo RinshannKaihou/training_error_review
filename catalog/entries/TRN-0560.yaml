@@ -43,6 +43,7 @@ original:
   discovery: 2026-10-31 每日扫描
   notes:
   - '2026-11-01 回访 2026-11-01：批次快照显示 issue #7736 closed、修复 !13012 merged 状态不变；未核实发布版本。'
+  - '2026-11-02 2026-11-02 回访：同接口另案 #7901（mRef 量化索引未写回恒 0，absmaxMRef 系统性偏小）已独立收录为 TRN-0580——机制不同（输出索引写回缺陷 vs 零块 0/0 归一化 NaN），非 var 关系。'
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -59,5 +60,8 @@ migration:
         to: 量化
   updates:
   - date: '2026-11-01'
+    fields:
+    - original.notes
+  - date: '2026-11-02'
     fields:
     - original.notes

@@ -3,32 +3,32 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 577 条；状态：active 577
+共 593 条；状态：active 577、pending_audit 16
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 150 |
+| 算子/内核 | 157 |
 | 编译器 | 18 |
-| 运行时/执行 | 13 |
-| 集合通信 | 10 |
-| 并行切分 | 32 |
+| 运行时/执行 | 14 |
+| 集合通信 | 11 |
+| 并行切分 | 33 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
 | 输出解析 | 1 |
 | 解码/采样 | 2 |
-| 量化 | 25 |
+| 量化 | 26 |
 | 位置编码 | 7 |
 | 分词/模板 | 8 |
-| 模型定义 | 11 |
+| 模型定义 | 12 |
 | 权重/检查点 | 33 |
 | 数据管线 | 39 |
-| 优化器 | 42 |
+| 优化器 | 44 |
 | 损失计算 | 24 |
 | MoE路由 | 26 |
 | 重计算/卸载 | 16 |
-| RL训练回路 | 84 |
-| 观测/评测 | 18 |
+| RL训练回路 | 85 |
+| 观测/评测 | 19 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -1840,6 +1840,86 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7867
 - **关联**：var:TRN-0524；cross:INF-2339
 
+### TRN-0578 `opsnn_moe_grouped_topk_moe_expert_indices_layout` MoeGroupedTopK 输出 indices 形状错且第二维含无效元素
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / cann / MoeGroupedTopK
+- **原因行为**：MoeGroupedTopK 输出的 moeExpertIndices 未按官方 example layout 生成：第一维错位，第二维含非法/未过滤元素；分组 TopK 的完整前缀和滤波路径仅覆盖 k=4 特例，GTS 分支绕过
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：分组 MoE 路由的 expert id 与权重错乱；a6 之前局部专家数被硬限 256、k>8 或非 k=4/特例组合下静默错值
+- **改进措施**：检测 对拍 PyTorch 参考 grouped_topk 输出（形状+值），非 4 的 k 与局部专家数>256 的组合重点覆盖；修复 待定
+- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/15096
+
+### TRN-0579 `opsnn_mhc_pre_sinkhorn_premix_grad_dropped` MhcPreSinkhorn 无 premix 时 h_pre 梯度被丢弃
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / cann / MhcPreSinkhornPremix
+- **原因行为**：backward 在保存的 premix 为 None 时把 grad_pre 置 None，外部经 h_pre 回传的下游梯度被静默丢弃；no-premix 路径只归约内部 dPre，无法合并下游贡献
+- **影响对象**：梯度（静默错误）
+- **影响详情**：两次调用链（首次 premix=None、下次消费其 h_pre）中 x/phi/alpha/bias 梯度不完整，训练静默错梯度
+- **改进措施**：检测 构造两次调用链仅从第二次的 h_in 反传，与纯 PyTorch 参考实现比对首次调用的梯度；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15097（open，未合入）：premix 缺省且有 grad_h_pre 时反向改用保存的 h_pre 作为 preMix 并把内部 dPre 以 float32 加回 gradPre，附回归用例与 PyTorch 参考比对（未核实合入）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7006；https://gitcode.com/cann/ops-transformer/merge_requests/15097
+
+### TRN-0582 `torchnpu_310p_kthvalue_fp16_quantized` 310P kthvalue 值路径走 fp16 内部表示
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / torch_npu / kthvalue
+- **原因行为**：fp32 输入的 kthvalue 返回值不是输入中的元素，恰为真值的 fp16 舍入值（k=1/5/32 全命中）；索引路径 int64 正确；同族 sort/topk/median/min 同输入逐位干净
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：选择类算子返回不存在于输入中的数，310P3 独有（A3/910B3/950PR 三芯对照全干净）；量化面不限于 Cube/GEMM 路径
+- **改进措施**：检测 kthvalue 返回值与『输入在该索引处的真值』比对（索引正确可直接定位）；或与 fp16 舍入参照对拍；修复 待定（issue open，未见修复）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5787
+- **关联**：cross:INF-2350
+
+### TRN-0583 `opsnn_adaptive_avg_pool2d_h0_success_unwritten` AdaptiveAvgPool2d 空 H 维成功返回但输出未写
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / cann / aclnnAdaptiveAvgPool2d
+- **原因行为**：self 的 H=0（如 [1,2,0,8]）时两段均返回 0，输出缓冲完全未写入（0x5A 哨兵保持原样）；资料错误码表要求非第一维≤0 返回 161002，同族 AvgPool2d/MaxPool 均正确拒绝
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：空输入路径返回成功但输出为缓冲区残留值；下游拿到看似合法的成功状态消费脏数据
+- **改进措施**：检测 输出预填哨兵检测是否写入；调用前显式校验非第一维>0；修复 待定（issue open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7892
+
+### TRN-0584 `ops_transformer_lightning_indexer_mte3_mte2_race` lightning_indexer top-k 回读缺 MTE3→MTE2 依赖
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / cann / lightning_indexer arch22
+- **原因行为**：ProcessVec 经 MTE3 写 vec1ResGm 后只排序 MTE3_V，ProcessLD 经 MTE2 读同一 GM 却只等 V_MTE2/S_MTE2，缺 MTE3→MTE2 依赖，可读到未完成写入的陈旧 workspace
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：归约后的 top-k indices/values 被陈旧数据污染；LightningIndexer 已有 NaN 案（TRN-0400），本竞态是另一独立缺陷面
+- **改进措施**：检测 同输入多次运行比对 top-k 输出一致性；压力场景下与 CPU 参考对拍；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15092（open，未合入）：arch22 top-k 回读前补 MTE3→MTE2 依赖（未核实合入）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7004；https://gitcode.com/cann/ops-transformer/merge_requests/15092
+- **关联**：cross:INF-2362
+
+### TRN-0585 `opsnn_repeat_interleave_repeats0_no_write` RepeatInterleave repeats=0 返回成功但 out 不写
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / cann / aclnnRepeatInterleave
+- **原因行为**：CheckIntRepeatsRange 只拒绝负数，repeats=0 两段接口均返回成功但 out 一个字节都不写，调用方拿到缓冲区原有内容；资料三处自相矛盾
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：repeats=0 时输出为未初始化/上次残留脏数据且无任何信号；正负对照（repeats=1/-1）均行为正确，唯独 0 落入『成功但不写』空档
+- **改进措施**：检测 out 预填哨兵后统计未被覆盖元素数；调用前显式拒绝 repeats=0；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13287（WIP open）：scalar-repeat 快路径前校验输出 metadata；未见针对 repeats=0 的显式处理（未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7875
+
+### TRN-0586 `torchnpu_maxpool2d_indices_contract_split` max_pool2d indices 契约四芯四态分裂
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / torch_npu / max_pool2d indices
+- **原因行为**：indices dtype 在四芯片线分裂为 int8/int32/float32（契约 int64），310P3 为 float32 且池化值面失真，A3/910B3 形状破裂（(2,8,4,160) vs 期望 (2,8,8,8)）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：indices 无法用于 gather/scatter（直接报错或错位），跨芯代码无统一行为可依赖；310P3 上纯选择算子的池化值也与 CPU 不一致
+- **改进措施**：检测 对 indices 断言 dtype==int64 且 shape==输出空间形状；池化值与 CPU 同码对照（310P3）；修复 待定（issue open，未见修复）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5791
+- **关联**：cross:INF-2357
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -2191,6 +2271,18 @@
 - **改进措施**：检测 初始化后断言 _queued_calls 为空；对 seed 生效性做两次采样一致性检查；修复 待定（issue open：建议 _lazy_call 与 _lazy_init 共用 _initialization_lock，重入不死锁）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5744
 
+### TRN-0581 `torchnpu_310p_inner_abort_poisons_process` 310P INNER-ABORT 后同进程 NPU 算子静默返回垃圾值
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：运行时/执行 / torch_npu / CANN error-manager 内错中止
+- **原因行为**：INNER-ABORT 抛异常后进程未终止，设备上下文已死但后续算子继续执行，返回未初始化显存垃圾（全有限非 NaN）；7 类触发（fp64 matmul/bmm/conv/LayerNorm、bf16 conv/LayerNorm）
+- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响详情**：abort 后同进程所有 NPU 计算静默不可信：fp32 matmul 相对误差 8.06e+17、17 案例族全部垃圾；一个 batch 混入一条触发语句则此后 loss/精度全线静默失真
+- **改进措施**：检测 abort 后同进程跑已知值探针（如 tanh/matmul vs CPU）即可暴露；运行期在每条 INNER-ABORT 异常后强制进程退出或重建上下文；修复 待定（issue open；对照 A3 同版本 fp64 走干净 op-plugin RuntimeError 且不毒化）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5789；https://gitcode.com/Ascend/pytorch/issues/5788
+- **关联**：cross:INF-2352
+
 ## 集合通信
 
 ### TRN-0030 `allreduce_silent_wrong_value` all-reduce 完成但 payload 已错的静默集合通信错误
@@ -2305,6 +2397,17 @@
 - **影响详情**：Ascend 950/960 分级建链场景（多 root 并发初始化通信域，如多机多卡启动的通信域建立阶段）可能出现通信域初始化异常、建链失败或偶发 hang/崩溃等不确定行为；复现取决于线程时序，相同配置重跑结果可能不同；未见静默错值实测报告，主要风险在建链阶段稳定性。
 - **改进措施**：检测 多线程/多 root 并发建链压测（TSAN）；审查通信域初始化调用方的并发拓扑。；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6394 （open，2026-10-31）：补齐线程安全访问封装。未核实发布。
 - **来源**：https://gitcode.com/cann/hcomm/issues/1182；https://gitcode.com/cann/hcomm/merge_requests/6394
+
+### TRN-0587 `hcomm_rtsqa5_stale_sqtail_cross_engine_regression` RtsqA5 陈旧 sqTail_ 镜像回退硬件 SQ tail
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：集合通信 / cann / RtsqA5 SQ 提交
+- **原因行为**：共享线程有第二提交者时，RtsqA5 用未同步 sqTail_ 镜像写 SQE 并把硬件 tail 从 9 回退到 7，形成 head>tail 非法环形队列态，硬件取未写 slot 报 errorType:9
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：混合运行序列首个 collective 提交失败；POD 上下文、RtsqA5、硬件寄存器三套 head/tail 账本互不同步，单写者场景安全、跨引擎共享即坏
+- **改进措施**：检测 二分法禁用第二提交者对照；hcomm 侧日志出现 CopySqeBufToSq 后硬件快照 sqHead>sqTail 即命中；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6402（open，未合入）：LaunchTask/TryLaunchTask 前用 QuerySqTail() 读回硬件 tail，镜像不一致时采纳硬件值（未核实合入）
+- **来源**：https://gitcode.com/cann/hcomm/issues/1188；https://gitcode.com/cann/hcomm/merge_requests/6402
 
 ## 并行切分
 
@@ -2664,6 +2767,17 @@
 - **影响详情**：把 sequence_tiled_compute 输出与任何其他项相加且 output_reduction=mean 时，另一项梯度被静默除以 shards；TiledMLP 不改写入梯度、TiledFusedLogitsLoss 只除自己的张量，无此缺陷；CPU 测试修前失败、修后 26 通过
 - **改进措施**：检测 对 tiled+other 复合 loss 与单卡参考对拍梯度；检查 autograd 传入梯度是否被原地修改；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8960（open，改为 out-of-place 除法，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8960
+
+### TRN-0588 `mindspeed_ms_all_to_all_forward_splits` MSAdapter all_to_all split_sizes 处理错误
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：并行切分 / mindspeed / all_to_all_forward 适配层
+- **原因行为**：split_sizes 已是 Python list 时仍调 .tolist()（AttributeError）；且 input 一行错误判断 output 是否为 None，input=None 时可触发 None.tolist()
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：MindSpeed on MindSpore 的 TP all_to_all 路径调用即崩（AttributeError/NoneType）；修复版 120 次全过。2.3.0 与 26.1.0 分支均存在，26.2.0 起适配文件移除
+- **改进措施**：检测 传入合法 list 的 split_sizes 调用 all_to_all_forward 直接暴露 AttributeError；修复 issue 建议 int(x) 列表推导分别判 None（社区修复脚本在案）；26.2.0_core 分支起该适配文件已移除（版本核查在 issue 内）
+- **来源**：https://atomgit.com/mindspore/mindspore/issues/29708
 
 ## KV缓存
 
@@ -3027,6 +3141,17 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7791；https://gitcode.com/cann/ops-nn/pull/13097
 - **关联**：cross:INF-2309
 
+### TRN-0580 `opsnn_apply_adam_w_quant_mref_always_zero` ApplyAdamWQuant mRef 量化动量索引未写回恒为 0
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：量化 / cann / aclnnApplyAdamWQuant
+- **原因行为**：mRef 作为输入/输出张量调用后恒为全 0（预填 127 仍被写成 0，排除未写回），量化动量索引未按更新后的 m 写出；同调用 vRef/absmaxMRef 正确
+- **影响对象**：优化器状态（静默错误）
+- **影响详情**：下一步以 0 号索引反量化 m，absmaxMRef 系统性偏小（第 2 步实测 0.2013 vs 参考 0.5268），量化 AdamW 训练静默错值
+- **改进措施**：检测 调用后读回 mRef 与参考量化索引对拍（absmaxMRef 与 vRef 可作对照，两者正确）；修复 待定（issue open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7901
+
 ## 位置编码
 
 ### TRN-0055 `config_default_swallows_cli_override` Megatron VLM 入口漏传 --rotary-base
@@ -3322,6 +3447,17 @@
 - **影响详情**：gate 或 up 激活超过 10 时 MoE 输出与参考实现不同；同一 checkpoint 在 torchtitan 训练路径与 transformers 参考路径算出不同结果，静默无报错
 - **改进措施**：检测 同权重与 transformers DeepseekV4MLP 对拍（PR 自带 reproducer：同随机权重比 shared expert 输出）；修复 修复 PR https://github.com/pytorch/torchtitan/pull/5646（merged 2026-10-29）：新增 LimitedSwiGLU 用于两 flavor 的路由/共享专家，MTP 块深拷贝继承；dist_moe 对不支持的激活显式 TypeError
 - **来源**：https://github.com/pytorch/torchtitan/pull/5646
+
+### TRN-0589 `trl_sft_skips_modernbert_decoder_head` SFTTrainer 静默跳过 ModernBERT 解码头
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：模型定义 / trl / SFTTrainer 模型适配
+- **原因行为**：默认设置下 SFTTrainer 跳过 ModernBertDecoder 的非线性 prediction head（含 Ettin），训练无报错继续，被跳过层无梯度；其余参数用与原生推理不同的 logits 更新
+- **影响对象**：梯度；训练轨迹（静默错误）
+- **影响详情**：prediction head 得不到训练且其余参数基于错误 logits 更新；同权重同输入下 trainer 打分与模型原生打分不一致
+- **改进措施**：检测 同权重同输入比对 trainer 默认打分与模型原生 forward；检查 head 参数梯度为 None；修复 待定（issue open，未见修复 PR）
+- **来源**：https://github.com/huggingface/trl/issues/8052
 
 ## 权重/检查点
 
@@ -4616,6 +4752,28 @@
 - **影响详情**：首个更新的一阶矩按 min 动量累积，偏差修正可掩盖第一步，第二步起权重偏离调度参考（实测 actual 0.7388 vs reference 0.7878）；fp64 双优化器对照脚本稳定复现
 - **改进措施**：检测 断言 optimizer.param_groups beta1 与 scheduler.get_mom() 首步一致；双优化器对照训练；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8953（open，Initialize OneCycle momentum at the upper bound，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8951；https://github.com/deepspeedai/DeepSpeed/pull/8953
+
+### TRN-0591 `deepspeed_cpuadam_load_state_dict_casts_fp32_moments` CPU 优化器 load_state_dict 舍入 fp32 矩
+
+`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：优化器 / deepspeed / CPUAdam load_state_dict
+- **原因行为**：fp32_optimizer_states 默认开启时 bf16/fp16 参数保留 fp32 矩，但继承 torch 的 load_state_dict 把状态 cast 成参数 dtype，resume 在舍入后的矩上静默继续
+- **影响对象**：优化器状态（静默错误）
+- **影响详情**：load_checkpoint 后 131584 元素中仅 3 个未舍入（最大 0.39% 偏差）；resume 与连续运行偏差最高 1.0e-2
+- **改进措施**：检测 resume 后读回优化器状态 dtype 与保存值比对；与不间断运行对拍第一步后参数；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8974（open，未合入）：override load_state_dict 从保存张量按 fp32 取回状态（修复后 resume bit-identical，未核实合入）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8974
+
+### TRN-0593 `deepspeed_zero_partial_offload_backup_optimizer` ZeRO-3 部分卸载设备子组优化器五项静默错误
+
+`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：优化器 / deepspeed / backup_optimizer 设备子组
+- **原因行为**：ratio<1 时设备子组由独立 torch optimizer 步进：忽略 LR 调度与超参、ckpt 无 Adam 状态、param group 共享致设备步多更新 CPU 子组、weight decay 语义用错
+- **影响对象**：优化器状态；训练轨迹（静默错误）
+- **影响详情**：无报错改变训练结果：首步 lr=0 权重仍移动 3.0e-3、resume 一步后偏 4.9e-3、每步多更新 3.0e-3、4 步偏 2.4e-2
+- **改进措施**：检测 ratio<1 时对设备子组核对 lr/超参是否随调度生效；resume 后与连续运行对拍；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8973（open，未合入）：每步前拷贝超参、保存设备子组 Adam 状态、param group 独立 dict、改用 torch.optim.Adam 语义（未核实合入）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8973
 
 ## 损失计算
 
@@ -6321,6 +6479,17 @@
 - **改进措施**：检测 resume 后首步强制 sync 并断言引擎权重指纹与 trainer 一致；修复 修复 PR https://github.com/huggingface/trl/pull/7994（open，对齐 GOLDTrainer：初始值 -vllm_sync_frequency + >= 判定，未合入）
 - **来源**：https://github.com/huggingface/trl/pull/7994
 
+### TRN-0592 `trl_grpo_tp_ranks_different_completions` GRPO 张量并行各 rank 采样不同 completions
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：RL训练回路 / trl / GRPOTrainer TP 种子
+- **原因行为**：GRPOTrainer 用 set_seed(seed, device_specific=True)（加进程索引）重播种，但 TP 组各 rank 本应共用同一模型/同一 batch，组内各 rank 因此各自采样 completions
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：TP>1 时同组 rank 的 completions 不一致（all_gather 实测 agreement=False），reward/advantage 组统计建立在互相矛盾的样本视图上
+- **改进措施**：检测 TP 组内 all_gather_object 比对 completions 是否一致（issue 附探针 reward 函数）；修复 待定（issue open，未见修复 PR）
+- **来源**：https://github.com/huggingface/trl/issues/8056
+
 ## 观测/评测
 
 ### TRN-0096 `metric_flush_key_set_rank_local_contamination` GRPO/RLOO 指标 flush 按本地 key 集合聚合致混列/死锁
@@ -6525,6 +6694,17 @@
 - **改进措施**：检测 用 issue 附带 4 组边界用例（±1e200/±1e308/1e-200）做比对器自测。；修复 修复方案已在 issue 给出（按最大绝对值预缩放再算点积/范数、仅真零走全零分支、原地缩放不动调用方输入）；未见独立修复 MR 合入记录，未核实。
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/665
 - **关联**：cross:INF-2327
+
+### TRN-0590 `swift_eval_loss_divided_by_accumulation` swift 评估 loss 被训练累积窗口相除
+
+`故障` · `pending_audit` · `sft；rl` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：观测/评测 / ms-swift / Trainer 评估路径
+- **原因行为**：Trainer/RerankerTrainer/ScoringTrainer 的评估 loss 也被训练梯度累积窗口相除；num_items_in_batch 不能区分训练/评估调用，应仅对 training mode 施加缩放
+- **影响对象**：指标/日志（静默错误）
+- **影响详情**：accumulation=8 时评估分类 loss 0.693147→0.086643；评估跟在完整/部分训练窗口后时除数变化，可反向影响 checkpoint 选择
+- **改进措施**：检测 固定权重下比较 accumulation=1 与 8 的评估 loss 是否一致；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10487（open，未合入）：仅对 training mode 的模型施加累积缩放，附 CPU 复现与 36 项回归（原实现 9 项预期失败）（未核实合入）
+- **来源**：https://github.com/modelscope/ms-swift/pull/10487
 
 ## 配置/参数
 

@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 公开入口 vs 内部 op 双调用梯度对拍；backward 输出有限性断言
-  fix: 待定（issue open：一行补丁验证通过；建议为公开入口 autograd 路径补测试——现有 pytest 三通路均直调内部 op 未覆盖）
+  fix: 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15041 （merged 2026-11-02，双缺陷同笔修复：Python grad_enabled 判据 + arch35/92 tiling GRAD_ENABLED 位）
 labels:
   stage:
   - shared
@@ -42,6 +42,7 @@ original:
   discovery: 2026-10-31 每日扫描
   notes:
   - 2026-11-01 回访 2026-11-01：修复 MR !15041（open）到位且深读揭示第二缺陷——arch35/arch92 compressor tiling GenTilingKey 判 gradEnabled 指针非空（OPTIONAL.Bool 恒非空）→ GRAD_ENABLED 位恒 1，属性完全失效（推理态白写 ~536MB 中间量）；两缺陷互相掩盖（950PR 上 tiling 恒 1 使 Python 判据缺陷表现为不复现），必须同一笔修复。PR 实测修复后公开入口 vs 直调梯度 max_abs_diff=0。
+  - 2026-11-03 2026-11-03 回访：修复 MR !15041 已 merged（批次快照 2026-11-02T13:47）
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -64,3 +65,9 @@ migration:
   - date: '2026-11-01'
     fields:
     - original.notes
+  - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-03'
+    fields:
+    - mitigation.fix

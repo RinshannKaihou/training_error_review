@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 三方精度比对（cross_check L1 判据）+ FP64 参考正确舍入值；冻结输入回归。
-  fix: 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13229 （open）：FP16 融合路径块参数 8→2，恢复 Kahan 补偿有效性；132 条回归全过。未核实发布。
+  fix: 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13229 （merged 2026-11-02）：FP16 融合路径块参数 8→2，恢复 Kahan 补偿有效性；132 条回归全过。未核实发布。
 labels:
   stage:
   - shared
@@ -39,6 +39,8 @@ original:
   behavior: NPU 上 3D BN 训练（视频/医学 3D 卷积网络）用 FP16 输入时，训练归约算子的平方和输出在部分通道比正确值低 1 ULP 级精度超差（RMSE 比值 1.73 超三方比对 1.5 门槛），同输入稳定失败、无报错；运行均值/方差统计量随之偏差，下游 BN 仿射与梯度都建立在偏移统计上。块参数修复后同输入全部通过。
   trigger_surface: Ascend 950PR + CANN 9.3.0；BN3DTrainingReduce FP16 NDHWC 单 tile 融合路径（块参数 8）；3D BN 训练前向统计。
   discovery: 2026-11-01 每日扫描
+  notes:
+  - 2026-11-03 2026-11-03 回访：修复 MR !13229 已 merged（批次快照 2026-11-02T07:22）
 migration:
   method: scan
   scanned: '2026-11-01'
@@ -52,6 +54,12 @@ migration:
   - date: '2026-11-01'
     fields:
     - pattern
+  - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-03'
+    fields:
+    - mitigation.fix
   audit:
     round: daily-audit-2026-11-01
     base:

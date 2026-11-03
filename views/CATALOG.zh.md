@@ -3,16 +3,16 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 593 条；状态：active 593
+共 606 条；状态：active 593、pending_audit 13
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 156 |
-| 编译器 | 18 |
+| 算子/内核 | 161 |
+| 编译器 | 19 |
 | 运行时/执行 | 14 |
 | 集合通信 | 11 |
-| 并行切分 | 33 |
+| 并行切分 | 34 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
 | 输出解析 | 1 |
@@ -21,14 +21,14 @@
 | 位置编码 | 7 |
 | 分词/模板 | 8 |
 | 模型定义 | 12 |
-| 权重/检查点 | 33 |
+| 权重/检查点 | 35 |
 | 数据管线 | 39 |
-| 优化器 | 43 |
+| 优化器 | 45 |
 | 损失计算 | 25 |
-| MoE路由 | 27 |
+| MoE路由 | 28 |
 | 重计算/卸载 | 17 |
 | RL训练回路 | 85 |
-| 观测/评测 | 18 |
+| 观测/评测 | 19 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -1704,7 +1704,7 @@
 - **原因行为**：autograd.Function.forward 内 is_grad_enabled() 恒 False，判据结构性恒 False → kernel 不写 softmax_score/kv 中间量 → backward 消费未初始化显存
 - **影响对象**：梯度（静默错误）
 - **影响详情**：经公开入口训练态梯度为垃圾值/NaN（实测 rel 1.1~2.8 或大形状 nan；直调内部 op rel 2.5e-3~3.5e-3 正常）；引入于 MR !13855；A3/910_93 bf16
-- **改进措施**：检测 公开入口 vs 内部 op 双调用梯度对拍；backward 输出有限性断言；修复 待定（issue open：一行补丁验证通过；建议为公开入口 autograd 路径补测试——现有 pytest 三通路均直调内部 op 未覆盖）
+- **改进措施**：检测 公开入口 vs 内部 op 双调用梯度对拍；backward 输出有限性断言；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15041 （merged 2026-11-02，双缺陷同笔修复：Python grad_enabled 判据 + arch35/92 tiling GRAD_ENABLED 位）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6962；https://gitcode.com/cann/ops-transformer/merge_requests/15041
 - **关联**：cross:INF-2316
 
@@ -1812,7 +1812,7 @@
 - **原因行为**：FP16 单 tile 融合路径每 8 个向量块先做朴素累加，块内已舍弃的低位不能由后续 Kahan 恢复；平方和输出相对 FP64 正确舍入值在部分通道低 1 ULP。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：950PR 实测：FP16 NDHWC [12,17,12,20,10]（[-1,1]）平方和 RMSE 比值 1.732>1.5 门槛，冻结输入三次稳定失败；块参数 8→2 后 3/3 PASS（比值 1.414）；全量复测 588 条正向精度失败 0。
-- **改进措施**：检测 三方精度比对（cross_check L1 判据）+ FP64 参考正确舍入值；冻结输入回归。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13229 （open）：FP16 融合路径块参数 8→2，恢复 Kahan 补偿有效性；132 条回归全过。未核实发布。
+- **改进措施**：检测 三方精度比对（cross_check L1 判据）+ FP64 参考正确舍入值；冻结输入回归。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13229 （merged 2026-11-02）：FP16 融合路径块参数 8→2，恢复 Kahan 补偿有效性；132 条回归全过。未核实发布。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7831
 - **关联**：var:TRN-0564
 
@@ -1908,6 +1908,63 @@
 - **改进措施**：检测 对 indices 断言 dtype==int64 且 shape==输出空间形状；池化值与 CPU 同码对照（310P3）；修复 待定（issue open，未见修复）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5791
 - **关联**：cross:INF-2357
+
+### TRN-0594 `opsnn_max_pool2d_with_mask_310p_tail_dirty` MaxPool2dWithMask 310P 索引尾部非对齐清零残留脏数据
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：算子/内核 / cann / MaxPool2dWithMask M200 实现
+- **原因行为**：310P(M200) 5 个实现文件用 3 参 DataCopy 按元素计数清零 indices 尾部，NPU 模式 32B 块对齐向下取整，尾块非 32B 整数倍时最后最多 7 个 int32 不被清零，保留未初始化/脏数据
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：正常业务 shape 即触发：样例 input[1,1,7,7] fp32 kernel 3x3 → output 25 元素、100%32=4 非对齐，indices 尾部最多 7 个 int32 脏数据；output 元素数 8 倍数时对齐不触发
+- **改进措施**：检测 310P 上 output 元素数非 8 倍数的池化核对 indices 尾部与 CPU 参照；8 倍数对照组；修复 待定（issue open；修复方向为尾块 DataCopyPad 或逐元素 SetValue 补齐，未见修复 PR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7917
+- **关联**：cross:INF-2370
+
+### TRN-0596 `opsnn_foreach_div_scalar_double_demote_zero` ForeachDivScalarV2 fp16+DOUBLE 标量降精度全 0
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：算子/内核 / cann / aclnnForeachDivScalarV2
+- **原因行为**：x=FLOAT16 + scalar=DOUBLE 时标量被降成 fp16 下发，70000 超 fp16 上限变 inf，输出全 0；资料明确允许该组合，bf16 显式提升 FLOAT 正确、fp32 正确，唯 fp16 落入降精度空档
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：foreach 除以大 DOUBLE 标量时 fp16 张量输出位模式全 0000（正确值 x/70000≈2.14e-5 为 fp16 可表示次正规值），无错误码无警告；torch._foreach_div 路径可直接触达
+- **改进措施**：检测 x=fp16 + scalar=DOUBLE(70000) 组合探针；输出预填哨兵后检查全 0；修复 待定（issue open，无修复 PR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7954
+- **关联**：cross:INF-2371
+
+### TRN-0603 `opsnn_modulate_grad_formula_and_dtype` ModulateBackward 梯度公式缺 +1 项且半精度字节错乱
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：算子/内核 / cann / aclnnModulateBackward
+- **原因行为**：kernel 实现 grad_input=grad_output*scale 遗漏链式法则 (1+scale) 的 +1 项，所有 dtype 所有 shape 均错；fp16/bf16 又被按 4 字节步长搬运输出错乱
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：modulate 层反向梯度全部错误：grad_input 差一个 +grad_output 项，半精度输入因 dtype 硬编码整体字节错乱，与 PyTorch modulate backward 不一致；含修复 PR 逐项对齐前后公式
+- **改进措施**：检测 对 modulate 反向与 PyTorch 参考做逐元素梯度对拍（fp16/bf16/fp32、非零 bias、skip_bias_add on/off）；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/13360（open，2026-11-02）：修正梯度公式三式、按 DTYPE_GRAD_OUTPUT 编译期选型 + fp32 累加、tiling 按 dtype 推导、空张量写零、非 3 维输入 EZ1008 拒绝、补 fp16/空张量 UT
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/13360
+
+### TRN-0604 `opsnn_foreach_log1p_small_x_zero` ForeachLog1p 极小 |x| 直接返回 0（相对误差 100%）
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：算子/内核 / cann / aclnnForeachLog1p
+- **原因行为**：Log1pAdapter 先 Adds(dst,src,1) 再 Log(dst,src)（别名 buffer），实际算 log(fl(1+x))，|x|<ulp(1)/2 时 fl(1+x)==1 → 输出 0
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：fp32 x=5.96e-8 → 0（rel err 100%）、x=1.79e-7 → 2.38e-7（33%）；fp16 x=2.44e-4 → 0。超差率 fp32 7/9、fp16 6/7；torch._foreach_log1p 与 torch.log1p 同输入结果不同
+- **改进措施**：检测 极小 |x| 探针（fp32 1e-8 量级、fp16 1e-5 量级）对比 torch.log1p 单算子；相对误差判据（绝对误差被 x~1e-8 掩盖）；修复 待定（issue open 无独立修复 PR；正确路径应使用 log1pf 或非别名 buffer，同仓 arch35 SIMT 已用 log1pf）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7977
+
+### TRN-0606 `opsnn_batch_matmul_b0_success_unwritten` BatchMatMul self batch=0 返回成功但输出不写
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：算子/内核 / cann / aclnnBatchMatMul
+- **原因行为**：CheckBmmResIsEmpty 漏查 mat2 batch 维；self batch=0+mat2 batch=1 时 out=[1,M,N] 非空却命中空 tensor 早退（SUCCESS+ws=0），不写 out
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：out 全部元素保持调用前显存内容（复现：预填 NaN 哨兵全量残留），调用方从返回码无法发现问题、读到未初始化显存；反方向（self batch=1、mat2 batch=0）走正常路径写出全 0，两方向行为不一致
+- **改进措施**：检测 bmm 空 batch 组合矩阵：out 预填哨兵、核对 batch=0×1 方向写入；与 A2 对照；修复 待定（issue open，无修复 PR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7976
 
 ## 编译器
 
@@ -2114,6 +2171,17 @@
 - **影响详情**：特定 reshape/permute 组合（size-1 维移动）在 Ascend 上编译期报 ub overflow 而无法运行（上游 #1640 载体）；GPU 语义等价路径无此问题
 - **改进措施**：检测 编译期 ub overflow 报错自带定位；修复 修复 PR https://github.com/triton-lang/triton-ascend/pull/2848（open）：getTransposedValue 检测空排列降为 tensor.collapse_shape+expand_shape 纯 reshape
 - **来源**：https://github.com/triton-lang/triton-ascend/pull/2848；https://github.com/triton-lang/triton-ascend/issues/1640
+
+### TRN-0601 `torchnpu_inductor_static_full_reduction_grid_split` NPU Inductor 静态完整归约误选 grid split 重复归约
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：编译器 / ascend / SplitTiling 轴选择
+- **原因行为**：静态完整归约在 fallback 中仍把归约轴选为 grid split；生成内核无 program_id 分区、无跨 program 合并，多 program 重复处理同一数据；归一化 epilogue 复用输入缓冲产生竞争
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：torch.compile 归一化模式 4 个静态形状复现调度断言失败；修复后 NPU 数值对照 513/1536/16384 长度×3 种子 9/9 通过（atol=rtol=3e-5），修复前失败
+- **改进措施**：检测 静态完整归约的 compiled vs eager 数值对照（多长度多种子）；调度层断言 split_axis==[]；修复 修复 MR https://gitcode.com/Ascend/pytorch/pull/48919（open）：完整归约保护从动态尺寸扩展到所有完整归约 + test/_inductor/test_full_reduction_split.py 回归
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5816；https://gitcode.com/Ascend/pytorch/pull/48919
 
 ## 运行时/执行
 
@@ -2767,6 +2835,17 @@
 - **影响详情**：传 list 形式 split_sizes 调 all_to_all_forward 抛 AttributeError；input_split_sizes=None 时可能调 None.tolist()。240 次对照中 60 次触发。2.3.0/26.1.0 存在，26.2.0 已移除适配文件。
 - **改进措施**：检测 传入合法 list 的 split_sizes 调用 all_to_all_forward 直接暴露 AttributeError；修复 issue 建议 int(x) 列表推导分别判 None（社区修复脚本在案）；26.2.0_core 分支起该适配文件已移除（版本核查在 issue 内）
 - **来源**：https://atomgit.com/mindspore/mindspore/issues/29708
+
+### TRN-0597 `mindspeed_sp_column_linear_bias_lost` MindSpeed SP 列并行 forward 丢失 bias 项
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：并行切分 / ascend / ColumnParallelSeq.forward
+- **原因行为**：ColumnParallelSeq.forward 把 None 作 bias 传给 allgather_matmul 且此前省略独立 bias 加法——传入 bias 整个丢弃；影响 FP8 开与关，非 FP8 GEMM 缺陷
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：SP+TP 列并行线性层带 bias 的 forward 输出缺 bias 项；历史 12 个零权重前向用例 2 failed/10 passed，修复后（补一次显式 bias 加法）24/24 通过，非零权重 forward/backward 的 dX/dW/dbias 零容差通过
+- **改进措施**：检测 SP+TP 列并行层非零 bias 的 forward 对照单卡（fix 后 A/B 每 rank 24 PASS）；检查输出对 bias 的偏导 dbias；修复 修复 PR https://gitcode.com/Ascend/MindSpeed/merge_requests/4128（open）：两行源码修复，传入 bias 显式加一次，对齐非 SP 路径；skip_bias_add 语义不变。测试为真实 NPU 双 worker 直调（Ascend950DT/CANN9.1.0/torch2.7.1），官方 CI 与 maintainer review pending
+- **来源**：https://gitcode.com/Ascend/MindSpeed/merge_requests/4128
 
 ## KV缓存
 
@@ -3823,6 +3902,28 @@
 - **改进措施**：检测 导出后校验 index 文件时间戳与权重 dtype/数值指纹（如 tag 值断言）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8954（open，Retire stale checkpoint artifacts after replacing a ZeRO export，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8952；https://github.com/deepspeedai/DeepSpeed/pull/8954
 
+### TRN-0599 `deepspeed_deepnvme_silent_io_failure` DeepNVMe 未检 I/O 结果：错位缓冲失败仍报成功
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：权重/检查点 / deepspeed / DeepNVMe async I/O
+- **原因行为**：DeepNVMe 不检查 I/O 请求结果，内核失败的请求报为完成；ZeRO-Infinity 在非对齐偏移读写 view，O_DIRECT 在 md RAID/LVM/老内核拒绝——swap-in 留陈旧数据、swap-out 零写入
+- **影响对象**：模型权重；梯度（静默错误）
+- **影响详情**：GH200 md RAID0 实测：非对齐偏移 I/O 零移动报成功；ZeRO-3 参数 offload 290 参数中 60 个错→修复后 0、首 loss 恢复基线；优化器 offload loss 第 2 步分叉→修复后一致
+- **改进措施**：检测 ZeRO-Infinity NVMe offload 与 CPU offload 的首步 loss/参数 checksum 对比；strace 检查 O_DIRECT 短读；非对齐偏移探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8985（open）：每个完成请求检查结果、失败使 wait()/sync_pread()/sync_pwrite() 抛 RuntimeError；非连续/未对齐张量走 bounce buffer；快初始化经 padding staging 张量；io_submit 错误不再 assert、io_pgetevents EINTR 重试、io_queue_init 失败抛错
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8985
+
+### TRN-0602 `deepspeed_nvme_offload_resume_no_optimizer_state` ZeRO-3 NVMe offload resume 丢失优化器状态
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：权重/检查点 / deepspeed / ZeRO ckpt load (NVMe)
+- **原因行为**：#7613 起 load_checkpoint 跳过 ZeRO 优化器 ckpt，NVMe offload resume 丢 Adam 状态/lr/scale/小子组权重；根因是换出子组状态存为空张量、swapper 不读回
+- **影响对象**：优化器状态；模型权重（静默错误）
+- **影响详情**：NVMe 优化器 offload 下断点续训：加载无报错但 Adam 动量/variance 从零开始、lr 调度重置、loss scale 重置、小子组权重丢失——恢复后的训练轨迹与断点前不可衔接，静默偏离
+- **改进措施**：检测 NVMe offload resume 前后对比优化器状态 checksum（exp_avg/exp_avg_sq/lr/scale）；空张量状态探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8984（open）：重新加载 ZeRO ckpt（在 swap 文件拷贝后）；swap-in 前每个空状态按子组大小恢复 size（不分配内存），swapper 从 swap 文件读回；Muon 内存 buffer 载入既有 buffer
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8984
+
 ## 数据管线
 
 ### TRN-0057 `epoch_boundary_resume_silent_skip` verl SFT 在 epoch 边界 resume 静默跳过下一 epoch
@@ -4753,6 +4854,28 @@
 - **改进措施**：检测 resume 后读回优化器状态 dtype 与保存值比对；与不间断运行对拍第一步后参数；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8974（open，未合入）：override load_state_dict 从保存张量按 fp32 取回状态（修复后 resume bit-identical，未核实合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8974
 
+### TRN-0595 `deepspeed_zero3_unused_param_stale_grad` ZeRO-3 未用参数梯度分区驻留：旧梯度被重复施加
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：优化器 / deepspeed / ZeRO-3 gradient partition
+- **原因行为**：ZeRO-3 梯度分区跨步驻留、仅 micro-step 0 覆写；某步无梯度的参数（跳过分支、未用 expert）保留上一步梯度被 optimizer 再次施加，ZeRO-1/2 对同参数给零梯度
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：GH200 实测：无梯度参数被旧梯度更新（最大权重变化 2.358e-02→0）；累积下首用参数梯度叠加残留；offload 下早 micro-step 梯度丢失（norm 0→0.17340）；fp16 残留 inf 使每步溢出（5→1 skipped）
+- **改进措施**：检测 构造部分参数单步无梯度的 ZeRO-3 步进、对比 ZeRO-1/2 与 CPU 参考的权重更新量；检查未用 expert 参数的更新范数；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8981（open）：step()/zero_grad() 后首个梯度覆写分区；累积边界处无梯度分区清零；offload 时未收到的分区显式拷贝给优化器
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8981
+
+### TRN-0598 `deepspeed_fp16_hysteresis0_scale_never_lowers` DeepSpeed fp16 hysteresis=0 时 scale 永不下降
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：优化器 / deepspeed / DynamicLossScaler
+- **原因行为**：update_scale 仅在 cur_hysteresis==1 时降 scale，hysteresis 从 0/负数起步时计数只向远离 1 方向走，降 scale 永不触发；config 无校验、stage 0 优化器对 0 语义相反
+- **影响对象**：优化器状态；训练轨迹（静默错误）
+- **影响详情**：fp16.hysteresis=0 或负数 + 动态 loss scale 时，每次溢出后 scale 停在初始值（如 2^16）不降，该步被跳过且『scale 已到最低』退出条件永不满足——从首个溢出起每个溢出步都被跳过直到训练结束，无最小值退出保护
+- **改进措施**：检测 fp16+hysteresis<=0 配置探针：连续 40 次溢出后检查 cur_scale 是否仍为 65536；对照 hysteresis=1（降到 1.0）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8983（open，Fixes #8982）：两处比较改 <=1，0/负数视为无延迟（对齐 stage 0 语义）；附带单测（main 上 2 failed/1 passed → 修复后 3 passed）。相关未合 #7856（config 解析时拒绝 <1）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8982；https://github.com/deepspeedai/DeepSpeed/pull/8983
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -5345,6 +5468,17 @@
 - **影响详情**：分组 MoE 路由时 moeExpertIndices 形状与官方 example 不一致：第一维错位、第二维出现不该出现的元素；k 取非 4 的值或局部专家数超过 256（a6 之前的硬编码上限）时路由输出静默错乱，无报错无异常，下游专家分派直接用错值。
 - **改进措施**：检测 对拍 PyTorch 参考 grouped_topk 输出（形状+值），非 4 的 k 与局部专家数>256 的组合重点覆盖；修复 待定
 - **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/15096
+
+### TRN-0605 `meg_moe_aux_loss_counter_cast_stall` Megatron MoE aux loss 计数器被 cast 停滞在 256
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：MoE路由 / megatron / MoE aux loss 计数器
+- **原因行为**：MoE aux loss 全局步数计数器 fp32 注册，被 Float16Module cast 成 bf16/fp16：bf16 加到 256 后 256+1 舍回 256 停滞；fp16 溢出 inf
+- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响详情**：bf16 训练中 aux loss 权重按停滞的 ga_steps 计算而不随步数衰减——路由平衡压力不再按计划退火，长跑（>256 步）的 MoE 负载均衡行为静默偏离配方；fp16 下计数 inf 直接产生 inf aux loss。触发需长累积窗口，短跑/测试不可见
+- **改进措施**：检测 bf16 MoE 训练检查 ckpt 里 ga_steps 类全局 buffer 的 dtype 与数值是否停滞在 256；对照 #7081 已修的 local 计数器；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/8520（open）：补 cast 豁免；含单卡复现。core 评论复核：MEMBER yaox12 两次 /ok to test（CI 放行）+ 作者 inline 已处理，属测试放行非缺陷确认；11-01 起留观 48h 窗口（至 11-02T16:19Z）无维护者缺陷确认，按计划收录
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8520
 
 ## 重计算/卸载
 
@@ -6705,6 +6839,17 @@
 - **改进措施**：检测 用 issue 附带 4 组边界用例（±1e200/±1e308/1e-200）做比对器自测。；修复 修复方案已在 issue 给出（按最大绝对值预缩放再算点积/范数、仅真零走全零分支、原地缩放不动调用方输入）；未见独立修复 MR 合入记录，未核实。
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/665
 - **关联**：cross:INF-2327
+
+### TRN-0600 `opsnn_foreach_log_ut_always_green` foreach log 族 UT 校验失效：kernel 全错也 PASSED
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：观测/评测 / cann / ops-nn UT compare_data.py
+- **原因行为**：三个接口的 compare_data.py 算出 diff_idx 却不用、无条件打印 PASSED、无 sys.exit(1)；log1p golden 用 np.log(x+1) 与错误实现同源；C++ 只看 system() 退出码
+- **影响对象**：测试判定；数值结果（静默错误）
+- **影响详情**：foreach_log/log1p/log2 kernel 无论算得多错 UT 都 PASSED：校验链（Python 判定丢弃 diff_idx + 无退出码传播 + golden 同源 + 值域避开触发区）四层叠加使 #7977 的 log1p 精度缺陷在 UT 层完全不可见
+- **改进措施**：检测 故意注入错误输出验证 UT 判定链；对照 foreach_log10 修好的正确写法；修复 待定（issue open；修法明确：diff_idx 判定分支 + sys.exit(1) + golden 改 np.log1p + system() 退出码传播，参照 foreach_log10 已修写法）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7998
 
 ## 配置/参数
 

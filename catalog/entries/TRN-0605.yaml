@@ -4,7 +4,7 @@ slug: meg_moe_aux_loss_counter_cast_stall
 aliases: []
 title: Megatron MoE aux loss 计数器被 cast 停滞在 256
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -13,6 +13,7 @@ cause:
   behavior: MoE aux loss 全局步数计数器 fp32 注册，被 Float16Module cast 成 bf16/fp16：bf16 加到 256 后 256+1 舍回 256 停滞；fp16 溢出 inf
 effect:
   objects:
+  - 训练信号
   - 数值结果
   - 训练轨迹
   detail: bf16 训练中 aux loss 权重按停滞的 ga_steps 计算而不随步数衰减——路由平衡压力不再按计划退火，长跑（>256 步）的 MoE 负载均衡行为静默偏离配方；fp16 下计数 inf 直接产生 inf aux loss。触发需长累积窗口，短跑/测试不可见
@@ -39,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 数值结果
+        to: 训练信号

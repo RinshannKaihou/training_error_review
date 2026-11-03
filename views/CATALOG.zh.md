@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 606 条；状态：active 593、pending_audit 13
+共 606 条；状态：active 606
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -21,12 +21,12 @@
 | 位置编码 | 7 |
 | 分词/模板 | 8 |
 | 模型定义 | 12 |
-| 权重/检查点 | 35 |
+| 权重/检查点 | 33 |
 | 数据管线 | 39 |
 | 优化器 | 45 |
 | 损失计算 | 25 |
 | MoE路由 | 28 |
-| 重计算/卸载 | 17 |
+| 重计算/卸载 | 19 |
 | RL训练回路 | 85 |
 | 观测/评测 | 19 |
 | 配置/参数 | 4 |
@@ -1911,7 +1911,7 @@
 
 ### TRN-0594 `opsnn_max_pool2d_with_mask_310p_tail_dirty` MaxPool2dWithMask 310P 索引尾部非对齐清零残留脏数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / MaxPool2dWithMask M200 实现
 - **原因行为**：310P(M200) 5 个实现文件用 3 参 DataCopy 按元素计数清零 indices 尾部，NPU 模式 32B 块对齐向下取整，尾块非 32B 整数倍时最后最多 7 个 int32 不被清零，保留未初始化/脏数据
@@ -1923,7 +1923,7 @@
 
 ### TRN-0596 `opsnn_foreach_div_scalar_double_demote_zero` ForeachDivScalarV2 fp16+DOUBLE 标量降精度全 0
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / aclnnForeachDivScalarV2
 - **原因行为**：x=FLOAT16 + scalar=DOUBLE 时标量被降成 fp16 下发，70000 超 fp16 上限变 inf，输出全 0；资料明确允许该组合，bf16 显式提升 FLOAT 正确、fp32 正确，唯 fp16 落入降精度空档
@@ -1935,7 +1935,7 @@
 
 ### TRN-0603 `opsnn_modulate_grad_formula_and_dtype` ModulateBackward 梯度公式缺 +1 项且半精度字节错乱
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / aclnnModulateBackward
 - **原因行为**：kernel 实现 grad_input=grad_output*scale 遗漏链式法则 (1+scale) 的 +1 项，所有 dtype 所有 shape 均错；fp16/bf16 又被按 4 字节步长搬运输出错乱
@@ -1946,18 +1946,18 @@
 
 ### TRN-0604 `opsnn_foreach_log1p_small_x_zero` ForeachLog1p 极小 |x| 直接返回 0（相对误差 100%）
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / aclnnForeachLog1p
 - **原因行为**：Log1pAdapter 先 Adds(dst,src,1) 再 Log(dst,src)（别名 buffer），实际算 log(fl(1+x))，|x|<ulp(1)/2 时 fl(1+x)==1 → 输出 0
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：fp32 x=5.96e-8 → 0（rel err 100%）、x=1.79e-7 → 2.38e-7（33%）；fp16 x=2.44e-4 → 0。超差率 fp32 7/9、fp16 6/7；torch._foreach_log1p 与 torch.log1p 同输入结果不同
+- **影响详情**：torch._foreach_log1p 路径：fp32 |x|<6e-8、fp16 |x|<2.4e-4 的输入返回 0（正确值≈x，相对误差 100%），略大输入最高 33% 相对误差；同输入 torch.log1p 正确，两路径不一致；无报错，下游 log 域统计/损失静默偏差。
 - **改进措施**：检测 极小 |x| 探针（fp32 1e-8 量级、fp16 1e-5 量级）对比 torch.log1p 单算子；相对误差判据（绝对误差被 x~1e-8 掩盖）；修复 待定（issue open 无独立修复 PR；正确路径应使用 log1pf 或非别名 buffer，同仓 arch35 SIMT 已用 log1pf）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7977
 
 ### TRN-0606 `opsnn_batch_matmul_b0_success_unwritten` BatchMatMul self batch=0 返回成功但输出不写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / aclnnBatchMatMul
 - **原因行为**：CheckBmmResIsEmpty 漏查 mat2 batch 维；self batch=0+mat2 batch=1 时 out=[1,M,N] 非空却命中空 tensor 早退（SUCCESS+ws=0），不写 out
@@ -2174,12 +2174,12 @@
 
 ### TRN-0601 `torchnpu_inductor_static_full_reduction_grid_split` NPU Inductor 静态完整归约误选 grid split 重复归约
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：编译器 / ascend / SplitTiling 轴选择
 - **原因行为**：静态完整归约在 fallback 中仍把归约轴选为 grid split；生成内核无 program_id 分区、无跨 program 合并，多 program 重复处理同一数据；归一化 epilogue 复用输入缓冲产生竞争
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：torch.compile 归一化模式 4 个静态形状复现调度断言失败；修复后 NPU 数值对照 513/1536/16384 长度×3 种子 9/9 通过（atol=rtol=3e-5），修复前失败
+- **影响详情**：NPU 上 torch.compile(inductor, dynamic=False) 编译归一化模式时，4 个静态形状 (1,)/(1536,)/(32768,)/(7,1024) 的 split_axis==[] 断言在静态路径失败，数值对照失败；修复后多长度×多种子 9/9 对照通过。
 - **改进措施**：检测 静态完整归约的 compiled vs eager 数值对照（多长度多种子）；调度层断言 split_axis==[]；修复 修复 MR https://gitcode.com/Ascend/pytorch/pull/48919（open）：完整归约保护从动态尺寸扩展到所有完整归约 + test/_inductor/test_full_reduction_split.py 回归
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5816；https://gitcode.com/Ascend/pytorch/pull/48919
 
@@ -2838,7 +2838,7 @@
 
 ### TRN-0597 `mindspeed_sp_column_linear_bias_lost` MindSpeed SP 列并行 forward 丢失 bias 项
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：并行切分 / ascend / ColumnParallelSeq.forward
 - **原因行为**：ColumnParallelSeq.forward 把 None 作 bias 传给 allgather_matmul 且此前省略独立 bias 加法——传入 bias 整个丢弃；影响 FP8 开与关，非 FP8 GEMM 缺陷
@@ -3902,28 +3902,6 @@
 - **改进措施**：检测 导出后校验 index 文件时间戳与权重 dtype/数值指纹（如 tag 值断言）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8954（open，Retire stale checkpoint artifacts after replacing a ZeRO export，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8952；https://github.com/deepspeedai/DeepSpeed/pull/8954
 
-### TRN-0599 `deepspeed_deepnvme_silent_io_failure` DeepNVMe 未检 I/O 结果：错位缓冲失败仍报成功
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
-
-- **原因对象**：权重/检查点 / deepspeed / DeepNVMe async I/O
-- **原因行为**：DeepNVMe 不检查 I/O 请求结果，内核失败的请求报为完成；ZeRO-Infinity 在非对齐偏移读写 view，O_DIRECT 在 md RAID/LVM/老内核拒绝——swap-in 留陈旧数据、swap-out 零写入
-- **影响对象**：模型权重；梯度（静默错误）
-- **影响详情**：GH200 md RAID0 实测：非对齐偏移 I/O 零移动报成功；ZeRO-3 参数 offload 290 参数中 60 个错→修复后 0、首 loss 恢复基线；优化器 offload loss 第 2 步分叉→修复后一致
-- **改进措施**：检测 ZeRO-Infinity NVMe offload 与 CPU offload 的首步 loss/参数 checksum 对比；strace 检查 O_DIRECT 短读；非对齐偏移探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8985（open）：每个完成请求检查结果、失败使 wait()/sync_pread()/sync_pwrite() 抛 RuntimeError；非连续/未对齐张量走 bounce buffer；快初始化经 padding staging 张量；io_submit 错误不再 assert、io_pgetevents EINTR 重试、io_queue_init 失败抛错
-- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8985
-
-### TRN-0602 `deepspeed_nvme_offload_resume_no_optimizer_state` ZeRO-3 NVMe offload resume 丢失优化器状态
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
-
-- **原因对象**：权重/检查点 / deepspeed / ZeRO ckpt load (NVMe)
-- **原因行为**：#7613 起 load_checkpoint 跳过 ZeRO 优化器 ckpt，NVMe offload resume 丢 Adam 状态/lr/scale/小子组权重；根因是换出子组状态存为空张量、swapper 不读回
-- **影响对象**：优化器状态；模型权重（静默错误）
-- **影响详情**：NVMe 优化器 offload 下断点续训：加载无报错但 Adam 动量/variance 从零开始、lr 调度重置、loss scale 重置、小子组权重丢失——恢复后的训练轨迹与断点前不可衔接，静默偏离
-- **改进措施**：检测 NVMe offload resume 前后对比优化器状态 checksum（exp_avg/exp_avg_sq/lr/scale）；空张量状态探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8984（open）：重新加载 ZeRO ckpt（在 swap 文件拷贝后）；swap-in 前每个空状态按子组大小恢复 size（不分配内存），swapper 从 swap 文件读回；Muon 内存 buffer 载入既有 buffer
-- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8984
-
 ## 数据管线
 
 ### TRN-0057 `epoch_boundary_resume_silent_skip` verl SFT 在 epoch 边界 resume 静默跳过下一 epoch
@@ -4856,18 +4834,18 @@
 
 ### TRN-0595 `deepspeed_zero3_unused_param_stale_grad` ZeRO-3 未用参数梯度分区驻留：旧梯度被重复施加
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：优化器 / deepspeed / ZeRO-3 gradient partition
 - **原因行为**：ZeRO-3 梯度分区跨步驻留、仅 micro-step 0 覆写；某步无梯度的参数（跳过分支、未用 expert）保留上一步梯度被 optimizer 再次施加，ZeRO-1/2 对同参数给零梯度
 - **影响对象**：梯度；数值结果（静默错误）
-- **影响详情**：GH200 实测：无梯度参数被旧梯度更新（最大权重变化 2.358e-02→0）；累积下首用参数梯度叠加残留；offload 下早 micro-step 梯度丢失（norm 0→0.17340）；fp16 残留 inf 使每步溢出（5→1 skipped）
+- **影响详情**：GH200 1 rank 实测：无梯度参数按过期方向持续更新，单参数最大错误权重变化 2.4e-2；梯度累积窗口叠加错误；offload 场景梯度范数本应 0.17 却为 0；fp16 残留 inf 使之后每步被当溢出跳过，训练无报错，loss 缓慢或停滞
 - **改进措施**：检测 构造部分参数单步无梯度的 ZeRO-3 步进、对比 ZeRO-1/2 与 CPU 参考的权重更新量；检查未用 expert 参数的更新范数；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8981（open）：step()/zero_grad() 后首个梯度覆写分区；累积边界处无梯度分区清零；offload 时未收到的分区显式拷贝给优化器
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8981
 
 ### TRN-0598 `deepspeed_fp16_hysteresis0_scale_never_lowers` DeepSpeed fp16 hysteresis=0 时 scale 永不下降
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：优化器 / deepspeed / DynamicLossScaler
 - **原因行为**：update_scale 仅在 cur_hysteresis==1 时降 scale，hysteresis 从 0/负数起步时计数只向远离 1 方向走，降 scale 永不触发；config 无校验、stage 0 优化器对 0 语义相反
@@ -5471,11 +5449,11 @@
 
 ### TRN-0605 `meg_moe_aux_loss_counter_cast_stall` Megatron MoE aux loss 计数器被 cast 停滞在 256
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：MoE路由 / megatron / MoE aux loss 计数器
 - **原因行为**：MoE aux loss 全局步数计数器 fp32 注册，被 Float16Module cast 成 bf16/fp16：bf16 加到 256 后 256+1 舍回 256 停滞；fp16 溢出 inf
-- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响对象**：训练信号；数值结果；训练轨迹（静默错误）
 - **影响详情**：bf16 训练中 aux loss 权重按停滞的 ga_steps 计算而不随步数衰减——路由平衡压力不再按计划退火，长跑（>256 步）的 MoE 负载均衡行为静默偏离配方；fp16 下计数 inf 直接产生 inf aux loss。触发需长累积窗口，短跑/测试不可见
 - **改进措施**：检测 bf16 MoE 训练检查 ckpt 里 ga_steps 类全局 buffer 的 dtype 与数值是否停滞在 256；对照 #7081 已修的 local 计数器；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/8520（open）：补 cast 豁免；含单卡复现。core 评论复核：MEMBER yaox12 两次 /ok to test（CI 放行）+ 作者 inline 已处理，属测试放行非缺陷确认；11-01 起留观 48h 窗口（至 11-02T16:19Z）无维护者缺陷确认，按计划收录
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8520
@@ -5671,6 +5649,28 @@
 - **影响详情**：无报错改变训练结果：首步 lr=0 权重仍移动 3.0e-3、resume 一步后偏 4.9e-3、每步多更新 3.0e-3、4 步偏 2.4e-2
 - **改进措施**：检测 ratio<1 时对设备子组核对 lr/超参是否随调度生效；resume 后与连续运行对拍；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8973（open，未合入）：每步前拷贝超参、保存设备子组 Adam 状态、param group 独立 dict、改用 torch.optim.Adam 语义（未核实合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8973
+
+### TRN-0599 `deepspeed_deepnvme_silent_io_failure` DeepNVMe 未检 I/O 结果：错位缓冲失败仍报成功
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：重计算/卸载 / deepspeed / DeepNVMe async I/O
+- **原因行为**：DeepNVMe 不检查 I/O 请求结果，内核失败的请求报为完成；ZeRO-Infinity 在非对齐偏移读写 view，O_DIRECT 在 md RAID/LVM/老内核拒绝——swap-in 留陈旧数据、swap-out 零写入
+- **影响对象**：模型权重；梯度（静默错误）
+- **影响详情**：GH200 md RAID0 实测：非对齐偏移 I/O 零移动报成功；ZeRO-3 参数 offload 290 参数中 60 个错→修复后 0、首 loss 恢复基线；优化器 offload loss 第 2 步分叉→修复后一致
+- **改进措施**：检测 ZeRO-Infinity NVMe offload 与 CPU offload 的首步 loss/参数 checksum 对比；strace 检查 O_DIRECT 短读；非对齐偏移探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8985（open）：每个完成请求检查结果、失败使 wait()/sync_pread()/sync_pwrite() 抛 RuntimeError；非连续/未对齐张量走 bounce buffer；快初始化经 padding staging 张量；io_submit 错误不再 assert、io_pgetevents EINTR 重试、io_queue_init 失败抛错
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8985
+
+### TRN-0602 `deepspeed_nvme_offload_resume_no_optimizer_state` ZeRO-3 NVMe offload resume 丢失优化器状态
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：重计算/卸载 / deepspeed / ZeRO ckpt load (NVMe)
+- **原因行为**：#7613 起 load_checkpoint 跳过 ZeRO 优化器 ckpt，NVMe offload resume 丢 Adam 状态/lr/scale/小子组权重；根因是换出子组状态存为空张量、swapper 不读回
+- **影响对象**：优化器状态；模型权重（静默错误）
+- **影响详情**：NVMe 优化器 offload 下断点续训：加载无报错但 Adam 动量/variance 从零开始、lr 调度重置、loss scale 重置、小子组权重丢失——恢复后的训练轨迹与断点前不可衔接，静默偏离
+- **改进措施**：检测 NVMe offload resume 前后对比优化器状态 checksum（exp_avg/exp_avg_sq/lr/scale）；空张量状态探针；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8984（open）：重新加载 ZeRO ckpt（在 swap 文件拷贝后）；swap-in 前每个空状态按子组大小恢复 size（不分配内存），swapper 从 swap 文件读回；Muon 内存 buffer 载入既有 buffer
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/8984
 
 ## RL训练回路
 
@@ -6842,12 +6842,12 @@
 
 ### TRN-0600 `opsnn_foreach_log_ut_always_green` foreach log 族 UT 校验失效：kernel 全错也 PASSED
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：观测/评测 / cann / ops-nn UT compare_data.py
 - **原因行为**：三个接口的 compare_data.py 算出 diff_idx 却不用、无条件打印 PASSED、无 sys.exit(1)；log1p golden 用 np.log(x+1) 与错误实现同源；C++ 只看 system() 退出码
 - **影响对象**：测试判定；数值结果（静默错误）
-- **影响详情**：foreach_log/log1p/log2 kernel 无论算得多错 UT 都 PASSED：校验链（Python 判定丢弃 diff_idx + 无退出码传播 + golden 同源 + 值域避开触发区）四层叠加使 #7977 的 log1p 精度缺陷在 UT 层完全不可见
+- **影响详情**：foreach_log/log1p/log2 的内核 UT 无论 kernel 输出多错都打印 PASSED 并判定通过，CI 长期绿；#7977 的 log1p 小输入返 0 精度缺陷即使值域命中也被同源 golden 掩盖，UT 永久绿，缺陷可跨版本静默存续。
 - **改进措施**：检测 故意注入错误输出验证 UT 判定链；对照 foreach_log10 修好的正确写法；修复 待定（issue open；修法明确：diff_idx 判定分支 + sys.exit(1) + golden 改 np.log1p + system() 退出码传播，参照 foreach_log10 已修写法）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7998
 

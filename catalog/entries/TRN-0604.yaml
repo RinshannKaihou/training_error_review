@@ -4,7 +4,7 @@ slug: opsnn_foreach_log1p_small_x_zero
 aliases: []
 title: ForeachLog1p 极小 |x| 直接返回 0（相对误差 100%）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp32 x=5.96e-8 → 0（rel err 100%）、x=1.79e-7 → 2.38e-7（33%）；fp16 x=2.44e-4 → 0。超差率 fp32 7/9、fp16 6/7；torch._foreach_log1p 与 torch.log1p 同输入结果不同
+  detail: torch._foreach_log1p 路径：fp32 |x|<6e-8、fp16 |x|<2.4e-4 的输入返回 0（正确值≈x，相对误差 100%），略大输入最高 33% 相对误差；同输入 torch.log1p 正确，两路径不一致；无报错，下游 log 域统计/损失静默偏差。
   visibility: 静默错误
 mitigation:
   detect: 极小 |x| 探针（fp32 1e-8 量级、fp16 1e-5 量级）对比 torch.log1p 单算子；相对误差判据（绝对误差被 x~1e-8 掩盖）
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

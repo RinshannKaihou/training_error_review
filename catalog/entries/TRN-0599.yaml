@@ -4,10 +4,10 @@ slug: deepspeed_deepnvme_silent_io_failure
 aliases: []
 title: DeepNVMe 未检 I/O 结果：错位缓冲失败仍报成功
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 重计算/卸载
     stack: deepspeed
     component: DeepNVMe async I/O
   behavior: DeepNVMe 不检查 I/O 请求结果，内核失败的请求报为完成；ZeRO-Infinity 在非对齐偏移读写 view，O_DIRECT 在 md RAID/LVM/老内核拒绝——swap-in 留陈旧数据、swap-out 零写入
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 重计算/卸载

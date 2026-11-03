@@ -4,7 +4,7 @@ slug: torchnpu_inductor_static_full_reduction_grid_split
 aliases: []
 title: NPU Inductor 静态完整归约误选 grid split 重复归约
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: torch.compile 归一化模式 4 个静态形状复现调度断言失败；修复后 NPU 数值对照 513/1536/16384 长度×3 种子 9/9 通过（atol=rtol=3e-5），修复前失败
+  detail: NPU 上 torch.compile(inductor, dynamic=False) 编译归一化模式时，4 个静态形状 (1,)/(1536,)/(32768,)/(7,1024) 的 split_axis==[] 断言在静态路径失败，数值对照失败；修复后多长度×多种子 9/9 对照通过。
   visibility: 静默错误
 mitigation:
   detect: 静态完整归约的 compiled vs eager 数值对照（多长度多种子）；调度层断言 split_axis==[]
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

@@ -4,10 +4,10 @@ slug: deepspeed_nvme_offload_resume_no_optimizer_state
 aliases: []
 title: ZeRO-3 NVMe offload resume 丢失优化器状态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 重计算/卸载
     stack: deepspeed
     component: ZeRO ckpt load (NVMe)
   behavior: '#7613 起 load_checkpoint 跳过 ZeRO 优化器 ckpt，NVMe offload resume 丢 Adam 状态/lr/scale/小子组权重；根因是换出子组状态存为空张量、swapper 不读回'
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 重计算/卸载

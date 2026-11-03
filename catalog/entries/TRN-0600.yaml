@@ -4,7 +4,7 @@ slug: opsnn_foreach_log_ut_always_green
 aliases: []
 title: foreach log 族 UT 校验失效：kernel 全错也 PASSED
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -15,7 +15,7 @@ effect:
   objects:
   - 测试判定
   - 数值结果
-  detail: 'foreach_log/log1p/log2 kernel 无论算得多错 UT 都 PASSED：校验链（Python 判定丢弃 diff_idx + 无退出码传播 + golden 同源 + 值域避开触发区）四层叠加使 #7977 的 log1p 精度缺陷在 UT 层完全不可见'
+  detail: foreach_log/log1p/log2 的内核 UT 无论 kernel 输出多错都打印 PASSED 并判定通过，CI 长期绿；#7977 的 log1p 小输入返 0 精度缺陷即使值域命中也被同源 golden 掩盖，UT 永久绿，缺陷可跨版本静默存续。
   visibility: 静默错误
 mitigation:
   detect: 故意注入错误输出验证 UT 判定链；对照 foreach_log10 修好的正确写法
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

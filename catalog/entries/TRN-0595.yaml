@@ -4,7 +4,7 @@ slug: deepspeed_zero3_unused_param_stale_grad
 aliases: []
 title: ZeRO-3 未用参数梯度分区驻留：旧梯度被重复施加
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 数值结果
-  detail: GH200 实测：无梯度参数被旧梯度更新（最大权重变化 2.358e-02→0）；累积下首用参数梯度叠加残留；offload 下早 micro-step 梯度丢失（norm 0→0.17340）；fp16 残留 inf 使每步溢出（5→1 skipped）
+  detail: GH200 1 rank 实测：无梯度参数按过期方向持续更新，单参数最大错误权重变化 2.4e-2；梯度累积窗口叠加错误；offload 场景梯度范数本应 0.17 却为 0；fp16 残留 inf 使之后每步被当溢出跳过，训练无报错，loss 缓慢或停滞
   visibility: 静默错误
 mitigation:
   detect: 构造部分参数单步无梯度的 ZeRO-3 步进、对比 ZeRO-1/2 与 CPU 参考的权重更新量；检查未用 expert 参数的更新范数
@@ -39,3 +39,18 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - visibility

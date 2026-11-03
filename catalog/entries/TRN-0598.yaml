@@ -4,7 +4,7 @@ slug: deepspeed_fp16_hysteresis0_scale_never_lowers
 aliases: []
 title: DeepSpeed fp16 hysteresis=0 时 scale 永不下降
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - behavior

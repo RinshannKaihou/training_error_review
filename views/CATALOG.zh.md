@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 606 条；状态：active 606
+共 615 条；状态：active 606、pending_audit 9
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 161 |
+| 算子/内核 | 165 |
 | 编译器 | 19 |
 | 运行时/执行 | 14 |
 | 集合通信 | 11 |
@@ -19,16 +19,16 @@
 | 解码/采样 | 2 |
 | 量化 | 26 |
 | 位置编码 | 7 |
-| 分词/模板 | 8 |
+| 分词/模板 | 10 |
 | 模型定义 | 12 |
-| 权重/检查点 | 33 |
+| 权重/检查点 | 34 |
 | 数据管线 | 39 |
-| 优化器 | 45 |
+| 优化器 | 46 |
 | 损失计算 | 25 |
 | MoE路由 | 28 |
 | 重计算/卸载 | 19 |
 | RL训练回路 | 85 |
-| 观测/评测 | 19 |
+| 观测/评测 | 20 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -1225,7 +1225,7 @@
 - **原因行为**：超大 blockSparseMask 时偏移计算使用 32 位整型，掩码规模使偏移超过 2^32 后按模回绕，掩码索引错位、注意力输出精度劣化；修复 MR 提升整型宽度。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：超长序列/超大稀疏块掩码下 block_sparse_attention 输出精度劣化，无报错；训练使用长序列稀疏注意力时前向/反向静默错。
-- **改进措施**：检测 大掩码 shape 与 golden 对拍；监控偏移量是否接近 2^32；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14632 （open 未合入，对应 issue #6766）
+- **改进措施**：检测 大掩码 shape 与 golden 对拍；监控偏移量是否接近 2^32；修复 master !14632 已合入；9.2.0 同步修复 !15196 已 merged（2026-11-03）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6766；https://gitcode.com/cann/ops-transformer/merge_requests/14632
 - **关联**：cross:INF-2197
 
@@ -1487,7 +1487,7 @@
 - **影响对象**：梯度（数值异常）
 - **影响详情**：x=±finfo(float32).max、dy=1 时输出 NaN（参考值 1/0）；331 元素实测 150 个数值不符；训练梯度被 NaN 污染
 - **改进措施**：检测 对激活值大的样本监控梯度 NaN；golden 对拍（golden.py 同样运算顺序会漏检，需修 golden）；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/13091（open）：先形成有界乘积 s*(s-1) 再乘有限 x 和 -1.702，并同步修 golden 与 UT 生成顺序；修复树 96 用例通过（报告者验证）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7727；https://gitcode.com/cann/ops-nn/pull/13091
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7727；https://gitcode.com/cann/ops-nn/pull/13091；https://gitcode.com/cann/ops-nn/merge_requests/13567
 
 ### TRN-0521 `aclnn_rsub_int64_alpha_int32_narrowing` CANN Rsub int64 alpha 窄化丢系数
 
@@ -1965,6 +1965,54 @@
 - **影响详情**：out 全部元素保持调用前显存内容（复现：预填 NaN 哨兵全量残留），调用方从返回码无法发现问题、读到未初始化显存；反方向（self batch=1、mat2 batch=0）走正常路径写出全 0，两方向行为不一致
 - **改进措施**：检测 bmm 空 batch 组合矩阵：out 预填哨兵、核对 batch=0×1 方向写入；与 A2 对照；修复 待定（issue open，无修复 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7976
+
+### TRN-0607 `opsnn_foreach_unscale_noncontig_silent_noop` ForeachUnscale 非连续梯度静默不反缩放
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / foreach 非连续 in-place 回写
+- **原因行为**：in-place 反缩放对非连续 scaledGrads view 的 MakeContiguous+ViewCopy 回写失效，反缩放静默不执行；tiling 按 storage shape 而非逻辑 view 取元素数
+- **影响对象**：梯度（静默错误）
+- **影响详情**：混合精度训练中非连续（sliced/strided）scaledGrads 输入反缩放后 storage 逐字节不变（实测 0/8 元素更新），foundInf 正常置位但乘法写回丢失，两段返回 0 无错误码，梯度保留 loss scale 倍放大
+- **改进措施**：检测 对非连续梯度 view 在 unscale 前后 allclose 断言；连续对照用例交替执行；修复 待定（issue 2026-11-03 open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7999
+- **关联**：var:TRN-0444
+
+### TRN-0608 `opstransformer_fa_bwd_det_tnd_shape_wrong` FA 反向 deterministic+TND 特定 shape 梯度错
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / FA 反向确定性 TND 路径
+- **原因行为**：deterministic=True 且 Softmax Layout=TND 的 FlashAttention 反向算子在特定 shape 下计算结果错误，无法与 fp64/CPU 参考对齐；seq_len 超过 1024 后复现
+- **影响对象**：梯度（静默错误）
+- **影响详情**：varlen 序列（实测 [128,256]）反向 dq/dk/dv 与 fp64 CPU eager 参考超出 1e-2 容差，仅 deterministic=True + softmax_layout=TND 组合触发；同输入关确定性或非 TND 布局正常
+- **改进措施**：检测 deterministic+TND 组合下用 CPU fp64 eager 参考 dq/dk/dv 对拍；修复 待定（issue 2026-11-03 open，未见修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7070
+- **关联**：var:TRN-0402
+
+### TRN-0611 `opsnn_bn_reduce_grad_catastrophic_cancel` BNTrainingReduceGrad 大 diff_scale 抵消成噪声
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / bn_training_reduce_grad a
+- **原因行为**：主循环按『先乘后加』计算 multiplier*x 与 addend 首项两个 ~1e37 量级项再相加，fp32 无法保真表示该量级中间值，本应精确相消的两项相减成灾难性抵消，输出退化为噪声
+- **影响对象**：梯度（静默错误）
+- **影响详情**：|diff_scale| 接近 FLT_MAX 且 x==batch_mean 时输出退化为舍入噪声（fp64 参考严重不符）；x!=batch_mean 常规用例正常，Ascend 950 arch35 逐 plane 与 R==1/R==2 合并路径同受影响
+- **改进措施**：检测 构造 x==batch_mean 且大 diff_scale 用例与 fp64 参考对拍（Sterbenz 论证相近数相减精确）；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13555 （open）：主循环改『先差后乘』等价式 y=((grads+multiplier*(x-batch_mean))+addend)*mulScale，代数恒等重排不改语义；未核实合入
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8050；https://gitcode.com/cann/ops-nn/merge_requests/13555
+- **关联**：var:TRN-0536
+
+### TRN-0612 `opsnn_foreach_norm_pow_cross` foreach Norm 非 1/2 阶静默错 + NaN 幂返 1
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / foreach norm/幂族适配
+- **原因行为**：ForeachNorm 只实现 p=1/2 两分支，其余 p 静默落相邻分支返回 L1/L2；foreach 幂族把 NaN 指数当 0 次幂处理，非负底数 x^nan 返 1.0；同机单算子 pow/norm 均正确
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：p=3/2.5/0.5/±inf/nan 全部静默返回 L1 或 L2 结果（p=0.5 差 1 万倍，nan 返有限值）；x^nan 非负底数返 1.0（IEEE/torch 应返 nan），torch._foreach_norm/_foreach_pow 直接可达，两段返回 0
+- **改进措施**：检测 foreach 路径与单算子路径结果对照（同机 torch.linalg.vector_norm(x,1.5) 正确）；NaN 指数哨兵用例；修复 待定（两 issue 2026-11-03 open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8012；https://gitcode.com/cann/ops-nn/issues/8013
+- **关联**：cross:INF-2377；cross:INF-2379
 
 ## 编译器
 
@@ -3392,6 +3440,29 @@
 - **改进措施**：检测 训练中运行 scripts/chat_template_checker.py 对比合并流与模板渲染；注册表外 model_type 显式告警；修复 待定（issue open：#6719 pitfall 4 的 comparator 以独立脚本落地未接入训练；未注册 model_type 仍静默回退）
 - **来源**：https://github.com/verl-project/verl/issues/8462
 
+### TRN-0614 `msswift_glm5_next_reasoning_effort_line_missing` ms-swift glm5_next 漏 Reasoning Effort 行
+
+`故障` · `pending_audit` · `sft` · `documented` · `var` · 发现 2026-11-04
+
+- **原因对象**：分词/模板 / ms-swift / GLM5NextTemplate 渲染开关
+- **原因行为**：GLM5NextTemplate 继承 needs_thinking=True，仅开思考渲染 Reasoning Effort 行；该模板思考默认关，而 GLM-5.3-Flash 发布模板每轮渲染（默认 Max）
+- **影响对象**：输入编码（质量退化）
+- **影响详情**：默认参数下 384/384 条 GSM8K 训练样本编码缺该系统行（与发布模板不一致）；配对 28 步 SFT 前三步训练 loss 差约 20%，收敛后验证 loss 0.356 vs 0.357
+- **改进措施**：检测 训练编码与发布 chat_template 渲染逐 token 对拍（修复 PR 以 384 行 GSM8K 对比验证）；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10507 （open）：GLM5NextTemplate 设 reasoning_effort_needs_thinking=False 与发布模板一致，修复后 384/384 行 token 完全一致；未核实合入
+- **来源**：https://github.com/modelscope/ms-swift/issues/10506；https://github.com/modelscope/ms-swift/pull/10507
+- **关联**：var:TRN-0178
+
+### TRN-0615 `msswift_tool_schema_json_loads_retype` swift agent 模板工具参数被 json.loads 改型
+
+`故障` · `pending_audit` · `rl；sft` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：分词/模板 / ms-swift / agent 模板 get_toolcall 解码
+- **原因行为**：hy_v3/minimax_m2/m3 的 get_toolcall 对每个 XML 参数值做 json.loads(+ast.literal_eval)，不查工具 schema；字符串参数形似字面量时类型或值被改
+- **影响对象**：训练样本流；跨请求/跨样本数据（静默错误）
+- **影响详情**：type:string 参数返回错误类型或改变值（12345 变 int）：swift infer/deploy 响应 arguments 错，GRPO 多轮 rollout 的环境反馈与奖励判定随之错；模板渲染-解析不往返
+- **改进措施**：检测 _format_tool_calls 渲染后 get_toolcall 解析做往返对拍；字符串型参数用例；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10490 （open）：为 hy_v3/flint/ling3/spark2_5/seed_oss 等接 supports_tool_schema 并传 tools schema（对齐 #10281/#10300 已修路径）；未核实合入
+- **来源**：https://github.com/modelscope/ms-swift/issues/10461；https://github.com/modelscope/ms-swift/pull/10490
+
 ## 模型定义
 
 ### TRN-0097 `sparse_attn_window_crosses_packed_document_boundary` torchtitan DSV4 稀疏注意力窗口跨越 packed 文档边界
@@ -3901,6 +3972,17 @@
 - **影响详情**：第二次转换本身写对，但 stale index 让 loader 读到旧权重：后续训练或推理静默使用旧模型，无报错；DeepSpeed master 8d4f29c7、含无 mock 复现脚本
 - **改进措施**：检测 导出后校验 index 文件时间戳与权重 dtype/数值指纹（如 tag 值断言）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8954（open，Retire stale checkpoint artifacts after replacing a ZeRO export，未合入）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8952；https://github.com/deepspeedai/DeepSpeed/pull/8954
+
+### TRN-0609 `ds_zero3_nontrainable_int8_frozen_weight_zero` ZeRO-3 冻结权重 int8 量化存储静默全零
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：权重/检查点 / deepspeed / zero_quantized_nontrainab
+- **原因行为**：初始化时对未初始化 buffer 量化取 scale，再用 dtype-cast 拷贝覆写，|w|<1 的 int8 存储被截断为 0；合并桶混 group 数按统一 group size 反量化算错 elems_per_group
+- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响详情**：LoRA+ZeRO-3 冻结基座权重变全零，前向输出 0、loss 停在 mean(label**2)、梯度为 0，全程无报错静默失效；合并桶路径 wrong elems_per_group 静默错值（NPU 上可触发整除断言）
+- **改进措施**：检测 开该 flag 后检查冻结层权重直方图/前向输出是否全零；单 rank 拉取做 dequantize 对照；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8995 （open，未合入）：初始化拷贝后再量化、quantizer 挂到 Init 类、按 param 逐个 scale 反量化再统一重量化；未核实发布
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8990；https://github.com/deepspeedai/DeepSpeed/pull/8995
 
 ## 数据管线
 
@@ -4852,7 +4934,19 @@
 - **影响对象**：优化器状态；训练轨迹（静默错误）
 - **影响详情**：fp16.hysteresis=0 或负数 + 动态 loss scale 时，每次溢出后 scale 停在初始值（如 2^16）不降，该步被跳过且『scale 已到最低』退出条件永不满足——从首个溢出起每个溢出步都被跳过直到训练结束，无最小值退出保护
 - **改进措施**：检测 fp16+hysteresis<=0 配置探针：连续 40 次溢出后检查 cur_scale 是否仍为 65536；对照 hysteresis=1（降到 1.0）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/8983（open，Fixes #8982）：两处比较改 <=1，0/负数视为无延迟（对齐 stage 0 语义）；附带单测（main 上 2 failed/1 passed → 修复后 3 passed）。相关未合 #7856（config 解析时拒绝 <1）
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8982；https://github.com/deepspeedai/DeepSpeed/pull/8983
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8982；https://github.com/deepspeedai/DeepSpeed/pull/8983；https://github.com/deepspeedai/DeepSpeed/pull/8993
+
+### TRN-0610 `ds_zero12_stale_fp32_grad_unused_param` ZeRO-1/2 CPU offload 旧梯度重复施加
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-04
+
+- **原因对象**：优化器 / deepspeed / FP32 梯度分区跨步清理缺失
+- **原因行为**：reset_cpu_buffers 只清 norm_for_param_grads 与 local_overflow，不清 FP32 分区梯度；未运行参数的旧 slice 被 optimizer 再次施加并遭本步 clip 重缩放
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：某窗口某可训参数全程无梯度时，optimizer 用上一窗口旧 slice 更新（且已被本步 clip 系数重新缩放）；该参数下一窗口运行则被边界 copy_ 覆盖而安全
+- **改进措施**：检测 交替遮蔽某参数梯度（conditionally unused）对照 zero-grad 语义的参数更新；修复 待定（issue 2026-11-03 open，无修复 PR；正文讨论须在 optimizer 消费后清零，与 #8949 累积窗口互补）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8991
+- **关联**：var:TRN-0595
 
 ## 损失计算
 
@@ -6850,6 +6944,18 @@
 - **影响详情**：foreach_log/log1p/log2 的内核 UT 无论 kernel 输出多错都打印 PASSED 并判定通过，CI 长期绿；#7977 的 log1p 小输入返 0 精度缺陷即使值域命中也被同源 golden 掩盖，UT 永久绿，缺陷可跨版本静默存续。
 - **改进措施**：检测 故意注入错误输出验证 UT 判定链；对照 foreach_log10 修好的正确写法；修复 待定（issue open；修法明确：diff_idx 判定分支 + sys.exit(1) + golden 改 np.log1p + system() 退出码传播，参照 foreach_log10 已修写法）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7998
+
+### TRN-0613 `opsnn_kl_div_grad_golden_scalar_broadcast` KL 梯度 golden 标量/广播参考错误
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-04
+
+- **原因对象**：观测/评测 / cann / kl_div 两算子 CPU golden
+- **原因行为**：两 golden 无条件读 shape[0]（标量 IndexError）；广播输入 mean 分母用未广播元素数、batchmean 未按 self batch 维，参考梯度错
+- **影响对象**：测试判定（静默错误）
+- **影响详情**：标量输入四种 reduction 全部无法生成参考；混合广播输入 mean 梯度放大 2 倍、batchmean 分母错——kernel 与 golden 同错时 UT 给假阳性，kernel 对 golden 错时给假阴性，精度回归判定失真
+- **改进措施**：检测 golden 与真实 PyTorch autograd 对拍（修复 PR 以 336 例 autograd 对照验证）；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13570 （open）：mean 分母按 pointwise 广播 shape、batchmean 按 self batch 维（标量 self 按 1）、保持标量输出 shape/dtype，20 个 ST CSV 用例；336 例 autograd 对照 210→336 全过；未核实合入
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8064；https://gitcode.com/cann/ops-nn/merge_requests/13570
+- **关联**：var:TRN-0600
 
 ## 配置/参数
 

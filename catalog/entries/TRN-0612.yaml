@@ -4,7 +4,7 @@ slug: opsnn_foreach_norm_pow_cross
 aliases: []
 title: foreach Norm 非 1/2 阶静默错 + NaN 幂返 1
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: ForeachNorm 只实现 p=1/2 两分支，其余 p 静默落相邻分支返回 L1/L2；foreach 幂族把 NaN 指数当 0 次幂处理，非负底数 x^nan 返 1.0；同机单算子 pow/norm 均正确
 effect:
   objects:
-  - 梯度
   - 数值结果
+  - 梯度
   detail: p=3/2.5/0.5/±inf/nan 全部静默返回 L1 或 L2 结果（p=0.5 差 1 万倍，nan 返有限值）；x^nan 非负底数返 1.0（IEEE/torch 应返 nan），torch._foreach_norm/_foreach_pow 直接可达，两段返回 0
   visibility: 静默错误
 mitigation:
@@ -46,3 +46,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 梯度
+        to: 数值结果
+    uncertain:
+    - behavior

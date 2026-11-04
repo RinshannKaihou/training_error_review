@@ -4,15 +4,16 @@ slug: msswift_tool_schema_json_loads_retype
 aliases: []
 title: swift agent 模板工具参数被 json.loads 改型
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 分词/模板
+  - subsystem: 输出解析
     stack: ms-swift
     component: agent 模板 get_toolcall 解码
   behavior: hy_v3/minimax_m2/m3 的 get_toolcall 对每个 XML 参数值做 json.loads(+ast.literal_eval)，不查工具 schema；字符串参数形似字面量时类型或值被改
 effect:
   objects:
+  - 输出内容
   - 训练样本流
   - 跨请求/跨样本数据
   detail: type:string 参数返回错误类型或改变值（12345 变 int）：swift infer/deploy 响应 arguments 错，GRPO 多轮 rollout 的环境反馈与奖励判定随之错；模板渲染-解析不往返
@@ -43,3 +44,22 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 分词/模板
+        to: 输出解析
+      effect:
+        from: 训练样本流
+        to: 输出内容
+    uncertain:
+    - behavior

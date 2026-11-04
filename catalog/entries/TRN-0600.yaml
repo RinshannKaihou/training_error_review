@@ -31,6 +31,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7998
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0065
 original:
   mechanism: 'cann/ops-nn #7998（2026-11-02 open）。三层失效叠加：1) tests/ut/op_kernel/{log,log1p,log2}_data/compare_data.py 计算 diff_idx=np.where(diff_res!=True) 但不看结果无条件 print("PASSED!")、data_same 恒 True、无 sys.exit(1)；2) foreach_log1p golden 用 np.log(x+1)（gen_data.py）与被测错误实现（Adds+Log）同源；3) C++ test_foreach_log1p.cpp 用 system() 调 python、只取进程退出码，脚本永不非零退出。对照 foreach_log10 的正确写法（diff_idx 判定 + data_same=False + 打印前 5 个差异）。全仓 58 个 compare_data.py 另 55 个正确——孤立漏改非设计取舍。后果：#7977 的 log1p 别名精度缺陷（小 x 返 0）即使值域命中也被同源 golden 掩盖，UT 永久绿。'
   source: cann/ops-nn https://gitcode.com/cann/ops-nn/issues/7998（open）
@@ -48,3 +49,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - pattern

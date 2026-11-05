@@ -4,7 +4,7 @@ slug: pytorch_npu_rsplit_outer_double_count
 aliases: []
 title: NPU Inductor rsplit 重写越界重复计数静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0280
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/pytorch !49015（2026-11-04 open，关联 issue #5520，从 !48170 拆出）：torch_npu 后端自有 rsplit_outer 是对已生成 partial body 的文本改写，只能重绕文本中仍存在的 ragged-tail mask；当 extent 与 tile 对齐时 mask 已被折叠为常量，重绕后的循环边界使每个 core 的最后一个 tile 越界进入下一 core 的切片——重复计数（定算例 1.03125=33/32，正确 1.0）+ 越过张量末尾读，静默算错数。修复：config.py rsplit_outer 默认 True→False；删除 __init__.py 强制 inductor_config.split_reductions=False，跨核并行度交回上游 split_reductions（split 轴为 stage-1 kernel 自由轴，bound/mask/index 由标准归约 codegen 生成）。验证：ragged 归约 14866848 元素、上游 split 182 非整除，sum diff 6.1e-05（相对 ~1e-7）、mean diff 2.9e-11；holey 行归约 diff 1.19e-07；最新 master Super_SloMo 从编译失败变为可跑（38.53 ms/iter）；2.13/2.15 双栈验证；e2e 数值守护 max rel err 3.40e-05（阈值 1e-3）。'
   source: https://gitcode.com/Ascend/pytorch/merge_requests/49015 ｜关联 issue：https://gitcode.com/Ascend/pytorch/issues/5520
@@ -43,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

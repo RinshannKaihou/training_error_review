@@ -4,7 +4,7 @@ slug: opsnn_indexadd_v2_empty_index_unwritten
 aliases: []
 title: IndexAddV2 空 index 返回成功但输出未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 梯度
-  detail: index=int64[0]、source 与 dim 维 0 时 out 保持调用方预填哨兵/未初始化内存（48/48 字节 0xA5），数学上应等于 self；V1 同输入正确。
+  detail: index 长度 0（source 对应 dim 维同为 0，合法）时接口返回 0，但 out 一个字节未写，保持预填哨兵 0xA5/未初始化内存（实测 48/48 字节未变）；数学上应等于 self，V1 同输入正确。dim=0/-1、fp32/fp16、mode=0/1 四组合均可复现。
   visibility: 静默错误
 mitigation:
   detect: 空 index 用例预填 device 哨兵字节后调 V2 检查 out 是否等于 self；对比 V1 行为。
@@ -44,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

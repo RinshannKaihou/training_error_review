@@ -32,6 +32,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/pull/12612
   kind: gitcode_pr
 relations: []
+pattern: PAT-TRN-0068
 original:
   mechanism: CANN ops-nn SoftplusGrad（activation/softplus_grad，master）：(1) sigmoid=1/(1+exp(-features)) 数值不稳定——features 绝对值较大的负数时 exp(-features) 中间量溢出为 inf，sigmoid 错误下溢为 0（REQUIREMENTS 8.1 要求 exp 参数均 ≤0 的稳定实现）；(2) features∈(-103.28,-88.73] 时 sigmoid 因 fp32 FTZ denormal 刷 0，若 gradients=±inf 则 inf×0=NaN，而数学上 sigmoid∈(0,1) 恒正、正确结果 ±inf。修复 PR !12612（issue 同日提）：sigmoid 改 Compare/Select 双分支稳定实现 + 叠加 fp32 最小正规数；修复前验证 375 条旧用例唯一失败项即 inf×NaN 边界；修复后 Kernel UT 13/13、Host UT 29/29、上板 kernel 83/83、GEIR 83/83 PASS（PR 自述，open 未合入）。另含空 Tensor 误拦截、未知秩推导失败、INT64_MAX 容量防护缺失等非数值项。硬件 Atlas A2/A3。无训练框架受害报告，缺陷为算子级实测（PR 修复前后对照）。
   source: https://gitcode.com/cann/ops-nn/issues/7268 ｜修复 PR：https://gitcode.com/cann/ops-nn/pull/12612
@@ -61,3 +62,6 @@ migration:
   - date: '2026-10-27'
     fields:
     - original.notes
+  - date: '2026-11-05'
+    fields:
+    - pattern

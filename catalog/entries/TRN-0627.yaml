@@ -4,7 +4,7 @@ slug: pytorch_npu_index_kernel_seed_offset_constexpr_missing
 aliases: []
 title: Index 路径静态 1 参数缺常量绑定回退慢核
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 性能/资源
   detail: 异常被吞后静默回落 no-linear 备用 kernel：Electra 首层 attention 16.79ms→0.97ms 差 17 倍，整步 kernel 时长多 15ms；无报错。
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 检查生成 kernel 名（no-linear fallback 形态）与 kernel duration；回归 test_index_triton_constants.py（seed offset=0/1/2）。
   fix: 修复 commit 20c8be63（issue 记录，修复分支）：equal_1_arg_indices(signature) 找静态 1 SizeArg 并设 constants=1；方法级回放 3 项失败→修复后 3 项通过。合入状态未核实。
@@ -39,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 性能退化

@@ -3,16 +3,16 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 628 条；状态：active 615、pending_audit 13
+共 628 条；状态：active 628
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
 | 算子/内核 | 170 |
-| 编译器 | 24 |
+| 编译器 | 25 |
 | 运行时/执行 | 14 |
 | 集合通信 | 11 |
-| 并行切分 | 35 |
+| 并行切分 | 34 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
 | 输出解析 | 2 |
@@ -2016,11 +2016,11 @@
 
 ### TRN-0618 `opstransformer_flashattn_masked_sink_lse` FlashAttn 全 masked 块跳过致 sink 行 LSE 错
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：算子/内核 / cann / flash_attn sink 初始化
 - **原因行为**：ClearOutput 把 LSE 全部初始化为 +inf，GetTaskDealMode 整块跳过无可见 KV 的 query 块，跳过块不经过 sink 初始化与 LSE 写回，保留 +inf 而非 sink[head]。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：滑动窗口+因果 mask 下全 masked 有效 query 行 LSE 返回 +inf（应 sink[head]），同类行结果依赖分块边界；原始 case LSE 匹配率 73.66%，错 24576/93312 元素，attention 匹配率 99.9988%。
 - **改进措施**：检测 构造 win_left/win_right 使部分 query 全 masked 的 LSE 用例（原始 case Prefill_FP16_..._Mask_200029：seqused_kv=[5184,67,67]、win 2166/2996）；新增回归 test_masked_sink_lse.py 48 例。；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15277（open）：有 sink 时初始 LSE 为 head 的 sink、被跳过块自然保留正确值；arch35 已实测恢复 100%，arch92 待真机；附 100-case 性能回归存在可复现劣化。未发布。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7101；https://gitcode.com/cann/ops-transformer/merge_requests/15277
@@ -2028,7 +2028,7 @@
 
 ### TRN-0620 `opsnn_conv2d_v2_pad_eq_kernel_all_wrong` conv2d_v2 pad=kernel 场景精度全错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-05
 
 - **原因对象**：算子/内核 / cann / conv2d_v2 tiling 校验
 - **原因行为**：small kernel 路径不校验 pad 与 kernel 尺寸关系，pad 等于 kernel（如 1x1 核 pad 5）时输出与参考完全不符。
@@ -2039,11 +2039,11 @@
 
 ### TRN-0621 `opsnn_geglu_grad_v2_fp16_intermediate_overflow` GeGluGradV2 FP16 中间乘积溢出致梯度失真
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：算子/内核 / cann / GeGluGradV2 FP16 路径
-- **原因行为**：FP16 路径先用 half 计算 linear*dy 再转 float，中间乘积超 FP16 范围即溢出为 inf/-inf，后续升精度无法恢复；最终梯度本可在 FP16 范围内表示。
-- **影响对象**：梯度（静默错误）
+- **原因行为**：FP16 路径先用 half 计算 linear*dy 再转 float，中间乘积超 FP16 最大值 65504 即溢出为 ±inf，后续升精度无法恢复；而激活导数小于 1 时最终梯度本可能仍在 FP16 范围内。
+- **影响对象**：梯度（数值异常）
 - **影响详情**：linear=300、dy=300、gate=-1、approximate=1 时中间乘积 90000 超 65504，golden 返 -inf（正确约 -7468 有限）；注册 144 项中 32 项 FP16 溢出用例失败，修复后全过。
 - **改进措施**：检测 FP16 大激活（linear、dy 数百量级）+ gelu 导数 <1 的边界用例对拍 float64 autograd；kernel UT 检查非有限 FP16 输出。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13576（open）：复用已有 FP32 临时缓冲、乘法前分别转换两个输入；不增 UB、不改公开接口。设备端编译/UT/精度以 CI 为准，未发布。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8078；https://gitcode.com/cann/ops-nn/merge_requests/13576
@@ -2051,19 +2051,19 @@
 
 ### TRN-0622 `opsnn_indexadd_v2_empty_index_unwritten` IndexAddV2 空 index 返回成功但输出未写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-05
 
 - **原因对象**：算子/内核 / cann / aclnnIndexAddV2 空输入路径
 - **原因行为**：两条实现（mode==0 AiCore/mode!=0 AiCpu）均无空 index 早退写输出处理：合法退化输入两段 rc=0 但 out 一个字节未写。
 - **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：index=int64[0]、source 与 dim 维 0 时 out 保持调用方预填哨兵/未初始化内存（48/48 字节 0xA5），数学上应等于 self；V1 同输入正确。
+- **影响详情**：index 长度 0（source 对应 dim 维同为 0，合法）时接口返回 0，但 out 一个字节未写，保持预填哨兵 0xA5/未初始化内存（实测 48/48 字节未变）；数学上应等于 self，V1 同输入正确。dim=0/-1、fp32/fp16、mode=0/1 四组合均可复现。
 - **改进措施**：检测 空 index 用例预填 device 哨兵字节后调 V2 检查 out 是否等于 self；对比 V1 行为。；修复 待定（issue 建议 P0：空 index 早退写 out=self 或第一段显式报 ACLNN_ERR_PARAM_INVALID；修复载体未见）。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8102；https://gitcode.com/cann/ops-nn/issues/8069
 - **关联**：cross:INF-2389
 
 ### TRN-0625 `opsnn_bn3d_training_reduce_fullr_slot_merge` BN3DTrainingReduce FP16 full-R 两槽合并丢舍入低位
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：算子/内核 / cann / BN3DTrainingReduce 槽合并
 - **原因行为**：FP16 full-R 两槽合并不保留新产生的舍入低位，合并后通道 sum 与正确 FP32 舍入结果出现低位偏差。
@@ -2290,9 +2290,20 @@
 - **改进措施**：检测 静态完整归约的 compiled vs eager 数值对照（多长度多种子）；调度层断言 split_axis==[]；修复 修复 MR https://gitcode.com/Ascend/pytorch/pull/48919（open）：完整归约保护从动态尺寸扩展到所有完整归约 + test/_inductor/test_full_reduction_split.py 回归
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5816；https://gitcode.com/Ascend/pytorch/pull/48919
 
+### TRN-0616 `pytorch_npu_collective_fallback_buffer_reuse` NPU Inductor 通信 fallback 注册覆盖致复用改写在途数据
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-05
+
+- **原因对象**：编译器 / torch_npu / 通信 fallback 注册覆盖
+- **原因行为**：后端激活时批量注册的通用 fallback 覆盖 _c10d_functional 通信/等待 lowering，IR 丢失通信依赖与缓冲区生命周期，内存复用让第二次通信覆写在途的第一次通信结果。
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：TP 分布式 cross-entropy 等 8 类 functional collective 编译图下数值静默错：双卡 zero-logits CE 均值 2055.6 正确约 7.62；关闭 buffer_reuse 掩盖问题。
+- **改进措施**：检测 编译前后对拍分布式 log-prob 期望值（-log(local_vocab×world_size)）；8 类 functional collective 生命周期回归（torch_npu test_collective_wait_lifetime.py）。；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/48875（open，未发布）；产品侧跟踪 torchtitan-ascend #19、适配 !85。
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5859；https://gitcode.com/Ascend/pytorch/merge_requests/48875；https://gitcode.com/Ascend/torchtitan-ascend/issues/19
+
 ### TRN-0617 `torchair_addmm_split_bias_rounding_loss` TorchAir AddMM 拆分丢 bias 低精度舍入边界
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：编译器 / torchair / AddMM lowering 拆分
 - **原因行为**：二维逐元素 bias 的 aten.addmm 被 lowering 拆成 MatMul+Add，bias 生产者 Mul 内联进 FP32 Add epilogue 丢失原 BF16/FP16 输出的舍入边界，融合后逐元素偏离融合前。
@@ -2304,7 +2315,7 @@
 
 ### TRN-0623 `pytorch_npu_rsplit_outer_double_count` NPU Inductor rsplit 重写越界重复计数静默错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：编译器 / torch_npu / rsplit_outer 文本重写
 - **原因行为**：自研 rsplit 对已生成 partial body 文本改写重绕 ragged-tail mask；extent 与 tile 对齐时 mask 已折叠为常量，重绕循环边界使每 core 最后 tile 越入下一 core 切片。
@@ -2316,7 +2327,7 @@
 
 ### TRN-0624 `triton_ascend_i64_i32_floor_divide_zero` triton-ascend 混合整数除法正数静默返 0
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：编译器 / triton-ascend / i64//i32 整数除法编译
 - **原因行为**：triton-ascend 对 i64//i32 混合整数除法误编译：正数操作数静默返回 0（7//3→0），编译期不报错、运行期才暴露数值错误。
@@ -2328,7 +2339,7 @@
 
 ### TRN-0626 `pytorch_npu_inductor_softmax_nan_argmax_mismatch` NPU Inductor max/argmax NaN 语义与 eager 不符
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：编译器 / torch_npu / triton_helpers _extremum
 - **原因行为**：_extremum 用 tl.min 实现且 vendor 绑定缺 propagate_nan，NaN 不传播；max/min_with_index 掩码缺 value!=value，NaN 行索引与 eager 错位。
@@ -2340,11 +2351,11 @@
 
 ### TRN-0627 `pytorch_npu_index_kernel_seed_offset_constexpr_missing` Index 路径静态 1 参数缺常量绑定回退慢核
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-05
 
 - **原因对象**：编译器 / torch_npu / NPUIndexTritonKernel 签名
 - **原因行为**：codegen_kernel 生成 signature 后未为静态等于 1 的 SizeArg 补常量值：参数标记 constexpr 但 constants 无对应值，Index checker TTIR 生成失败。
-- **影响对象**：性能/资源（静默错误）
+- **影响对象**：性能/资源（性能退化）
 - **影响详情**：异常被吞后静默回落 no-linear 备用 kernel：Electra 首层 attention 16.79ms→0.97ms 差 17 倍，整步 kernel 时长多 15ms；无报错。
 - **改进措施**：检测 检查生成 kernel 名（no-linear fallback 形态）与 kernel duration；回归 test_index_triton_constants.py（seed offset=0/1/2）。；修复 修复 commit 20c8be63（issue 记录，修复分支）：equal_1_arg_indices(signature) 找静态 1 SizeArg 并设 constants=1；方法级回放 3 项失败→修复后 3 项通过。合入状态未核实。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5855
@@ -3012,17 +3023,6 @@
 - **影响详情**：SP+TP 列并行线性层带 bias 的 forward 输出缺 bias 项；历史 12 个零权重前向用例 2 failed/10 passed，修复后（补一次显式 bias 加法）24/24 通过，非零权重 forward/backward 的 dX/dW/dbias 零容差通过
 - **改进措施**：检测 SP+TP 列并行层非零 bias 的 forward 对照单卡（fix 后 A/B 每 rank 24 PASS）；检查输出对 bias 的偏导 dbias；修复 修复 PR https://gitcode.com/Ascend/MindSpeed/merge_requests/4128（open）：两行源码修复，传入 bias 显式加一次，对齐非 SP 路径；skip_bias_add 语义不变。测试为真实 NPU 双 worker 直调（Ascend950DT/CANN9.1.0/torch2.7.1），官方 CI 与 maintainer review pending
 - **来源**：https://gitcode.com/Ascend/MindSpeed/merge_requests/4128
-
-### TRN-0616 `pytorch_npu_collective_fallback_buffer_reuse` NPU Inductor 通信 fallback 注册覆盖致复用改写在途数据
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-05
-
-- **原因对象**：并行切分 / torch_npu / 通信 fallback 注册覆盖
-- **原因行为**：后端激活时批量注册的通用 fallback 覆盖 _c10d_functional 通信/等待 lowering，IR 丢失通信依赖与缓冲区生命周期，内存复用让第二次通信覆写在途的第一次通信结果。
-- **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：TP 分布式 cross-entropy 等 8 类 functional collective 编译图下数值静默错：双卡 zero-logits CE 均值 2055.6 正确约 7.62；关闭 buffer_reuse 掩盖问题。
-- **改进措施**：检测 编译前后对拍分布式 log-prob 期望值（-log(local_vocab×world_size)）；8 类 functional collective 生命周期回归（torch_npu test_collective_wait_lifetime.py）。；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/48875（open，未发布）；产品侧跟踪 torchtitan-ascend #19、适配 !85。
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5859；https://gitcode.com/Ascend/pytorch/merge_requests/48875；https://gitcode.com/Ascend/torchtitan-ascend/issues/19
 
 ## KV缓存
 
@@ -3740,7 +3740,7 @@
 
 ### TRN-0619 `mindformers_mla_tnd_dsa_mask_loss` MindFormers DSA 标志误判致 MLA 丢因果掩码
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `var` · 发现 2026-11-05
+`故障` · `active` · `pretrain` · `documented` · `var` · 发现 2026-11-05
 
 - **原因对象**：模型定义 / mindformers / MLA 预处理掩码分支
 - **原因行为**：预处理只查 DSA 稀疏标志不看实际 attention variant，普通 MLA+TND+EOD 压缩时提前返回空 attention mask，FA V4 读整段序列而非因果前缀。
@@ -7100,7 +7100,7 @@
 
 ### TRN-0628 `msprobe_nan_check_backward_direction_swap` msprobe nan_check 反向方向搞反漏存误存
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-05
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-05
 
 - **原因对象**：观测/评测 / msprobe / nan_check backward hook
 - **原因行为**：API backward hook 交换两侧梯度后内部 output 才是反向计算梯度，isnan 保存逻辑误用内部 input 作条件，判断方向错误。

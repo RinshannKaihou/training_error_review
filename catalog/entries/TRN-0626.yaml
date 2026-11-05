@@ -4,7 +4,7 @@ slug: pytorch_npu_inductor_softmax_nan_argmax_mismatch
 aliases: []
 title: NPU Inductor max/argmax NaN 语义与 eager 不符
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0280
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/pytorch !49041（2026-11-04 open，合入来源 issue #5755）：default 后端（TORCHINDUCTOR_NPU_BACKEND=default）online softmax 套件验证发现两类问题：(1) NPUIndexTritonKernel.reduction() 为 vendor 重实现，丢失上游 TritonKernel.reduction() 的 online_softmax_reduce 循环携带分支——循环形态（归约长度超 persistent 阈值或 dim=0 外层归约）无法生成在线 softmax kernel，形态断言失败被 combined scheduling 的 except Exception: log.debug 吞掉后静默回落经典两遍形式（数值近似正确但在线 softmax 机制失效，性能退化）；(2) triton_helpers 两处语义偏差：_extremum 用 tl.min 实现（vendor tl.min 绑定缺 propagate_nan kwarg），NaN 传播语义与 eager 不符；max_with_index/min_with_index 命中掩码缺 value!=value，NaN 行索引与 eager argmax/argmin 错位。修复：新增 online_softmax_reduce/combine 包装（丢弃 strict_signed_zero，bishengir 无法编译 strict reduce）、_extremum 浮点改 -tl.max(-value,propagate_nan=True) 等价实现、掩码补 value!=value、reduction() 补循环携带分支、should_use_persistent_reduction 对 online 强制 False。验证：Ascend NPU 910B4、CANN 9.2.0-beta.2、triton-ascend 3.6.0，default 后端 75 项 73 PASS/0 FAIL/2 ERROR（2 ERROR 为已知独立缺陷）；TE 后端 63 PASS/4 FAIL/8 ERROR 与合入前基线一致零回归。NaN 语义错位为静默错值面：训练图含 NaN 输入（如 SDC/溢出后）时 max/argmax 结果与 eager 分叉。'
   source: https://gitcode.com/Ascend/pytorch/merge_requests/49041 ｜关联 issue：https://gitcode.com/Ascend/pytorch/issues/5755
@@ -43,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

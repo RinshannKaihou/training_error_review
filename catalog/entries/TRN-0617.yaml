@@ -4,7 +4,7 @@ slug: torchair_addmm_split_bias_rounding_loss
 aliases: []
 title: TorchAir AddMM 拆分丢 bias 低精度舍入边界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0280
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/torchair #939（2026-11-04 open）+ 修复 !3950（Fixes #939）：二维逐元素 bias 的 aten.addmm 在 lowering 中被拆成 MatMul 和 Add；当 bias 又来自 BF16/FP16 的 Mul 时，其生产者可能内联进 FP32 Add epilogue，丢失原 Mul 输出的低精度舍入边界。五轮 BF16 矩阵多项式图首个差异节点 bias=A*(-6.8946); B=addmm(bias,cA,A)：首轮 B 有 200252/1048576 元素不同、最大绝对差 3.0517578125e-5，后续五轮更新放大差异，完整输出按现有 83 判据失败。同输入 5 个 MM+Mul 融合 kernel 与原生 MM/Mul 逐 bit 一致；诊断中仅恢复 10 处 bias Mul 结果的 BF16 舍入（保留 MM 融合），完整网络最终输出就与关闭 MM 融合逐 bit 一致——定位到 bias 舍入边界丢失。无 NaN/Inf。环境：CANN 9.2.0、Ascend 950、torch/torch_npu 2.14.0、TorchAir 26.2.0、Inductor ascendc 后端自动融合开启。修复 PR !3950：AddMM/BAddBMM 模板保留完整 [a,b,bias] 原生算子与非向量 bias 整体 fallback；bias 纳入 dtype 一致性检查；CV 复用保护改按真实 storage 别名；四份完整图（普通/转置 MM、BMM±Add 五轮）连续执行与 83 判据全过、开关 MM 最大绝对差 0。'
   source: https://gitcode.com/Ascend/torchair/issues/939 ｜修复 PR：https://gitcode.com/Ascend/torchair/merge_requests/3950
@@ -43,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

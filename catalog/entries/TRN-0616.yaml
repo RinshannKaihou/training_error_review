@@ -4,10 +4,10 @@ slug: pytorch_npu_collective_fallback_buffer_reuse
 aliases: []
 title: NPU Inductor 通信 fallback 注册覆盖致复用改写在途数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 并行切分
+  - subsystem: 编译器
     stack: torch_npu
     component: 通信 fallback 注册覆盖
   behavior: 后端激活时批量注册的通用 fallback 覆盖 _c10d_functional 通信/等待 lowering，IR 丢失通信依赖与缓冲区生命周期，内存复用让第二次通信覆写在途的第一次通信结果。
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 并行切分
+        to: 编译器

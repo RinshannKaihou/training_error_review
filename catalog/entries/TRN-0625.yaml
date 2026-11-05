@@ -4,7 +4,7 @@ slug: opsnn_bn3d_training_reduce_fullr_slot_merge
 aliases: []
 title: BN3DTrainingReduce FP16 full-R 两槽合并丢舍入低位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0564
+pattern: PAT-TRN-0062
 original:
   mechanism: 'cann/ops-nn #8106（2026-11-04 closed）+ 修复 MR !13622（merged）：BN3DTrainingReduce FP16 NCDHW [83,6,46,34] full-R 两槽合并丢失新舍入低位：通道 0 的 sum 正确 FP32 舍入结果 65699.1796875，旧输出 65699.171875，三方 RMSE 比值 2.0>1.5（原测例 BN3DTrainingReduce_L1_149，输入区间 [0.01,1]、两输出 FP32 [6]）。环境 Ascend950PR_9579、CANN 9.3.0、TTK 5bc080fe。修复：普通 full-R 改用已有 TwoSum，保留新产生的舍入误差；固定输入 kernel 3 次与 GEIR 1 次均通过。回归：原报告 588 条纳入计划，取得新结果 586/588——正向两方 mixed 562/562、三方 cross_check L1 562/562，修复版本精度失败 0；2 条超大内存用例按用户要求不测不计通过；24 条反向用例为非法输入拒绝/原报错预期修订单独核对，不记精度通过。本地 CI（受测提交 7e5d8c6a）：pre-commit、隔离 OAT、链接、950/910b 定向构建通过；线上流水线通过但最终通过状态未核实。BN3DTrainingReduce 是 3D BN 训练归约算子，训练统计量直接受害。'
   source: https://gitcode.com/cann/ops-nn/issues/8106 ｜修复 MR：https://gitcode.com/cann/ops-nn/merge_requests/13622
@@ -43,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

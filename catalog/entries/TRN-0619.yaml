@@ -4,7 +4,7 @@ slug: mindformers_mla_tnd_dsa_mask_loss
 aliases: []
 title: MindFormers DSA 标志误判致 MLA 丢因果掩码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -35,6 +35,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0143
+pattern: PAT-TRN-0067
 original:
   mechanism: 'mindspore/mindformers #2624（2026-11-04 open，AtomGit）：PyNative GPTModel 使用普通 MLA、TND 布局和 EOD 掩码压缩时，若 DSA 稀疏损失配置为 true，_preprocess_input_labels_and_masks 的分支只检查 DSA 标志、未检查实际 attention variant，提前返回空 attention mask；后续 MLA FlashAttention V4（local_v4_varlen_flash_attention）读取整段序列，而自回归位置应仅访问因果前缀。MindFormers master 79caac2a 与独立验证源 52f614ee 均核对到该分支。最小复现：同种子同输入调用两次，TND、sparse_mode=3、BF16、Q/K [4096,32,192]、V [4096,32,128]、384 个值 4096 的累积端点；空 mask 时首 token 与全序列参考最大差仅 3.4e-5（证明读了全序列）、与因果前缀参考差 0.90191650；压缩因果 mask 时与因果前缀参考差 0（正确）。输出与 Q/K/V 梯度均有差异；末 token 本可访问全段不受影响。环境：910B3、CANN 9.1.0 B243、MindSpore 2.10.0 6b7c4b02、HP-MS r1.0.0。关联 HP/MF 单卡总跟踪 hyper-parallel #353。'
   source: https://atomgit.com/mindspore/mindformers/issues/2624 ｜关联跟踪：https://github.com/hf1s/hyper-parallel/issues/353
@@ -44,3 +45,27 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    uncertain_short:
+    - kind
+    - subsystem
+    - effect
+    - visibility

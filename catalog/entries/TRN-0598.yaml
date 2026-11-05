@@ -42,6 +42,7 @@ original:
   discovery: 2026-11-03 每日扫描
   notes:
   - '2026-11-04 2026-11-04 回访：新增第二修复载体 !8993（open，2026-11-03）：cur_hysteresis==1 改 <=1（hysteresis 0/负值视为无延迟，对齐 stage 0 #8647），新增单测覆盖 0/-1/-5/1/2；原 !8983 仍 open'
+  - 2026-11-05 2026-11-05：第二修复载体 !8993 批次快照 open 无状态变化；#8982 issue open。
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -61,4 +62,7 @@ migration:
   - date: '2026-11-04'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-05'
+    fields:
     - original.notes

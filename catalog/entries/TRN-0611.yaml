@@ -41,6 +41,8 @@ original:
   behavior: 在 Ascend 950 上跑带 BNTrainingReduceGrad 的同步 BatchNorm 反向（如大 batch 统计 + 冻结/仿射 diff_scale 数值极大的配置），当某通道输入恰好等于 batch_mean 且 diff_scale 量级接近 FLT_MAX 时，该通道梯度输出变成纯噪声（与 fp64 参考完全不符），而 x≠batch_mean 的通道一切正常：无报错、无 NaN，只有特定输入关系的通道梯度静默全错，下游权重被噪声梯度更新。
   trigger_surface: aclnnBNTrainingReduceGrad（Ascend 950 arch35；逐 plane 与 merged R==1/R==2 路径），|diff_scale|~FLT_MAX 且 x==batch_mean
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-06 2026-11-06 回访：修复 MR !13555 批次快照 merged（2026-11-05T01:18Z）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-04'
     fields:
     - pattern
+  - date: '2026-11-06'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

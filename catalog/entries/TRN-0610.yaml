@@ -30,6 +30,8 @@ remarks: ''
 evidence:
 - url: https://github.com/deepspeedai/DeepSpeed/issues/8991
   kind: github_issue
+- url: https://github.com/deepspeedai/DeepSpeed/pull/9018
+  kind: github_pr
 relations:
 - kind: var
   target: TRN-0595
@@ -40,6 +42,8 @@ original:
   behavior: ZeRO-1/2 + CPU 优化器 offload 训练中，若某可训参数在一个更新窗口内没产生任何梯度（条件分支跳过、该步未用到的模块），下一次 optimizer.step 会把这个参数上一窗口的旧梯度再加到权重上一次（且被当前步的梯度裁剪系数重新缩放）：无报错、无 NaN，权重持续被陈旧更新污染；该参数恢复运行后自动正常，问题只在『间歇性未用参数』上间歇出现。
   trigger_surface: DeepSpeed ZeRO-1/2 + offload_optimizer(CPU) + FP32 master + ignore_unused_parameters=True（默认）+ 参数间歇性无梯度
   discovery: 2026-11-04 每日扫描
+  notes:
+  - '2026-11-06 2026-11-06 回访：修复载体 !9018（open 2026-11-05，sfc-gh-truwase）重构 #8949 设计：按分区组预分配 CPU 累加器并修 reset_cpu_buffers 清零 FP32 分区梯度（明确修复 #8991 stale-gradient leak）；附 overflow 检测语义说明；未合入。'
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -47,6 +51,10 @@ migration:
   - date: '2026-11-04'
     fields:
     - pattern
+  - date: '2026-11-06'
+    fields:
+    - evidence
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

@@ -42,6 +42,7 @@ original:
   notes:
   - 2026-10-31 2026-10-31 回访：#7727/!13091 仍 open，无状态变化。
   - 2026-11-04 2026-11-04 回访：修复载体更新——新 PR !13567（open，2026-11-03）以完整证据链重提同一修复：先形成有界 q=s*(s-1) 再乘有限 x（9 条向量指令不变），fp64 解析导数对照 FLT_MAX/±2.0e38/BF16 极值全对（旧 NaN）、1000 条泛化用例、A5 950PR 实机 ACLNN 验证（不加载自编译包仍 NaN 确认走修复 kernel）、性能无可测回退；同步修 golden.py 同错互证面。原 !13091 未合入
+  - 2026-11-06 2026-11-06 回访：!13567（closed 未合入，2026-11-04T08:53Z 快照维持）——修复载体第三次被关（!13091 closed、!6394 前身 closed、!13567 closed），机制证据仍有效、条目维持，等待新载体。
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -59,4 +60,7 @@ migration:
   - date: '2026-11-04'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-06'
+    fields:
     - original.notes

@@ -38,6 +38,8 @@ original:
   behavior: NPU 上跑 fp16 conv2d，1x1 小卷积核配较大 pad（pad=kernel，如 pad 5）且带 dilation/stride 组合时，输出与 CPU 参考完全不符、精度判据全挂，但算子正常返回无任何报错；训练 loss 从第一步就异常或完全训不动，换 CPU/GPU 或避开该 pad 组合即正常。11-04 留观、本轮修复 merged 转收。
   trigger_surface: CANN conv2d_v2 small kernel 路径 + pad 尺寸 >= kernel（实测 1x1 核 pad 5）+ fp16 + Ascend950；dilation/stride 组合（5 1 / 3 3）
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 2026-11-06 回访：修复 MR !13572 merged 状态维持（2026-11-04 快照）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -53,3 +55,7 @@ migration:
     - qwen3.8-max
     uncertain:
     - component
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - original.notes

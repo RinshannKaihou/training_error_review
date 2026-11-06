@@ -40,6 +40,7 @@ original:
   discovery: 2026-10-23 每日扫描
   notes:
   - 2026-11-05 2026-11-05：空输入面修复载体 !13635（open）落地——GetWorkspaceSize 在 self IsEmpty 分支直接置 workspaceSize=0 返回、executor 无算子，第二段无事可做，gradTarget 从未写入（C++ 金丝雀修复前 NaN 保留）；修复新增 FillZeroToGradTarget（Fill 全 0+ViewCopy 支持非连续 view，9 例非连续全过），空 self 正确恒 0 与 CPU 一致。中间量溢出面修复状态不变。
+  - 2026-11-06 2026-11-06 回访：修复 MR !13635 批次快照 merged（2026-11-05T06:51Z）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-10-23'
@@ -60,5 +61,8 @@ migration:
     fields:
     - evidence
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-06'
     fields:
     - original.notes

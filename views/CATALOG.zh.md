@@ -3,15 +3,15 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 628 条；状态：active 628
+共 637 条；状态：active 628、pending_audit 9
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 170 |
+| 算子/内核 | 177 |
 | 编译器 | 25 |
 | 运行时/执行 | 14 |
-| 集合通信 | 11 |
+| 集合通信 | 12 |
 | 并行切分 | 34 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
@@ -26,7 +26,7 @@
 | 优化器 | 45 |
 | 损失计算 | 25 |
 | MoE路由 | 28 |
-| 重计算/卸载 | 20 |
+| 重计算/卸载 | 21 |
 | RL训练回路 | 85 |
 | 观测/评测 | 21 |
 | 配置/参数 | 4 |
@@ -776,7 +776,7 @@
 - **原因行为**：sigmoid=1/(1+exp(-features)) 在大负 features 时中间量溢出为 inf、sigmoid 下溢为 0；特定窗口内遇 inf 梯度时 inf×0=NaN，正确应为 ±inf。
 - **影响对象**：梯度（数值异常）
 - **影响详情**：softplus 反向在深负激活区（约 -103~- -89）遇到 inf 梯度时输出 NaN 而非 ±inf；修复前 375 条旧用例 374 PASS、唯一失败即此边界。
-- **改进措施**：检测 对 features∈(-103.28,-88.73] × gradients=±inf 组合做边界单测；已写修复。；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/12612（open 2026-10-23）：sigmoid 改 Compare/Select 双分支稳定实现（两分支 exp 参数均 ≤0）并叠加 fp32 最小正规数 1.17549435e-38 防 FTZ 刷 0；Kernel UT 13/13、Host UT 29/29、上板 83/83 PASS（PR 记录，未发布）
+- **改进措施**：检测 对 features∈(-103.28,-88.73] × gradients=±inf 组合做边界单测；已写修复。；修复 对冲修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13592（merged 2026-11-05）：回退 !12612 的稳定双分支、恢复 TF 公式 1/(1+exp(-features)) 并按输入 dtype 传播溢出/NaN（feature=-100 有限梯度→0、Inf 梯度→NaN）；未核实发布版本
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7268；https://gitcode.com/cann/ops-nn/pull/12612
 
 ### TRN-0394 `opsmath_clamp_max_scalar_wraps_bit_pattern` aclnnClampMax 标量越界按位环绕静默改写输出
@@ -2073,6 +2073,90 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8106；https://gitcode.com/cann/ops-nn/merge_requests/13622
 - **关联**：var:TRN-0564
 
+### TRN-0629 `opsmath_cumsum_gt2p30_silent_identity` aclnnCumsum 元素数超 2^30 静默返回恒等
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / aclnnCumsum 块间 carry
+- **原因行为**：arch35 两遍式 cumsum（块内前缀+块间 carry）在元素数 S>2^30 时块间 carry 未叠加，输出退化为输入本身；两段接口返回 0/0、无错误码无日志。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：fp32 1 维 dim=0、S≥2^30+1 起输出==输入（x[0]=1 构造应全 1.0，实测 out[1:]=0.0；交叉构造应 1024,1026,1030 实测 1024,2,4），A3 910_9362/CANN 9.3.0 实测，9.2.0 逐值一致
+- **改进措施**：检测 对 S>2^30 的 cumsum 结果做首尾元素断言（前缀和末元素应≈总和）；阈值仅由 host 侧 shape 决定，可静态排查；修复 待定（issue open，未见修复 MR；报告者提示 cumsum_twoway_ss.h 的 blockCount/blockFactor 32 位宽度疑点，未坐实）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4574
+- **关联**：var:TRN-0271；cross:INF-2403
+
+### TRN-0630 `opsmath_isinf_gt2p31_int32_offset_oob` aclnnIsInf 元素数超 2^31 偏移溢出写坏输入
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / aclnnIsInf GM 偏移位宽
+- **原因行为**：kernel GM 偏移用 int32_t/uint32_t 计算，元素数超 2^31 后偏移回绕变负：out 尾部不写（保持预填 0 即全非 inf 错值），且越界写把正确结果写进只读输入 x 区。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：fp16 全 +inf 输入、n=2^31+8192：out 错值 7296 个（首个 @2147484544）、x 被污染 3648 个（首个 @1073750464≈2^31/2，符合 int32 负偏移落点）；两段 rc=0
+- **改进措施**：检测 超大张量 isinf/isfinite 结果抽查；同族 is_finite.h 已是 uint64 位宽，可对照两算子输出差异定位；修复 待定（issue open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4530
+- **关联**：var:TRN-0271
+
+### TRN-0631 `opsnn_foreach_expm1_tensornum_gt256_oob_silent_skip` ForeachExpm1 tensorNum>256 越界写且尾部静默跳过
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / ForeachExpm1 tensorNum 校验
+- **原因行为**：对 tensorNum>256 无校验：tiling 对定长 256 数组按 i<tensorNum 逐项写入发生 host 侧越界写；kernel 以 tensorCount 索引同一数组，index≥256 的张量不参与计算。
+- **影响对象**：数值结果；优化器状态（静默错误）
+- **影响详情**：两段 rc 始终 0：A5 上 n≥257 kernel fault+部分张量静默错值（n=512 时 510 处）；910C 上 n=257/300 时 index≥256 的张量完全未写、sync=0 无报错——foreach 优化器长参数列表尾部更新静默丢失
+- **改进措施**：检测 调用前断言 tensorNum≤256；对 foreach 输出列表尾部张量做哨兵 round-trip 校验；修复 待定（issue open，期望同族 aclnnForeachNeg 在 arch35 首段拒绝的做法；未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8254
+- **关联**：var:TRN-0444
+
+### TRN-0632 `opsnn_mse_loss_backward_u32_truncation_unwritten` MseLossBackward 元素数超 2^32 梯度部分未写
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / MseLossGrad tiling 位宽
+- **原因行为**：arch22 tiling 把元素总数存入 uint32_t，超 2^32 静默截断：截为 K 时只算前 K 个、其余梯度从未写入但返回 SUCCESS；恰为 2^32 整数倍时 usedCoreNum=0 整除零返回内部码 361001。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：fp16 reduction=none、self=1/target=0/gradOutput=1（应恒 2.0）：n=2^32 返 361001；n=2^32+K 返回 SUCCESS 但 out[n-1] 恒 0.0——2^32 后元素从未被任何核写过；A2 910B3/CANN 9.2.0 实测
+- **改进措施**：检测 超大 batch 维度 mse_loss 反向后检查输出末元素是否仍为预填值；tiling.h 的 totalLength 本就是 uint64，契约无 2^32 上限声明；修复 待定（issue open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8187
+- **关联**：var:TRN-0271
+
+### TRN-0633 `opstransformer_smla_causal_topk_metadata_mismatch_nan` SMLA 族 causal topk 规划与主内核不一致出 NaN
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / SMLA 族 metadata
+- **原因行为**：cmp_mask_mode=3 且给 cmp_topk_length 时，metadata 忽略逐行实际长度按 indices 宽度规划，主内核按实际长度执行——FA/FD 分块规划与执行不一致，产出 NaN 与 Inf LSE。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：ragged batch B=16/S1=14/S2=4196、ORI band mask + CMP causal mask、cmp_topk_length 覆盖零长度/17/缺省：未修复包三算子复现失败（NaN/Inf），修复后 9/9 paramset 通过；Ascend950 实测
+- **改进措施**：检测 causal mask + cmp_topk_length 组合的 batch consistency 回归（修复新增 bc_causal_cmp_topk_length paramset 即此判据）；输出 NaN/LSE Inf 直接可见但定位难；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15351 （open 2026-11-05）：三个 metadata 移除仅 No Mask 下读实际长度的限制、保留按索引宽度截断与缺省行为；9/9 paramset 通过，未发布
+- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/15351
+- **关联**：var:TRN-0608
+
+### TRN-0636 `opstransformer_flash_attn_score_a6_dn_tail_stride_mismatch` FlashAttentionScore A6 DN 尾块行距不一致精度错误
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / FA DN fixpipe dstStride
+- **原因行为**：A6 DN 路径 fixpipe dstStride 写死 s1BaseSize，vec 侧按 Align32(s1RealSize)/CV_RATIO 行距读——尾块 s1RealSize≤32 时行距不一致，softmax 数据错位。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：TND varlen B=2、seq_q=[250,1]、seq_kv=[41,40]、d=192/dv=128、bf16 无 mask：输出从第 250 行（batch1 唯一输出行）起错误、batch0 前 250 行正确；A5（CV_RATIO=2）无此问题
+- **改进措施**：检测 TND varlen 且存在 s1 尾块（Align32(s1RealSize)<s1BaseSize）的用例对拍 CPU 参考；batch1 短序列行先错是判别特征；修复 修复方案在 issue 内给出（CV_RATIO==1 分支 dstStride 改为跟随 nSize，classic DN=Align32(s1RealSize)），批次内未见关联 MR，状态未核实
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7138
+- **关联**：cross:INF-2412；var:TRN-0608
+
+### TRN-0637 `opsnn_in_training_update_v2_rounding_residual_loss` INTrainingUpdateV2 方差/仿射舍入残差丢失三方超差
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+
+- **原因对象**：算子/内核 / cann / INTrainingUpdateV2 数值链
+- **原因行为**：arch35 in_training_update_v2_common.h 逐步丢舍入残差：高位相减丢减法舍入误差、invR/(1-invR) 叠加倒数舍入误差、仿射高位在低位合并前恢复指数提前溢出。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：483：有限 gamma=-FLT_MAX 输出真值有限项 NPU -Inf；147：方差 1 ULP、RMSE 比值 1.571>1.5；470：batch_variance 三方比值 1.607>1.5；修复后与 GPU 逐位一致
+- **改进措施**：检测 FP32 NCHW 大 R（如 R=209055）+ 极端 sum/square_sum/gamma 组合的三方（NPU/FP64 golden/真实 GPU）cross_check 回归；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13699 （merged，#8173 三轮两项：仿射两次融合乘加恢复第三段残差+方差残差补偿）、https://gitcode.com/cann/ops-nn/merge_requests/13756 （open，#8236 四轮：减法残差补入）；三轮修复后 8 小型三方+2 原始用例全过，四轮 11 条定向三方 PASS；完整 707 条回归未完
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8173；https://gitcode.com/cann/ops-nn/issues/8236；https://gitcode.com/cann/ops-nn/merge_requests/13699；https://gitcode.com/cann/ops-nn/merge_requests/13756
+- **关联**：var:TRN-0564
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -2642,6 +2726,17 @@
 - **影响详情**：950/960 平台上 POD 引擎与 RtsqA5 共用通信域线程时，第一次 collective 提交即报 errorType:9 失败；日志可见 ConfigSqTail 把硬件 tail 从 9 拉回 7 的回退动作；禁用第二提交者后一切正常，二分可稳定定位。
 - **改进措施**：检测 二分法禁用第二提交者对照；hcomm 侧日志出现 CopySqeBufToSq 后硬件快照 sqHead>sqTail 即命中；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6402（open，未合入）：LaunchTask/TryLaunchTask 前用 QuerySqTail() 读回硬件 tail，镜像不一致时采纳硬件值（未核实合入）
 - **来源**：https://gitcode.com/cann/hcomm/issues/1188；https://gitcode.com/cann/hcomm/merge_requests/6402
+
+### TRN-0635 `mindspeed_pp_shape_batch_isend_irecv_race` MindSpeed+Megatron0.18 PP shape 交换读未写入内存
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-06
+
+- **原因对象**：集合通信 / mindspeed / P2PCommunicator shape 交换
+- **原因行为**：Megatron 0.18 非 ring 分支 batch_isend_irecv 交换 shape，HCCL batch 内部流竞态使 wait() 返回时 buffer 未写入；MindSpeed 兜底补丁挂旧函数名静默失效。
+- **影响对象**：可用性/进度（不可复现）
+- **影响详情**：4 机 TP=2/PP=2/EP=16 + variable_seq_lengths：recv_prev_shape 读到垃圾整数（实测 -4.58e17），torch.empty 抛 SymInt 错误训练中断；EP=16 必现、EP=8 正常；synchronize 兜不住内部通信流
+- **改进措施**：检测 variable_seq_lengths/mtp_standalone + EP≥16 多机配置下监控 shape 交换后的张量合法性；开 use_ring 或 batch_comm=False；修复 修复 MR https://gitcode.com/Ascend/MindSpeed/merge_requests/4132 （批次快照 closed，2026-11-05）：P2PCommunicator 类方法补丁改用 _p2p_ops 逐条 send/recv 绕开 batch 通信竞态；合入与否未核实
+- **来源**：https://gitcode.com/Ascend/MindSpeed/merge_requests/4132
 
 ## 并行切分
 
@@ -5904,8 +5999,19 @@
 - **影响对象**：模型权重；梯度（静默错误）
 - **影响详情**：某窗口某可训参数全程无梯度时，optimizer 用上一窗口旧 slice 更新（且已被本步 clip 系数重新缩放）；该参数下一窗口运行则被边界 copy_ 覆盖而安全
 - **改进措施**：检测 交替遮蔽某参数梯度（conditionally unused）对照 zero-grad 语义的参数更新；修复 待定（issue 2026-11-03 open，无修复 PR；正文讨论须在 optimizer 消费后清零，与 #8949 累积窗口互补）
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8991
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/8991；https://github.com/deepspeedai/DeepSpeed/pull/9018
 - **关联**：var:TRN-0595
+
+### TRN-0634 `deepspeed_offload_states_reload_stale_states` DeepSpeed offload/reload_states 恢复陈旧状态
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-06
+
+- **原因对象**：重计算/卸载 / deepspeed / offload/reload_states 重挂
+- **原因行为**：offload_states 替换状态张量后视图/链接不重挂，或 reload 从首次 pinned 缓冲恢复：ZeRO-1/2 fragment 指向旧设备副本，ZeRO-3 恢复旧 pinned 值——训练静默接着旧参数跑。
+- **影响对象**：优化器状态；模型权重（静默错误）
+- **影响详情**：ZeRO-1/2：offload(include=[optim_states]) 释放 0 字节、getters 返回 offload 前旧值、一步后 fragment 与状态差 2.5e-4；ZeRO-3：pin 变化后 reload 参数回退一步前（lr 1e-2 偏差至 1e-2）
+- **改进措施**：检测 offload/reload 循环后对比参数与优化器状态 bit 一致性（修复 PR 附带前后对照）；监控 reload 后首个 step 的 param norm 突变；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9015 （open 2026-11-04）与 https://github.com/deepspeedai/DeepSpeed/pull/9016 （open 2026-11-04）：#9015 修 ZeRO-3 frozen 参数映射+reload 一致性；#9016 修 ZeRO-1/2 fragment 视图重挂；均未合入未发布
+- **来源**：https://github.com/deepspeedai/DeepSpeed/pull/9015；https://github.com/deepspeedai/DeepSpeed/pull/9016
 
 ## RL训练回路
 

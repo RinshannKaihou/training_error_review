@@ -41,6 +41,8 @@ original:
   behavior: NPU（Ascend 950）FP16 BN3D 训练里 full-R 两槽合并形状（实测 NCDHW [83,6,46,34]）的通道 sum 比正确 FP32 舍入结果差一个低位（65699.171875 vs 65699.1796875），RMSE 比值 2.0 超三方判据 1.5；BN 用错统计量、训练无报错但数值偏离参考。FP32/BF16 与其他合并路径不受影响。
   trigger_surface: CANN BN3DTrainingReduce + FP16 + full-R 两槽合并 + Ascend950PR/CANN 9.3.0；NCDHW [83,6,46,34] 冻结输入
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 2026-11-06 回访：修复 MR !13622 merged 状态维持（2026-11-04 快照）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-06'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

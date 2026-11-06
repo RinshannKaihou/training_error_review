@@ -18,7 +18,7 @@ effect:
   visibility: 数值异常
 mitigation:
   detect: 对 features∈(-103.28,-88.73] × gradients=±inf 组合做边界单测；已写修复。
-  fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/12612（open 2026-10-23）：sigmoid 改 Compare/Select 双分支稳定实现（两分支 exp 参数均 ≤0）并叠加 fp32 最小正规数 1.17549435e-38 防 FTZ 刷 0；Kernel UT 13/13、Host UT 29/29、上板 83/83 PASS（PR 记录，未发布）
+  fix: 对冲修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13592（merged 2026-11-05）：回退 !12612 的稳定双分支、恢复 TF 公式 1/(1+exp(-features)) 并按输入 dtype 传播溢出/NaN（feature=-100 有限梯度→0、Inf 梯度→NaN）；未核实发布版本
 labels:
   stage:
   - shared
@@ -42,6 +42,7 @@ original:
   - 2026-10-25 2026-10-25 回访：修复 MR !12612（softplus_grad 空 Tensor/未知秩/稳定 sigmoid/inf×0）open，2026-10-24T16:32Z 仍有更新；未合入。
   - 2026-10-26 2026-10-26 回访：修复 MR !12612 批次快照 open、2026-10-25T00:48Z 仍更新未合入。
   - 2026-10-27 回访 2026-10-27：修复 MR !12612 open（10-26T15:18 仍更新），未合入。
+  - 2026-11-06 2026-11-06 回访：#8099（closed）+ 对冲 PR !13592（回退 TF 原始公式 1/(1+exp(-x))，2026-11-05T01:10Z merged）合入——!12612 的稳定双分支实现被 !13592 回退取代，方向冲突以 !13592 落地收尾；条目机制（inf×0=NaN 与 TF 不一致面）仍成立，fix 载体改写为 !13592（merged）。
 migration:
   method: scan
   scanned: '2026-10-24'
@@ -65,3 +66,7 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-06'
+    fields:
+    - mitigation.fix
+    - original.notes

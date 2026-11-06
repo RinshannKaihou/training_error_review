@@ -4,7 +4,7 @@ slug: opstransformer_flash_attn_score_a6_dn_tail_stride_mismatch
 aliases: []
 title: FlashAttentionScore A6 DN 尾块行距不一致精度错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -34,6 +34,7 @@ relations:
   target: INF-2412
 - kind: var
   target: TRN-0608
+pattern: PAT-TRN-0051
 original:
   mechanism: 'cann/ops-transformer issue #7138（2026-11-05 open）。A6（ascend960dt，DAV_9201）FlashAttentionScore 走 DN 路径且 s1 存在尾块（Align32(s1RealSize)<s1BaseSize）时输出精度错误。触发链：d=192>128 → tiling 选 S1Base=64；无可选输入 → A6 IsDnForTrain=true → classic DN 路径（IterateBmm1DnSplitK+ProcessVec1Dn）；cube 侧 DN fixpipe CV_RATIO==1 分支 dstStride 写死 s1BaseSize，vec 侧以 m=Align32(s1RealSize)/CV_RATIO 为行距读取 bmm1 UB 瓦片；尾块 s1RealSize≤32 时 nSize=32≠s1BaseSize=64，fixpipe 写入行距与 vec 读取行距不一致 → softmax（max/sum/exp）数据错位。A5 CV_RATIO=2 时 dstStride=nSize/2 恒等于 vec 侧 m，无此问题。复现：TND varlen B=2、headNum=1、seq_list_q=[250,1]、seq_list_kv=[41,40]、d=dk=192、dv=128、bf16、无 mask——输出从第 250 行（batch1 唯一输出行）开始错误，batch0（0~249 行）正确。修复方案（issue 内给出）：CV_RATIO==1 分支 dstStride 改为跟随 nSize（classic DN=Align32(s1RealSize)，Causal DN=Align64(s1RealSize)），与 vec 侧对齐；满块时 nSize==s1BaseSize 行为不变。批次快照未见关联修复 MR。'
   source: https://gitcode.com/cann/ops-transformer/issues/7138 （open；含根因定位与修复方案）
@@ -43,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

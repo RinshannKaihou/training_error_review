@@ -4,7 +4,7 @@ slug: deepspeed_offload_states_reload_stale_states
 aliases: []
 title: DeepSpeed offload/reload_states 恢复陈旧状态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 重计算/卸载
@@ -15,7 +15,7 @@ effect:
   objects:
   - 优化器状态
   - 模型权重
-  detail: ZeRO-1/2：offload(include=[optim_states]) 释放 0 字节、getters 返回 offload 前旧值、一步后 fragment 与状态差 2.5e-4；ZeRO-3：pin 变化后 reload 参数回退一步前（lr 1e-2 偏差至 1e-2）
+  detail: ZERO-1/2：offload(include=[optim_states]) 释放 0 字节、getters 返回 offload 前旧值或抛 TypeError；ZERO-3：pin 变化后 reload 参数回退到上次 offload 值（lr 1e-2 偏差至 1e-2）
   visibility: 静默错误
 mitigation:
   detect: offload/reload 循环后对比参数与优化器状态 bit 一致性（修复 PR 附带前后对照）；监控 reload 后首个 step 的 param norm 突变
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    uncertain_short:
+    - effect

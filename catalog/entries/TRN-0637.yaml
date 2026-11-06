@@ -4,7 +4,7 @@ slug: opsnn_in_training_update_v2_rounding_residual_loss
 aliases: []
 title: INTrainingUpdateV2 方差/仿射舍入残差丢失三方超差
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -38,6 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0564
+pattern: PAT-TRN-0062
 original:
   mechanism: 'cann/ops-nn issues #8173（2026-11-05 closed，三轮）+ #8236（2026-11-05 open，四轮），修复 MR !13699（merged）与 !13756（open）。InstanceNorm 训练更新算子 INTrainingUpdateV2 的 arch35 数值链（op_kernel/arch35/in_training_update_v2_common.h）连续三轮/四轮暴露舍入残差丢失类缺陷：(三轮 483) 仿射高位在低位合并前恢复指数导致提前溢出——有限 gamma=-FLT_MAX 下输出第 1814415 项真值有限（100 位 Decimal 独立计算 -3.40e38，低于 FP32 round-to-nearest 溢出中点）NPU 却输出 -Inf；(三轮 147) 无偏方差未用已有 varLowReg 且 invR/(1-invR) 叠加倒数舍入误差——FP16 方差输出差 1 ULP、三方 RMSE 比值 1.571>1.5；(四轮 470) ComputeBaseStats 两个乘法已恢复低位但高位相减时丢减法舍入误差——FP32 NCHW x=(2,2,33,6335)、R=209055 的 batch_variance 三方 RMSE 比值 1.607>1.5 失败（NPU -1573.93420 vs FP64 golden -1573.93412 vs 真实 GPU -1573.93408），按原指令顺序建立的 FP32 数值模型与 NPU 逐位一致、补入残差后模型得到 FP64 golden 最近 FP32 值。修复：!13699（merged）仿射从原始 sum/均值高低位经两次融合乘加恢复第三段残差+方差补偿；!13756（open）补减法残差。验证：三轮修复后 8 个小型三方+2 原始用例 PASS/BINARY_MATCH、50 功能/44 精度边界/9 大 R 回归全过；四轮修复后 11 条定向三方 PASS（470 batch_variance 与 GPU 逐位一致）；完整 707 条回归未完成。环境：Ascend950PR_9579、任务内两套独立 CANN 9.3.0、TTK --pc=1、真实 A100 三方标杆。'
   source: https://gitcode.com/cann/ops-nn/issues/8173 （closed）+ https://gitcode.com/cann/ops-nn/issues/8236 （open）+ 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13699 （merged）/ https://gitcode.com/cann/ops-nn/merge_requests/13756 （open）
@@ -47,3 +48,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

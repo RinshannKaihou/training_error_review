@@ -4,7 +4,7 @@ slug: opsnn_mse_loss_backward_u32_truncation_unwritten
 aliases: []
 title: MseLossBackward 元素数超 2^32 梯度部分未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0271
+pattern: PAT-TRN-0013
 original:
   mechanism: 'cann/ops-nn issue #8187（2026-11-05 open）。aclnnMseLossBackward（mse_loss_grad_v2 的 arch22 tiling，ascend910b/910_93/310p 路径）把元素总数存进 uint32_t，超过 2^32 后静默截断，两种后果：(1) 截断为 0（n 恰为 2^32 整数倍）→ usedCoreNum=0 → totalLength%usedCoreNum 整数除零 → 361001（ACLNN_ERR_RUNTIME_ERROR，内部码泄漏）；(2) 截断为 K（n=2^32+K）→ 只算前 K 个元素，其余从未被写入但返回 SUCCESS。决定性证据是 out[n-1]：无论 n 超出 2^32 多少，最后一个元素恒为初值 0.0，即 2^32 之后的元素从未被任何核写过。实测（fp16、reduction=0、self=1/target=0/gradOutput=1，正确应恒 2.0）：n=2^24 基线全 2.0；n=2^32 execute ret=361001；n=2^32+8192 与 2^32+100000 返回 0 但 out[n-1]=0.0。契约面：docs/aclnnMseLossBackward.md 未声明元素数上限，错误码表只有 161001/161002；MseLossGradTilingData.totalLength（tiling.h:24）本就声明为 uint64_t。环境：Atlas A2 910B3、CANN 9.2.0、HBM 60.5GB；仓库 ops-nn master cabf7c65（2026-11-05 fetch）。附完整复现脚本。mse_loss 是训练最常见损失之一，超大 batch/序列拼接后元素总数超 2^32 时反向梯度部分静默缺失。'
   source: https://gitcode.com/cann/ops-nn/issues/8187 （open，附完整复现脚本与实测矩阵）
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

@@ -4,7 +4,7 @@ slug: mindspeed_pp_shape_batch_isend_irecv_race
 aliases: []
 title: MindSpeed+Megatron0.18 PP shape 交换读未写入内存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   detail: 4 机 TP=2/PP=2/EP=16 + variable_seq_lengths：recv_prev_shape 读到垃圾整数（实测 -4.58e17），torch.empty 抛 SymInt 错误训练中断；EP=16 必现、EP=8 正常；synchronize 兜不住内部通信流
-  visibility: 不可复现
+  visibility: 报错
 mitigation:
   detect: variable_seq_lengths/mtp_standalone + EP≥16 多机配置下监控 shape 交换后的张量合法性；开 use_ring 或 batch_comm=False
   fix: 修复 MR https://gitcode.com/Ascend/MindSpeed/merge_requests/4132 （批次快照 closed，2026-11-05）：P2PCommunicator 类方法补丁改用 _p2p_ops 逐条 send/recv 绕开 batch 通信竞态；合入与否未核实
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 报错
+    uncertain:
+    - effect

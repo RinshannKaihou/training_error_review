@@ -4,7 +4,7 @@ slug: opsnn_foreach_expm1_tensornum_gt256_oob_silent_skip
 aliases: []
 title: ForeachExpm1 tensorNum>256 越界写且尾部静默跳过
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0444
+pattern: PAT-TRN-0063
 original:
   mechanism: 'cann/ops-nn issue #8254（2026-11-05 open）。aclnnForeachExpm1 对 tensorNum>256 没有任何校验：两段接口都返回 ACLNN_SUCCESS、workspaceSize 正常，但 tiling 对 tensorElements[i]（长度 256 的定长数组）按 i<tensorNum 逐项写入——n>256 时 host 侧结构体越界写；device kernel 以 tensorCount 索引同一 256 元素数组，index≥256 的张量不参与计算。实测（A5 Ascend950PR/CANN 9.3.0.B020 + 910C arch22 双探针）：A5 上 n=4/256 干净，n≥257 kernel fault（sync=507035，plog AI Core kernel execution failed）且部分张量输出静默错误（n=258→2 处、300→86 处、512→510 处，首错 idx=257）；910C 上 n=257/300 时 index≥256 的张量完全未被写（哨兵原样保留）且 sync=0 无任何报错。期望：同族 aclnnForeachNeg 在 arch35 上首段即拒绝 tensorNum>256。附完整探针代码与 plog。训练影响：torch._foreach_* 是 NPU 融合优化器（FusedAdam 等）对参数列表批量下发的底层路径，大模型参数分组超 256 个张量时尾部参数更新静默丢失（910C 形态）或部分错值（A5 形态）。'
   source: https://gitcode.com/cann/ops-nn/issues/8254 （open；附双平台探针实测矩阵）
@@ -42,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

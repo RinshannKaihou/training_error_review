@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 637 条；状态：active 628、pending_audit 9
+共 637 条；状态：active 637
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -2075,10 +2075,10 @@
 
 ### TRN-0629 `opsmath_cumsum_gt2p30_silent_identity` aclnnCumsum 元素数超 2^30 静默返回恒等
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / aclnnCumsum 块间 carry
-- **原因行为**：arch35 两遍式 cumsum（块内前缀+块间 carry）在元素数 S>2^30 时块间 carry 未叠加，输出退化为输入本身；两段接口返回 0/0、无错误码无日志。
+- **原因行为**：aclnnCumsum（fp32、1 维、dim=0）S>2^30 时静默退化为恒等（out==x），接口返回 0/0；报告者疑因 arch35 两遍式实现 blockCount/blockFactor 为 32 位宽度，但未定位到具体行。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：fp32 1 维 dim=0、S≥2^30+1 起输出==输入（x[0]=1 构造应全 1.0，实测 out[1:]=0.0；交叉构造应 1024,1026,1030 实测 1024,2,4），A3 910_9362/CANN 9.3.0 实测，9.2.0 逐值一致
 - **改进措施**：检测 对 S>2^30 的 cumsum 结果做首尾元素断言（前缀和末元素应≈总和）；阈值仅由 host 侧 shape 决定，可静态排查；修复 待定（issue open，未见修复 MR；报告者提示 cumsum_twoway_ss.h 的 blockCount/blockFactor 32 位宽度疑点，未坐实）
@@ -2087,7 +2087,7 @@
 
 ### TRN-0630 `opsmath_isinf_gt2p31_int32_offset_oob` aclnnIsInf 元素数超 2^31 偏移溢出写坏输入
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / aclnnIsInf GM 偏移位宽
 - **原因行为**：kernel GM 偏移用 int32_t/uint32_t 计算，元素数超 2^31 后偏移回绕变负：out 尾部不写（保持预填 0 即全非 inf 错值），且越界写把正确结果写进只读输入 x 区。
@@ -2099,7 +2099,7 @@
 
 ### TRN-0631 `opsnn_foreach_expm1_tensornum_gt256_oob_silent_skip` ForeachExpm1 tensorNum>256 越界写且尾部静默跳过
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / ForeachExpm1 tensorNum 校验
 - **原因行为**：对 tensorNum>256 无校验：tiling 对定长 256 数组按 i<tensorNum 逐项写入发生 host 侧越界写；kernel 以 tensorCount 索引同一数组，index≥256 的张量不参与计算。
@@ -2111,7 +2111,7 @@
 
 ### TRN-0632 `opsnn_mse_loss_backward_u32_truncation_unwritten` MseLossBackward 元素数超 2^32 梯度部分未写
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / MseLossGrad tiling 位宽
 - **原因行为**：arch22 tiling 把元素总数存入 uint32_t，超 2^32 静默截断：截为 K 时只算前 K 个、其余梯度从未写入但返回 SUCCESS；恰为 2^32 整数倍时 usedCoreNum=0 整除零返回内部码 361001。
@@ -2123,7 +2123,7 @@
 
 ### TRN-0633 `opstransformer_smla_causal_topk_metadata_mismatch_nan` SMLA 族 causal topk 规划与主内核不一致出 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / SMLA 族 metadata
 - **原因行为**：cmp_mask_mode=3 且给 cmp_topk_length 时，metadata 忽略逐行实际长度按 indices 宽度规划，主内核按实际长度执行——FA/FD 分块规划与执行不一致，产出 NaN 与 Inf LSE。
@@ -2135,7 +2135,7 @@
 
 ### TRN-0636 `opstransformer_flash_attn_score_a6_dn_tail_stride_mismatch` FlashAttentionScore A6 DN 尾块行距不一致精度错误
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / FA DN fixpipe dstStride
 - **原因行为**：A6 DN 路径 fixpipe dstStride 写死 s1BaseSize，vec 侧按 Align32(s1RealSize)/CV_RATIO 行距读——尾块 s1RealSize≤32 时行距不一致，softmax 数据错位。
@@ -2147,7 +2147,7 @@
 
 ### TRN-0637 `opsnn_in_training_update_v2_rounding_residual_loss` INTrainingUpdateV2 方差/仿射舍入残差丢失三方超差
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / INTrainingUpdateV2 数值链
 - **原因行为**：arch35 in_training_update_v2_common.h 逐步丢舍入残差：高位相减丢减法舍入误差、invR/(1-invR) 叠加倒数舍入误差、仿射高位在低位合并前恢复指数提前溢出。
@@ -2729,11 +2729,11 @@
 
 ### TRN-0635 `mindspeed_pp_shape_batch_isend_irecv_race` MindSpeed+Megatron0.18 PP shape 交换读未写入内存
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：集合通信 / mindspeed / P2PCommunicator shape 交换
 - **原因行为**：Megatron 0.18 非 ring 分支 batch_isend_irecv 交换 shape，HCCL batch 内部流竞态使 wait() 返回时 buffer 未写入；MindSpeed 兜底补丁挂旧函数名静默失效。
-- **影响对象**：可用性/进度（不可复现）
+- **影响对象**：可用性/进度（报错）
 - **影响详情**：4 机 TP=2/PP=2/EP=16 + variable_seq_lengths：recv_prev_shape 读到垃圾整数（实测 -4.58e17），torch.empty 抛 SymInt 错误训练中断；EP=16 必现、EP=8 正常；synchronize 兜不住内部通信流
 - **改进措施**：检测 variable_seq_lengths/mtp_standalone + EP≥16 多机配置下监控 shape 交换后的张量合法性；开 use_ring 或 batch_comm=False；修复 修复 MR https://gitcode.com/Ascend/MindSpeed/merge_requests/4132 （批次快照 closed，2026-11-05）：P2PCommunicator 类方法补丁改用 _p2p_ops 逐条 send/recv 绕开 batch 通信竞态；合入与否未核实
 - **来源**：https://gitcode.com/Ascend/MindSpeed/merge_requests/4132
@@ -6004,12 +6004,12 @@
 
 ### TRN-0634 `deepspeed_offload_states_reload_stale_states` DeepSpeed offload/reload_states 恢复陈旧状态
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：重计算/卸载 / deepspeed / offload/reload_states 重挂
 - **原因行为**：offload_states 替换状态张量后视图/链接不重挂，或 reload 从首次 pinned 缓冲恢复：ZeRO-1/2 fragment 指向旧设备副本，ZeRO-3 恢复旧 pinned 值——训练静默接着旧参数跑。
 - **影响对象**：优化器状态；模型权重（静默错误）
-- **影响详情**：ZeRO-1/2：offload(include=[optim_states]) 释放 0 字节、getters 返回 offload 前旧值、一步后 fragment 与状态差 2.5e-4；ZeRO-3：pin 变化后 reload 参数回退一步前（lr 1e-2 偏差至 1e-2）
+- **影响详情**：ZERO-1/2：offload(include=[optim_states]) 释放 0 字节、getters 返回 offload 前旧值或抛 TypeError；ZERO-3：pin 变化后 reload 参数回退到上次 offload 值（lr 1e-2 偏差至 1e-2）
 - **改进措施**：检测 offload/reload 循环后对比参数与优化器状态 bit 一致性（修复 PR 附带前后对照）；监控 reload 后首个 step 的 param norm 突变；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9015 （open 2026-11-04）与 https://github.com/deepspeedai/DeepSpeed/pull/9016 （open 2026-11-04）：#9015 修 ZeRO-3 frozen 参数映射+reload 一致性；#9016 修 ZeRO-1/2 fragment 视图重挂；均未合入未发布
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/9015；https://github.com/deepspeedai/DeepSpeed/pull/9016
 

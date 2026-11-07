@@ -41,6 +41,8 @@ original:
   behavior: 开发者在 Ascend 上开发或验证 KL 散度梯度算子（kl_div_loss_grad/kl_div_target_loss_grad）时：标量输入的精度用例根本跑不出参考结果（golden 直接 IndexError）；广播输入（如 self=(2,3)、target=(1,3)）的 mean/batchmean 梯度参考值是错的（mean 梯度放大 2 倍）——被测 kernel 与错误 golden 同错时精度用例照样 PASS（假阳性），kernel 实际正确时反而可能判 FAIL（假阴性），算子精度回归的通过/失败结论不可信。
   trigger_surface: cann/ops-nn kl_div_loss_grad 与 kl_div_target_loss_grad 的 CPU golden（tests/assets/golden.py），标量与广播输入
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照 !13570 仍 open（2026-11-06T08:49Z 更新），维持。
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-04'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

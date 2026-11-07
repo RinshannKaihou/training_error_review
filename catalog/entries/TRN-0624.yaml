@@ -41,6 +41,8 @@ original:
   behavior: NPU torch.compile（triton_experimental 后端，含 AOTI/cpp_wrapper）里整数 floor 除法（i64//i32、含 SymInt 除数）的正数结果静默变 0（如 7//3 得 0），无编译错误，运行期表现为索引/掩码/分桶逻辑整体错乱、loss 异常，难定位；规避 PR 把整数除法整体回退 ATen 后恢复。
   trigger_surface: triton-ascend（Triton Ascend 3.6）+ triton_experimental 后端 + i64//i32 混合整数 floor_divide（含 SymInt/sympy 整型）；正数操作数
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照显示 !49022 已 closed（2026-11-06T02:34Z，未 merged），修复载体关闭，维持待新载体。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

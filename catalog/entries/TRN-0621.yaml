@@ -41,6 +41,8 @@ original:
   behavior: 混合精度训练里 GeGLU 激活的反向梯度在 linear 分支激活值与上游梯度都较大（数百量级、乘积超 65504）时输出 ±inf 而非有限梯度（正确值约 -7468 这种量级），无报错；inf 梯度回传会污染后续梯度链或触发 loss 异常。常规小数值训练不受影响，golden 套件 144 项中 32 项此类边界失败，平时难暴露。
   trigger_surface: CANN GeGluGradV2 FP16 路径（arch35 tanh/erf、通用 fp16、310p 四入口）+ linear*dy 中间乘积超 65504 + gelu 导数<1；混合精度大激活训练
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照显示 !13576 已 closed（2026-11-06T09:49Z，未 merged），修复载体关闭，维持待新载体。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

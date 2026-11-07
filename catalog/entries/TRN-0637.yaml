@@ -45,6 +45,8 @@ original:
   behavior: NPU 上 InstanceNorm 训练更新在 FP32 大空间尺寸（R 约 20 万）配合极端统计量（大方差相消、gamma 近 ±FLT_MAX）时，输出与 GPU/FP64 参考差出最后几位（RMSE 比值超 1.5 三方判据），个别通道有限值被算成 -Inf；训练继续跑、无报错，只是归一化结果慢慢偏离参考实现，评测/对拍时才显形。修复后与真实 GPU 逐位一致。
   trigger_surface: cann INTrainingUpdateV2 arch35、FP32/FP16 NCHW、大 R + 相消/极值统计量组合；Ascend950PR、CANN 9.3.0
   discovery: 2026-11-06 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照显示 !13756 已 merged（2026-11-06T03:46Z，保留 INTrainingUpdateV2 方差减法残差），#8236 侧修复落地；发布未核实。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -52,6 +54,9 @@ migration:
   - date: '2026-11-06'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-06
     base:

@@ -36,6 +36,8 @@ original:
   behavior: NPU 多机流水线并行训练（Megatron 0.18 + MindSpeed 0.18，开 variable_seq_lengths 或 MTP standalone，EP=16 时必现）在 PP 通信阶段崩溃：torch.empty 报「expected to contain only concrete integers」，根因是 shape 交换的 batch 通信在 wait() 返回后缓冲区还没写入、读到了未初始化的垃圾整数；MindSpeed 自己的兜底补丁因挂在旧版函数名上静默失效。表现为训练偶发中断（竞态），EP=8 不触发、EP=16 必现。
   trigger_surface: MindSpeed 0.18 + Megatron 0.18、variable_seq_lengths/mtp_standalone、非 ring P2P 分支 batch_isend_irecv、EP=16（4 机 TP=2/PP=2 实测）
   discovery: 2026-11-06 每日扫描
+  notes:
+  - '2026-11-07 回访 2026-11-07：hcomm #1242 显示「回退标卡（standardCard）识别相关变更（回退 !4099 与 !5367）」已 closed——与 MindSpeed PP 形状交换竞态条目无直接关联（不同组件），仅记录标卡回退动向。'
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -55,3 +57,7 @@ migration:
         to: 报错
     uncertain:
     - effect
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - original.notes

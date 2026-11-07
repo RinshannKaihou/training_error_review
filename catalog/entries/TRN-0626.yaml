@@ -41,6 +41,8 @@ original:
   behavior: NPU torch.compile（default 后端）下含 NaN 的输入做 max/min/argmax/argmin 时结果与 eager 不一致（NaN 不传播、NaN 行索引取错位置），无报错；训练出现 NaN 后依赖这些归约的图（softmax/异常检测路径）行为与 eager 版本分叉，掩盖或放大 NaN 影响。另长归约 online softmax 静默退化为两遍形式（数值近似正确、性能掉）。修复后 73 项套件全过。
   trigger_surface: torch_npu Inductor default 后端 + 含 NaN 输入的 max/min/argmax/argmin + online softmax 长归约；910B4/CANN 9.2.0-beta.2/triton-ascend 3.6.0
   discovery: 2026-11-05 每日扫描
+  notes:
+  - '2026-11-07 回访 2026-11-07：批次快照显示 !49041 已 closed（2026-11-06T02:27Z，未 merged）；同日同族新 issue #5924（argmax/argmin 全 NaN 索引错）+ 修复 !49185（open）建 TRN-0639。'
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

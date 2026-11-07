@@ -41,6 +41,8 @@ original:
   behavior: 训练用 FlashAttention 带 learnable sink、LSE 输出且 mask（滑动窗口/因果）使部分有效 query 的 KV 全被 mask 时，这些行的 LSE 输出为 +inf 而不是 sink 值，且哪些行错取决于分块边界；实测原始 case 26% LSE 元素错（匹配率 73.66%）、attention 输出本身基本不受影响（99.9988% 匹配）——依赖 LSE 的下游（如 normalization/蒸馏目标）静默拿到 inf。
   trigger_surface: CANN flash_attn + learnable sink + return_softmax_lse + mask_mode=4/滑窗使整块 query 全 masked；Ascend950PR arch35 真机复现（CANN 9.3.0），arch92 同路径
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照 !15277 仍 open（2026-11-04T08:09Z 后无更新），维持。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

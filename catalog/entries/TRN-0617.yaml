@@ -41,6 +41,8 @@ original:
   behavior: NPU 上开启 MM/BMM 自动融合训练 BF16/FP16 模型（含 addmm 且 bias 来自低精度逐元素运算）时，编译后的网络输出与关闭融合/原生执行不一致：实测五轮图首轮约 19% 元素偏差 3e-5 量级、逐轮放大，最终输出精度回归失败，全程无报错无 NaN；关掉 MM 融合或恢复 bias 的 BF16 舍入后逐位一致。
   trigger_surface: torchair Inductor ascendc 后端 + MM/BMM 自动融合 + aten.addmm 二维逐元素 bias（来自 BF16/FP16 Mul）+ CANN 9.2.0/Ascend 950/torch_npu 2.14.0
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-07 回访 2026-11-07：批次快照 !3950 仍 open（2026-11-06T22:58Z 更新，标题更新为「保留MatMul bias语义并保护CV共享输入（26.2.0，#939）」），维持。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - pattern
+  - date: '2026-11-07'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

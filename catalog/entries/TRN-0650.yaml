@@ -4,10 +4,10 @@ slug: arxiv_time_bomb_spike_lm_head_quantization
 aliases: []
 title: LM head 量化误差累积引发延迟 loss spike
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 量化
     stack: 通用
     component: LM head 量化误差累积
   behavior: 输出 logit 持续增长使 LM head 权重的量化误差快速累积（降精度加速、升精度减缓），误差累积到临界后触发延迟出现的终局发散。
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 量化
+    uncertain:
+    - visibility

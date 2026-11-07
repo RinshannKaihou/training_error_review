@@ -4,7 +4,7 @@ slug: aclnn_empty_input_early_return_unwritten_batch_1106
 aliases: []
 title: aclnn 空输入早退不写输出/跳校验又五例
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 梯度
-  detail: 空 self/gradOut/全空输入下非法 out 放行（rc=0）且 out/gradInput/gradPhi 等保持预填哨兵（0xCD/7/qNaN 实测）；BCE 反向与 MoE Sinkhorn 反向是训练梯度路径。
+  detail: 空 self/gradOut/全空输入/空 batch 下均返回成功、无报错，非法 out 形状放行（rc=0）；应写入的 out/mOut/gradPhi/gradAlpha/gradBias 保持缓冲区残留值（预填 0xCD/7/qNaN 实测原样）；空 batch 步反向梯度读到未初始化显存。
   visibility: 不可复现
 mitigation:
   detect: 出参预填哨兵做 round-trip；空 batch 用例下与 CPU 语义对账（PyTorch 参考多为全 0 或按文档拷贝）。
@@ -41,6 +41,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0275
+pattern: PAT-TRN-0069
 original:
   mechanism: '2026-11-06 新开五单，与 TRN-0275（aclnn 空输入早退不写非空出参）同机理，各带真机实测矩阵：① ops-nn #8326 aclnnBinaryCrossEntropyBackward：self 为空时 CheckShape 直接返回 true（跳过 out 同形与 target/weight/gradOutput 广播校验），self->IsEmpty() 分支不建任何写 out 节点返回 SUCCESS——self=[0,4]、out=[2,4] 非法组合 rc=0/0，out 8 元素保持预填 0xCD（950 实测；同族 BCEWithLogitsBackward #7133 已修删除同一早退，本接口漏改）；② ops-nn #8327 aclnnFastBatchNormBackward：gradOut 空态快速路径（aclnn_fast_batch_norm_backward.cpp:761）先于 CheckParams（:769）返回 0，input=[2,3,4,4]×gradOut=[0,3,4,4] 明显不一致组合也 rc=0（910B2×8 实测）；③ ops-math #4601 aclnnCat：全空输入被 EraseDim1EmptyTensor 剔光后 :608 先于 CheckParams 返回成功，非法 out（[2,4]，期望 [0]）放行且 8/8 元素保持 qNaN（A5/A2、CANN 9.2.0/9.3.0 一致）；④ ops-math #4597 aclnnTriangularSolve：空 self 早退不拷贝 mOut——self=[72,0] 时 mOut=[72,72] 非空，5184 元素保持预填 0xCD（资料明写 mOut 应为 broadcast 后 A 的拷贝；950 实测）；⑤ ops-transformer #7216 aclnnMhcPreSinkhornPremixBackward：空 batch（B=0）早退不写与 batch 无关的参数梯度，gradPhi/gradAlpha/gradBias 预填 7 原样残留（B=2 对照组全 0；A2/910B2、ops-transformer master 0e496720 实测），数学上应清零。五单均 open（2026-11-06）。'
   source: https://gitcode.com/cann/ops-nn/issues/8326 ；同族：https://gitcode.com/cann/ops-nn/issues/8327 、https://gitcode.com/cann/ops-math/issues/4601 、https://gitcode.com/cann/ops-math/issues/4597 、https://gitcode.com/cann/ops-transformer/issues/7216
@@ -50,3 +51,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

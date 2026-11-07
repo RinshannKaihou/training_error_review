@@ -4,7 +4,7 @@ slug: cann_blocksparse_attention_allzero_mask_unwritten
 aliases: []
 title: BlockSparseAttention V1 全 0 掩码输出未写返回成功
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 全 0 mask 用例两段 rc=0/0 但 attentionOut 16384/16384 元素保持哨兵 7.0；全 1 对照组正常写入——输出值依赖调用方缓冲区残留。
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 输出预填哨兵做 round-trip；全 0 mask 冒烟用例（应写 0/中性值）。
   fix: '待定：issue open（2026-11-06）；同根因先例 #6751（GenericBlockSparseAttention 因果过滤后有效块为零提前 continue）已 closed。'
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0275
+pattern: PAT-TRN-0069
 original:
   mechanism: 'cann/ops-transformer issue #7218（2026-11-06 open）：aclnnBlockSparseAttention（V1）在 blockSparseMask 全 0（所有块不参与计算）时两段接口返回 0，但 attentionOut 完全未写。实测（A2/910B2 + CANN 9.3.0 weekly 20261104，ops-transformer master 0e496720）：输出缓冲统一预填 FP16 7.0（0x4700）哨兵，全 1 mask 对照组 16384/16384 正常写入；全 0 mask 组 16384/16384 仍为哨兵 7.0，仅 mask 不同。根因：全 0 mask 时 kernel 侧没有任何可参与计算的 KV 块，当前路径直接跳过该行/块的计算，未调用等价于空行写出的逻辑。报告者关联 #6751（GenericBlockSparseAttention 因果过滤后有效块数为零提前 continue 导致输出未写，已 closed）为同一根因的先例。期望：全 0 mask 时输出仍必须写定义明确的结果（按同族设计应写 0 或中性值），不能返回成功却保留调用方原值。'
   source: https://gitcode.com/cann/ops-transformer/issues/7218 ；同根因先例：https://gitcode.com/cann/ops-transformer/issues/6751 ；V3 版同机制推理条目：INF-1576
@@ -43,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误

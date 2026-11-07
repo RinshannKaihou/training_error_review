@@ -4,10 +4,10 @@ slug: opsnn_batch_norm_grad_v3_arch35_dgamma_rounding
 aliases: []
 title: batch_norm_grad_v3 arch35 dgamma 多次舍入超阈
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 算子/内核
     stack: cann
     component: dgamma/dx 归约舍入
   behavior: dgamma 归约被加项三次分立舍入（(x−mean)→×dy→×rstd，rstd 混在段内逐项相乘）舍入源偏多；dx 强抵消元素误差由 dgamma 误差主导。
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0564
+pattern: PAT-TRN-0062
 original:
   mechanism: 'cann/ops-nn issue #8290（closed 2026-11-06）+ 修复 PR #10979（merged 2026-11-06 快照）：batch_norm_grad_v3 arch35（Ascend950PR，__NPU_ARCH__ 3510）fp32 训练反向在 cv_fused_double_benchmark 精度标准下部分用例失败——均为误差比值超阈：[16,8,64,48] dx 比例 12.28>10、[8,1,64,64] dgamma 比例 2.32>2.0；绝对精度正常（vs fp64 真值误差 ~1e-7 量级，CPU 标杆全 PASS）。根因：dgamma 归约被加项为三次分立舍入（(x−mean)→×dy→×rstd，rstd 混在段内逐项相乘），舍入源偏多；dx 在强抵消元素上的误差由 dgamma 误差主导。修复 #10979：dgamma 先归约后乘 rstd（全 6 条 kernel 路径）、FullLoad/RA FullLoad 对折乘加改 MulAddDst（vmula 单次舍入）、dx 标量结构预合并 grad_scale=rstd·gamma、SplitR1 FoldVF tail 项构造修复；PR 前后各 30 组随机输入×3 形状对照：CPU 标杆 2 FAIL→90/90 全 PASS，dgamma 误差分布整体左移（max 1.77→1.22）。残留：小 C 长 R 形状（如 [8,1,64,64]）dgamma 比值随输入波动约 1/5 概率超阈，后续方向为融合乘加覆盖 LessThanVL 子路径或 C=1 类长归约升级累加精度。'
   source: https://gitcode.com/cann/ops-nn/issues/8290 ；修复 PR：https://gitcode.com/cann/ops-nn/pull/10979
@@ -43,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 算子/内核

@@ -4,10 +4,10 @@ slug: pytorch_npu_static_launcher_a5_repeat_inplace
 aliases: []
 title: static launcher A5 重复执行 in-place kernel
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 编译器
     stack: torch_npu
     component: static launcher 派发
   behavior: static Triton launcher（!45989）在 A5 one-program-per-tile 形态下 grid/参数处理不正确，in-place pointwise kernel 被重复执行。
@@ -34,6 +34,7 @@ relations:
   target: TRN-0280
 - kind: cross
   target: INF-2430
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/pytorch issue #5920（2026-11-06 open）：Ascend950DT（soc version 260）、torch 2.13.0/torch_npu 2.13.0+git5412c2f/CANN 9.2.0、TORCHINDUCTOR_NPU_BACKEND=triton_experimental：torch.compile(mm_div)（matmul 后除 8.0）与 eager 相比 max_abs 5.7~6.0；AlbertForMaskedLM（train）logits max_abs=1.56（dvm 后端 1.7e-06）。根因：static Triton launcher（torch_npu/_inductor/triton_experimental/static_launcher/，PR !45989 引入）在 A5（Ascend950，soc>=250）one-program-per-tile dispatch 形态下启动 kernel 的 grid/参数处理不正确，in-place pointwise kernel 被重复执行（输出被多次缩放）。证据链：① ic.use_static_triton_launcher=False 后最小复现 max_abs=0.0、Albert 1.86e-06；② 生成的 kernel 源码单独跑、逐步复现编译器完整流程（extern bmm→reinterpret→kernel）均完全正确；③ 坏区域 compiled/raw≈0.0119（0.125 的若干次幂）证明同一 in-place kernel 跑了多次；④ 尺寸阈值：[1,1,≤256,64]、[4,12,64,64] 全对，[4,12,128,64] 起错（55%），[4,12,512,64] 错 91.6%。910B（A2）不受影响（one-program-per-tile 仅 A5 形态）。issue 提供完整最小复现。推理库 INF-2430 同源，本条为训练范围条目（真实训练模型 AlbertForMaskedLM train 实测）。'
   source: https://gitcode.com/Ascend/pytorch/issues/5920 ；同源推理条目：INF-2430
@@ -43,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 编译器

@@ -4,17 +4,17 @@ slug: cann_weight_quant_batchmatmul_a16w8_pergroup_nd
 aliases: []
 title: WeightQuantBatchMatmulV2 PerGroup ND 静默错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: A16W8 G量化 ND 反量化
-  behavior: A16W8 PerGroup ND 路径反量化/数值实现缺陷：接口成功但 NRMS≈0.19，同参 PerChannel 正常（0.0017）。
+  behavior: A16W8 PerGroup ND 路径接口返回成功但输出与全精度参考严重偏离（NRMS≈0.19），同权重切 PerChannel 即正常；报告者疑为反量化/数值实现缺陷或该场景未支持却未报错，根因待维护者定位。
 effect:
   objects:
   - 数值结果
-  detail: vs FP64 参考 NRMS≈0.1935（allclose rtol=0.02 失败）；缩到 256×256 仍 0.1806（排除尾块）；PerChannel 对照 allclose=True。PTA 接口可触发。
+  detail: 910B3/CANN 9.3.0/torch_npu 2.14.0，A16W8+PerGroup(128)+ND：vs FP64 参考 NRMS≈0.1935、allclose=False；M 19456→256（小 shape）仍≈0.1806；PerChannel allclose=True。
   visibility: 静默错误
 mitigation:
   detect: PerGroup vs PerChannel 对照 + FP64 反量化参考对拍（NRMS 一眼可辨 0.19 vs 0.0017）。
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

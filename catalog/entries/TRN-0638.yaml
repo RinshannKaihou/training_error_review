@@ -4,7 +4,7 @@ slug: pytorch_npu_inductor_dynamic_sum_first_numel
 aliases: []
 title: NPU Inductor dynamic 归约长度固化首次值，变长输入静默算错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -34,6 +34,7 @@ relations:
   target: TRN-0280
 - kind: cross
   target: INF-2426
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/pytorch issue #5930（2026-11-06 open）：Atlas 910C + CANN 9.1.0 + torch-npu 2.10.0.post6 + triton-ascend 3.2.2，torch.compile(backend=inductor, dynamic=True) 编译 a.sum(dim=-1) 后，首次输入长度 4096、随后传入 2048/512 时结果为 8386560/4208640（eager 为 2096128/130816），无异常抛出。报告者源码定位：torch_npu/_inductor/codegen/triton.py 的 NPUIndexTritonKernel.initialize_range_tree()（.post6 38e483e 行 519）用首次编译的具体值替换符号长度，行 520 把结果写回 self.numels[k]，行 543 读回、行 676 加入 kernel 调用参数；并用官方 .post6 wheel 在 CPU 主机 FakeTensor 上运行 NPU 代码生成器验证：wrapper 已取得本次输入长度 s97，但调用求和 kernel 时仍传固定值 4096（triton_unk_fused_sum_0.run(arg1_1, buf0, 4096)），CPU Triton 解释器复现错值。触发面：dynamic=True 归约 + 变长输入；固定 shape 或 eager 不触发。推理库 INF-2426 同源同机制（同一 issue 推理侧重写），本条为训练范围条目。'
   source: https://gitcode.com/Ascend/pytorch/issues/5930 ；同源推理条目：INF-2426
@@ -43,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

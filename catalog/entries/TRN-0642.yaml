@@ -4,18 +4,19 @@ slug: cann_apply_came_part1_arch35_reduction_compensation
 aliases: []
 title: ApplyCamePart1 arch35 归约丢补偿项，CAME 矩静默失精度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 优化器
+  - subsystem: 算子/内核
     stack: cann
     component: ApplyCamePart1 归约/tiling
   behavior: 直接归约路径结果写回前未合并归约补偿项（丢低位）；长归约/窄列多次 FP32 累加无分块补偿，舍入误差累积；tile 与后处理缓冲区规划未按 UB 容量统一计算。
 effect:
   objects:
+  - 数值结果
   - 优化器状态
   - 训练轨迹
-  detail: CAME 一阶矩估计的 values=grad²+eps 三路归约（沿最后一维/倒数第二维/两维）精度超验，长归约窄列最差；FP64 golden 前后对照修复后三输出 PASS（950 GEIR 图模式实测）。
+  detail: Ascend950（arch35）用 CAME 训练时，ApplyCamePart1 的 grad²+eps 三路归约输出精度超验，矩估计带偏差；无报错、loss 曲线难察觉，长期训练质量受累积影响。触发：直接归约/长归约/窄列；issue 未附失败 shape/seed，独立复现具体失败不可行。
   visibility: 静默错误
 mitigation:
   detect: 修复前后 FP64 golden 对照（PR 已把 golden 全流程提升 FP64）；长归约窄列 shape 的三输出误差比值检查。
@@ -42,3 +43,22 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 优化器
+        to: 算子/内核
+      effect:
+        from: 优化器状态
+        to: 数值结果
+    rewritten:
+    - detail

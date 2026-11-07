@@ -4,7 +4,7 @@ slug: pytorch_npu_inductor_argmax_nan_index
 aliases: []
 title: NPU Inductor argmax/argmin 全 NaN 归约索引错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0626
+pattern: PAT-TRN-0066
 original:
   mechanism: 'Ascend/pytorch issue #5924 + 修复 PR !49185（均 2026-11-06 open）：test_argmax_argmin_with_nan_npu 检查含 NaN 输入的 argmax/argmin——32×32 输入全 NaN 列应返回最低索引 0，NPU 编译结果返回 31，2/32 索引不一致、退出码 1。源码定位 torch_npu/_inductor/runtime/triton_helpers.py 的 _extremum、max_with_index、min_with_index：浮点极值归约（tl.max/tl.min）未传播 NaN，随后索引阶段只判断 value==peak/valley，NaN 与自身比较为假导致匹配全部失败，返回用作填充值的最大索引。修复沿用两次单源归约：极值阶段以 propagate_nan=PropagateNan.ALL 的原生极值运算（IR 直接表达 arith.maximumf/minimumf；初版用比较器组合在 910B 编译报 LLVM ERROR: Not implemented，故改原生运算）、索引阶段补「输入值与极值均为 NaN」匹配条件并选携带的最小原始索引。验证环境 torch_npu 2.13/Ascend_950：原节点复现→补丁通过，覆盖 6×6/32×32/1028×1028 与两归约轴，5 项既有回归+原节点 6 PASS；另 FP32/FP16/BF16 × NaN 位于首/中/末/多个/全 NaN/重复极值/无穷/零均通过，两个 argmax CI 节点在 950 通过。与 TRN-0626（!49041）同 helper 文件同族但独立 issue/PR 载体、机制细节互补（该条掩码缺 value!=value，本条索引匹配 NaN 失败返回填充索引）。'
   source: https://gitcode.com/Ascend/pytorch/issues/5924 ；修复 PR：https://gitcode.com/Ascend/pytorch/merge_requests/49185
@@ -43,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

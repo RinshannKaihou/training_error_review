@@ -43,6 +43,7 @@ original:
   discovery: 2026-11-05 每日扫描
   notes:
   - 2026-11-07 回访 2026-11-07：批次快照 !3950 仍 open（2026-11-06T22:58Z 更新，标题更新为「保留MatMul bias语义并保护CV共享输入（26.2.0，#939）」），维持。
+  - 2026-11-08 2026-11-08 回访：master 同步修复 !3969（保留 AddMM/BAddBMM 原子语义并保护 CV 别名输入，open 2026-11-07）基于 upstream/master 92e1e967 迁入 !3950 五项精度/布局修复；批注含 2026-11-08 泛化验证（master 10/10、26.2.0 10/10，20/20 组开关 MM 逐 bit 一致）。!3950 仍 open，fix 维持未发布。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -51,6 +52,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-07'
+    fields:
+    - original.notes
+  - date: '2026-11-08'
     fields:
     - original.notes
   audit:

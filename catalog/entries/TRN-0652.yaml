@@ -41,6 +41,8 @@ original:
   behavior: 在 Ascend950 上用 torch.compile（triton_experimental 后端）训练/前向时：含 in-place pointwise kernel 的编译图输出被反复缩放——matmul 后除以 8 的操作结果偏差 5.7~6.0（应 ~1e-6），真实模型（AlbertForMaskedLM train）logits 偏差 1.56；输入大到 [4,12,128,64] 起开始错（55% 元素），512 时 91.6% 错。全程无报错；把 use_static_triton_launcher 关掉或换 dvm 后端立即恢复正确，数值上表现为输出被 0.125 的幂次缩放。
   trigger_surface: torch_npu 2.13 triton_experimental 后端 + static launcher + A5（Ascend950，soc>=250）one-program-per-tile + in-place pointwise kernel + 较大 shape（≥[4,12,128,64] 量级）；CANN 9.2.0
   discovery: 2026-11-07 每日扫描
+  notes:
+  - 2026-11-08 2026-11-08 回访：#5920 open 无更新（快照 2026-11-06T06:07Z）；同族 !49246（repair triton-ex launchers and profiler autotune timing，open 2026-11-07）修复 A5 static launcher 的 dispatch 约束（普通 kernel 用 vector core 分组、避免逻辑 tile 数直接作物理 grid）——A5 launcher 面修复载体新增，未合。
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - pattern
+  - date: '2026-11-08'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-07
     base:

@@ -38,6 +38,8 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-transformer/issues/7216
   kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-math/issues/4617
+  kind: gitcode_issue
 relations:
 - kind: var
   target: TRN-0275
@@ -48,6 +50,8 @@ original:
   behavior: NPU 上以空张量输入（空 self/空 gradOut/全空列表/空 batch B=0）调用这批 aclnn 算子时：接口两段均返回成功、无任何报错，但本应被校验的非法 out 形状被放行，本应被写入的输出（BCE 反向 out、Cat 的 out、TriangularSolve 的 mOut、Sinkhorn 反向的 gradPhi/gradAlpha/gradBias）保持调用方缓冲区残留值（预填哨兵 0xCD/7/qNaN 实测原样）。动态 shape 训练在空 batch 步（数据尾批/过滤后空批）走反向时，梯度读到未初始化显存，随显存复用不可复现；非空批恢复正常，问题间歇出现。
   trigger_surface: CANN aclnn 空输入快路径（BCEBackward/FastBatchNormBackward/Cat/TriangularSolve/MhcPreSinkhornPremixBackward）+ 空 self/gradOut/全空输入/空 batch；Ascend950PR/910B2、CANN 9.2.0-beta.2/9.2.0/9.3.0 实测，master（2026-11-06 拉取）缺陷仍在
   discovery: 2026-11-07 每日扫描
+  notes:
+  - '2026-11-08 2026-11-08 补：同接口 TriangularSolve 二次实测单 #4617（A2/910B2、canary 7.0、0/9 元素改写、源码 :184-189 定位）与修复 !7205（open）——机制同本条 #4597 面，详见 TRN-0659。'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -55,6 +59,10 @@ migration:
   - date: '2026-11-07'
     fields:
     - pattern
+  - date: '2026-11-08'
+    fields:
+    - evidence
+    - original.notes
   audit:
     round: daily-audit-2026-11-07
     base:

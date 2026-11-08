@@ -36,6 +36,8 @@ original:
   behavior: NPU 上用 torch_npu.npu_weight_quant_batchmatmul 做 A16W8 权重量化 matmul、antiquantGroupSize=128（PerGroup）且 weight/scale 为 ND 布局时：接口返回成功，但输出与把权重反量化后的全精度 matmul 相差巨大（NRMS≈0.19，相当于结果基本不可用）；同一权重把 groupSize 改 0（PerChannel）结果立即正常。小 shape 也错，说明不是尾部分块问题；依赖该量化路径的训练/前向全程无报错但数值错。
   trigger_surface: torch_npu npu_weight_quant_batchmatmul（WeightQuantBatchMatmulV2）A16W8 + PerGroup（antiquantGroupSize=128）+ ND 布局；910B3/CANN 9.3.0/torch_npu 2.14.0 复现
   discovery: 2026-11-07 每日扫描
+  notes:
+  - 2026-11-08 2026-11-08 回访：#8346 open 有更新（快照 2026-11-07T00:19Z updated），正文无根因新定位；维持。
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -49,3 +51,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-08'
+    fields:
+    - original.notes

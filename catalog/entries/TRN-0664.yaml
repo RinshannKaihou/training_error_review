@@ -4,7 +4,7 @@ slug: verl_rollout_logprob_refit_last_round_only
 aliases: []
 title: verl rollout logprob 对拍只查末轮假 PASS
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -15,7 +15,7 @@ effect:
   objects:
   - 测试判定
   - 训练信号
-  detail: round 1 失败 round 2-3 恢复时脚本打印 PASSED 退出 0；原脚本 27 个新测试中 17 个证实假成功退出码；QAT/低精度对齐验收结果失真。
+  detail: 第 1 轮 refit 超阈或 NaN/Inf、末轮恢复正常时脚本打印 PASSED、退出码 0；29 项 CPU 回归测试在原脚本上 27 项失败/2 项通过，其中 17 项证实假成功退出码；QAT/低精度对齐验收结果失真。
   visibility: 静默错误
 mitigation:
   detect: 对每轮 refit_runs 历史断言 finite kl 与 k3_kl<阈值；检查退出码与逐轮记录一致性。
@@ -41,3 +41,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

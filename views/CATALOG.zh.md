@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 667 条；状态：active 652、pending_audit 15
+共 667 条；状态：active 667
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 190 |
+| 算子/内核 | 189 |
 | 编译器 | 33 |
 | 运行时/执行 | 15 |
 | 集合通信 | 13 |
@@ -17,7 +17,7 @@
 | 调度/服务 | 1 |
 | 输出解析 | 2 |
 | 解码/采样 | 2 |
-| 量化 | 29 |
+| 量化 | 30 |
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
 | 模型定义 | 13 |
@@ -2218,7 +2218,7 @@
 
 ### TRN-0657 `abs_complex64_exponent_normalization` abs complex64 指数因子归一化仅 A∈[1,2) 正确
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / abs complex64 kernel
 - **原因行为**：abs complex_dag 路径 vB1=(B−2^k)+1 仅 A∈[1,2) 时等于 B/2^k；两分量跨 binade 或量级差大时算 2^k·sqrt((A/2^k)²+(B−2^k+1)²)，偏离 sqrt(A²+B²)。
@@ -2230,7 +2230,7 @@
 
 ### TRN-0658 `maxpool_grad_argmax_nhwc_small_c_decode` MaxPoolGradWithArgmax NHWC 小 C 切分解码错梯度散
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / MaxPoolGrad NHWC tiling
 - **原因行为**：Argmax 用全局 (h·W+w)·C+c 编码，DoMulCNhwc 还原 h/w 却用块内 C 做除数；tiling 无条件收缩 cOutputInner，块内 C<完整 C 时解码错误，梯度散错位置或被丢弃。
@@ -2242,11 +2242,11 @@
 
 ### TRN-0659 `aclnn_empty_input_early_return_unwritten_batch_1107` aclnn 空输入早退不写非空出参又三例
 
-`故障` · `pending_audit` · `shared` · `verified` · `var` · 发现 2026-11-08
+`故障` · `active` · `shared` · `verified` · `var` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / aclnn 空输入早退分支
 - **原因行为**：空输入快路径只置 workspaceSize=0 即返回 SUCCESS，不写与空输入无关的非空输出（三接口各带 A2 真机实测与源码行定位）。
-- **影响对象**：梯度；数值结果（不可复现）
+- **影响对象**：梯度；数值结果（静默错误）
 - **影响详情**：N=0/BT=0/空 self 时两段返回 0 但 gradGamma/gradBeta（预填 123456 原样）、weightGradOut（0/2048 字节改写）、mOut（0/9 元素改写）保持缓冲残留；空 batch 步梯度读到未初始化显存。
 - **改进措施**：检测 出参预填哨兵 round-trip；空 batch 用例与 CPU 语义对账（应写 0 或 A 拷贝）。；修复 TriangularSolve 已有修复 PR https://gitcode.com/cann/ops-math/merge_requests/7205（open 2026-11-07，空 self 时补拷 mOut）；GroupNormBackward/FLCELossGrad 建议在早退分支补 ProcessEmptyTensorWithValue(...,0,...)，未见修复 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8374；https://gitcode.com/cann/ops-nn/issues/8385；https://gitcode.com/cann/ops-math/issues/4617；https://gitcode.com/cann/ops-math/merge_requests/7205
@@ -2254,41 +2254,41 @@
 
 ### TRN-0660 `op_plugin_bool_add_arithmetic_sum` op-plugin bool add 算术和写入 bool 字节
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / torch_npu / bool add 路由
 - **原因行为**：NPU bool 张量 add 被路由到算术 aclnn add 内核，整数和直接写入 bool 字节（True+True 字节=2），未按 CPU 语义（bool 加法=逻辑或）路由到逻辑内核。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：torch.add(bool,bool).to(int64) NPU 得 2、CPU 得 1；广播 (5,1)+(5,) 25 元素 12 个失配（最大差 1）；eager 全形态（广播/标量/add_/alpha）受影响，编译路径参考侧错误。
+- **影响详情**：torch.add(bool,bool).to(int64) NPU 得 2、CPU 得 1；广播 (5,1)+(5,) 25 元素 12 个失配（最大差 1）；eager 全形态（广播/标量/add_/alpha）受影响；OpInfo 测试中编译输出正确、eager 参考侧错误。
 - **改进措施**：检测 bool 张量 add 后转 int 对账 CPU；OpInfo test_comprehensive___radd___npu_bool 样本 2 可复现。；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6187（open 2026-11-07）：bool add 路由 aclnnLogicalOr/aclnnInplaceLogicalOr 对齐 CPU 语义。未发布。
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/691；https://gitcode.com/Ascend/op-plugin/merge_requests/6187
 - **关联**：cross:INF-2448
 
 ### TRN-0661 `fag_dropout_seed_offset_int64_truncation` FAG dropout seed/offset 超 2^31 精度错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / FAG dropout seed/offset
 - **原因行为**：A5 FAG（FlashAttentionGrad）dropout 场景 seed 或 offset 大于 2^31 时精度异常；int64 截断疑点由修复 PR 标题「preserve int64」指向，issue 未展开根因。
-- **影响对象**：梯度（质量退化）
+- **影响对象**：梯度（静默错误）
 - **影响详情**：seed/offset>2^31 的 dropout 反向精度异常（950DT 实测，现象截图）；随机性掩码与 forward 不一致时梯度偏离，无报错。
 - **改进措施**：检测 dropout 反向与固定 seed CPU 对账；seed/offset>2^31 边界用例。；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486（open 2026-11-07）：preserve int64 dropout seed and offset on Ascend950；二级冒烟+算子泛化验证。未发布。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7226；https://gitcode.com/cann/ops-transformer/merge_requests/15486
 
 ### TRN-0663 `celu_subnormal_ftz_expm1_rounding` Celu 次正规 FTZ 与近零 expm1 双舍入错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / Celu kernel 负数域
 - **原因行为**：kernel 负数域 Divs(x,alpha2) 对 fp32 次正规操作数 FTZ：次正规被除数输出错零、正规被除数遇次正规除数过饱和、双次正规 0/0=NaN；exp(z)-1 近零区两次舍入相对误差随 z→0 发散。
-- **影响对象**：数值结果（数值异常）
+- **影响对象**：数值结果（静默错误）
 - **影响详情**：75 条 fp32 近零区精度比对失败、8 例真机次正规失败族（错零/过饱和/NaN）；修复后 1071 例回归全绿、次正规组合 18/18 过。
 - **改进措施**：检测 次正规输入（错零/过饱和/NaN/atol 掩蔽四形态）与近零 z 区域的 ulp 对账；golden 与 torch 交叉比对。；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/13890（open 2026-11-07，Closes #8375）：Kahan expm1 补偿+z∈[-87,87] 对称夹取、alpha2 量级三分支（次正规双边 ×2^23 归一）；修复后 75 条转绿、8/8 复绿、1071 例回归 1068 过+3 预期拒绝。未发布。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8375；https://gitcode.com/cann/ops-nn/merge_requests/13890
 
 ### TRN-0666 `search_sorted_dtype_mismatch_oob_read` SearchSorted dtype 不匹配越界读错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：算子/内核 / cann / SearchSorted dtype 校验
 - **原因行为**：记录 values_dtype_ 但从不与 sequence_dtype_ 比较；Compute 只按 sequence_dtype_ 选实现并 cast values——INT64 配 INT32 时每值按 8 字节读越出缓冲。
@@ -2296,17 +2296,6 @@
 - **影响详情**：values 元素被按 8 字节解释（含越界读到相邻内存），输出索引静默错；无错误码。
 - **改进措施**：检测 values 与 sequence dtype 不一致的组合与 CPU 对账；越界读可用 guard region 探测。；修复 修复 PR https://gitcode.com/cann/ops-math/issues/4616（标题为修复方向：reject mismatched input dtypes before reading values，open 2026-11-07，未见代码落地）。未发布。
 - **来源**：https://gitcode.com/cann/ops-math/issues/4616
-
-### TRN-0669 `aclnn_dtype_gate_first_stage_miss` aclnn 首段 dtype 校验缺口放行到执行段报内部错
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
-
-- **原因对象**：算子/内核 / cann / aclnn 首段 dtype 校验
-- **原因行为**：aclnnAddRmsNormQuant 在 A2 上对资料不支持的 FLOAT32 组合首段返回 0（应 161002），非法 dtype 带到执行段才报 561000 内部错。
-- **影响对象**：可用性/进度（报错）
-- **影响详情**：A2 传 FLOAT32：0/561000（应 0/161002 参数错误）；fp16 不一致组合已能 161002，说明校验存在但缺口覆盖「x 侧全 FLOAT32」。
-- **改进措施**：检测 按资料 dtype 表构造全组合首段返回码扫描。；修复 待定：issue open（2026-11-07），复核基线 d1efef7c30 缺陷仍在（x/scales 支持列表含 DT_FLOAT），未见修复 PR。
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8379
 
 ## 编译器
 
@@ -2644,7 +2633,7 @@
 
 ### TRN-0653 `triton_experimental_rsplit_tail_mask_lost` triton_experimental 分核归约尾块 mask 丢失求和错
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-08
 
 - **原因对象**：编译器 / torch_npu / 分核归约代码生成
 - **原因行为**：全局 numel 整除 block 但 ceil(numel/核数) 不整除时，load 阶段尾块 mask 已被删；分核改写只换循环边界无法恢复，跨分片重复读+末片越界；多轴改写不匹配仍生成 workspace combine 输出错。
@@ -2656,7 +2645,7 @@
 
 ### TRN-0654 `pad_lane_divf_nan_grad` pad-lane 格缺除法族传播反向梯度 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：编译器 / torch_npu / pad-lane 抽象格
 - **原因行为**：_pad_transform 未覆盖除法族：truediv 落默认规则「全操作数 finite→结果 finite」，掩码外 lane 以 0.0 填充、1/0=inf 被误判 finite，累加器守卫被错删，0*inf=NaN 入累加器。
@@ -2668,10 +2657,10 @@
 
 ### TRN-0655 `triton_experimental_slice_scatter_out_of_slice_write` triton_experimental slice_scatter 误写片外数据
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：编译器 / torch_npu / slice_scatter 融合改写
-- **原因行为**：融合的 masked load/select 形式在负偏移钳制后丢失未选中前缀，切片外元素被源值覆盖；嵌套区域运行时输入写回路径重复修改 x[1:5] 时误改切片外 x[0]。
+- **原因行为**：slice_scatter 融合的 masked load/select 形式在负偏移钳制后丢失未选中前缀，切片外元素被静默写成 0（0.5 变 0，而非源值 -3）；嵌套区域运行时输入写回重复修改 x[1:5] 时误改切片外 x[0]。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：torch.slice_scatter(x, src, 0, 1, 5) 编译执行把 x[0] 的 0.5 写成 0（eager 保留）；无报错，输入侧数据被静默改坏。
 - **改进措施**：检测 slice_scatter 结果与 eager 对账；嵌套区域用例对输入写回前后快照比对。；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49255（open 2026-11-07）：先物化输入副本再向视图写入 src，保留切片外数据与原输入；正/负边界、步长、空切片、非连续输入、来源别名 2 项 NPU 测试通过。未发布。
@@ -2680,7 +2669,7 @@
 
 ### TRN-0662 `triton_ascend_precise_divf_downgrade_vdiv` triton-ascend precise_divf 降级 vdiv 边界整值错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：编译器 / triton / PreciseDivConverter
 - **原因行为**：PreciseDivConverter 把 tt.precise_divf（IEEE RN 除法）改写为普通 arith.divf，A5 后端只能发射 vdiv（至多 1 ulp），整数边界处误差经 trunc/floor 改变结果。
@@ -2848,11 +2837,11 @@
 
 ### TRN-0656 `aclgraph_wait_event_current_stream_guard` aclgraph 跨流 wait_event 守卫按当前流误判
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：运行时/执行 / torch_npu / NPUEvent::block 排空守卫
 - **原因行为**：hasCapturesUnderway 由设备级非空收窄为按当前流判捕获：wait_event 在 with stream 内调用时守卫 false、不排空队列，WAIT_EVENT 滞留，侧流未 join 捕获。
-- **影响对象**：数值结果；可用性/进度（不可复现）
+- **影响对象**：可用性/进度；数值结果（挂起）
 - **影响详情**：侧流后续分配的图私有池过滤条件不命中、回落默认池 (0,0)，replay 出现地址异常服务挂死；同一语义两种写法（wait_event 在 with 内/外）结果不同。
 - **改进措施**：检测 多流捕获用例断言分配落在私有池（GRAPH-POOL 打印 match=1）；wait_event 写在 with 块外做对照。；修复 方案在 issue 中给出（门槛改为设备级 num_active_captures_>0 或显式组合「目标流未捕获+设备有捕获」），未见修复 PR（2026-11-07）；规避：wait_event 写在进入 with torch.npu.stream(...) 之前。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5948；https://gitcode.com/Ascend/pytorch/issues/5933
@@ -2996,11 +2985,11 @@
 
 ### TRN-0665 `hcomm_rtsq_baseSqHead_cross_thread_race` hcomm RTSQ baseSqHead 跨线程无同步提前完成上报
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：集合通信 / cann / rtsq_a5 轮询锚点
 - **原因行为**：baseSqHead_ 由数据面线程写、后台轮询线程读（约 10ms），非 atomic 无屏障；ARMv8 弱序允许读序重排，先读锚点再读硬件头的顺序无保证；环满等待锚点无刷新者、守卫无自愈。
-- **影响对象**：数值结果；可用性/进度（不可复现）
+- **影响对象**：数值结果；可用性/进度（静默错误）
 - **影响详情**：step 误判接近一圈前进、newHead 超前 sqDepth-1，PollCompletion 把在途 DbSend 记录判为完成出队、向 CiTracker 上报未完成 CI（提前完成/错序）；环满叠加时空转到 sqFullTimeout 抛 InternalException。
 - **改进措施**：检测 弱内存序设备上长时间压测校验 CI 完成顺序；TSAN/竞态检测覆盖轮询路径。；修复 issue 给出修复建议（atomic<u32> release/acquire 或读间 acquire fence；环满等待循环内周期性 RefreshSqHead；PollCompletion 守卫自愈），作者暂不处理（2026-11-06 回复），未见修复 PR（2026-11-07 复核 head de99de1a 未修改）。
 - **来源**：https://gitcode.com/cann/hcomm/issues/1243
@@ -3802,6 +3791,17 @@
 - **影响详情**：长时间看似健康训练后（延迟性）突现终局 loss spike（time-bomb spikes）；先兆是 LM head 量化误差快速增长；文献实测把 AdamW 换 SGD-momentum 抑制 logit 增长可提升长期稳定性，且既有 spike 缓解技术共同点都是降低量化误差。
 - **改进措施**：检测 监控 LM head 权重相对量化误差与输出 logit 范数的联合增长轨迹（先兆信号在 spike 前出现）。；修复 论文缓解（非库修复）：LM head 用 SGD with momentum 替代 AdamW 抑制 logit 增长；提高精度/降低量化误差类手段同向有效。
 - **来源**：https://arxiv.org/abs/2610.38277
+
+### TRN-0669 `aclnn_dtype_gate_first_stage_miss` aclnn 首段 dtype 校验缺口放行到执行段报内部错
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：量化 / cann / aclnn 首段 dtype 校验
+- **原因行为**：aclnnAddRmsNormQuant 在 A2 上对资料不支持的 FLOAT32 组合首段返回 0（应 161002），非法 dtype 带到执行段才报 561000 内部错。
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：A2 上 x1/x2/gamma/xOut 全 FLOAT32：实测首段返回 0、第二段返回 561000（ACLNN_ERR_INNER）；不支持 dtype 应在第一段返回 161002。x2 与 x1 dtype 不一致时首段已能 161002，说明校验路径存在但未覆盖该组合。
+- **改进措施**：检测 按资料 dtype 表构造全组合首段返回码扫描。；修复 待定：issue open（2026-11-07），复核基线 d1efef7c30 缺陷仍在（x/scales 支持列表含 DT_FLOAT），未见修复 PR。
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8379
 
 ## 位置编码
 
@@ -7552,12 +7552,12 @@
 
 ### TRN-0664 `verl_rollout_logprob_refit_last_round_only` verl rollout logprob 对拍只查末轮假 PASS
 
-`故障` · `pending_audit` · `shared；rl` · `documented` · `NEW` · 发现 2026-11-08
+`故障` · `active` · `shared；rl` · `documented` · `NEW` · 发现 2026-11-08
 
 - **原因对象**：观测/评测 / verl / rollout_logprob_diff 脚本
 - **原因行为**：scripts/rollout_logprob_diff.py --refit-rounds N 记录每一轮但只检查最后一轮摘要：早期 refit 轮可超阈值或产出非有限指标，最终轮健康即返回成功。
 - **影响对象**：测试判定；训练信号（静默错误）
-- **影响详情**：round 1 失败 round 2-3 恢复时脚本打印 PASSED 退出 0；原脚本 27 个新测试中 17 个证实假成功退出码；QAT/低精度对齐验收结果失真。
+- **影响详情**：第 1 轮 refit 超阈或 NaN/Inf、末轮恢复正常时脚本打印 PASSED、退出码 0；29 项 CPU 回归测试在原脚本上 27 项失败/2 项通过，其中 17 项证实假成功退出码；QAT/低精度对齐验收结果失真。
 - **改进措施**：检测 对每轮 refit_runs 历史断言 finite kl 与 k3_kl<阈值；检查退出码与逐轮记录一致性。；修复 修复 PR https://github.com/verl-project/verl/pull/8564（open 2026-11-05）：校验每个已记录轮次（finite kl/k3_kl + k3_kl<--max-k3-kl），任一轮失败即失败并报轮号与指标；29 项 CPU 回归（原始脚本 27 失败/2 过）。未合。
 - **来源**：https://github.com/verl-project/verl/pull/8564
 

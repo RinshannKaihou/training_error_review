@@ -4,7 +4,7 @@ slug: celu_subnormal_ftz_expm1_rounding
 aliases: []
 title: Celu 次正规 FTZ 与近零 expm1 双舍入错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 75 条 fp32 近零区精度比对失败、8 例真机次正规失败族（错零/过饱和/NaN）；修复后 1071 例回归全绿、次正规组合 18/18 过。
-  visibility: 数值异常
+  visibility: 静默错误
 mitigation:
   detect: 次正规输入（错零/过饱和/NaN/atol 掩蔽四形态）与近零 z 区域的 ulp 对账；golden 与 torch 交叉比对。
   fix: '修复 PR https://gitcode.com/cann/ops-nn/merge_requests/13890（open 2026-11-07，Closes #8375）：Kahan expm1 补偿+z∈[-87,87] 对称夹取、alpha2 量级三分支（次正规双边 ×2^23 归一）；修复后 75 条转绿、8/8 复绿、1071 例回归 1068 过+3 预期拒绝。未发布。'
@@ -41,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 数值异常
+        to: 静默错误

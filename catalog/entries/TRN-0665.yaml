@@ -4,7 +4,7 @@ slug: hcomm_rtsq_baseSqHead_cross_thread_race
 aliases: []
 title: hcomm RTSQ baseSqHead 跨线程无同步提前完成上报
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 可用性/进度
   detail: step 误判接近一圈前进、newHead 超前 sqDepth-1，PollCompletion 把在途 DbSend 记录判为完成出队、向 CiTracker 上报未完成 CI（提前完成/错序）；环满叠加时空转到 sqFullTimeout 抛 InternalException。
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 弱内存序设备上长时间压测校验 CI 完成顺序；TSAN/竞态检测覆盖轮询路径。
   fix: issue 给出修复建议（atomic<u32> release/acquire 或读间 acquire fence；环满等待循环内周期性 RefreshSqHead；PollCompletion 守卫自愈），作者暂不处理（2026-11-06 回复），未见修复 PR（2026-11-07 复核 head de99de1a 未修改）。
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    uncertain:
+    - effect

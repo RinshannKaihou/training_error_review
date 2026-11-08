@@ -4,17 +4,17 @@ slug: aclnn_dtype_gate_first_stage_miss
 aliases: []
 title: aclnn 首段 dtype 校验缺口放行到执行段报内部错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: aclnn 首段 dtype 校验
   behavior: aclnnAddRmsNormQuant 在 A2 上对资料不支持的 FLOAT32 组合首段返回 0（应 161002），非法 dtype 带到执行段才报 561000 内部错。
 effect:
   objects:
   - 可用性/进度
-  detail: A2 传 FLOAT32：0/561000（应 0/161002 参数错误）；fp16 不一致组合已能 161002，说明校验存在但缺口覆盖「x 侧全 FLOAT32」。
+  detail: A2 上 x1/x2/gamma/xOut 全 FLOAT32：实测首段返回 0、第二段返回 561000（ACLNN_ERR_INNER）；不支持 dtype 应在第一段返回 161002。x2 与 x1 dtype 不一致时首段已能 161002，说明校验路径存在但未覆盖该组合。
   visibility: 报错
 mitigation:
   detect: 按资料 dtype 表构造全组合首段返回码扫描。
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - detail

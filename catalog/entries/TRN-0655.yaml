@@ -4,13 +4,13 @@ slug: triton_experimental_slice_scatter_out_of_slice_write
 aliases: []
 title: triton_experimental slice_scatter 误写片外数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: torch_npu
     component: slice_scatter 融合改写
-  behavior: 融合的 masked load/select 形式在负偏移钳制后丢失未选中前缀，切片外元素被源值覆盖；嵌套区域运行时输入写回路径重复修改 x[1:5] 时误改切片外 x[0]。
+  behavior: slice_scatter 融合的 masked load/select 形式在负偏移钳制后丢失未选中前缀，切片外元素被静默写成 0（0.5 变 0，而非源值 -3）；嵌套区域运行时输入写回重复修改 x[1:5] 时误改切片外 x[0]。
 effect:
   objects:
   - 数值结果
@@ -49,3 +49,15 @@ migration:
   - date: '2026-11-08'
     fields:
     - original.notes
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

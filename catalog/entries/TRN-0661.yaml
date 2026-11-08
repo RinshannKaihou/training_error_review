@@ -4,7 +4,7 @@ slug: fag_dropout_seed_offset_int64_truncation
 aliases: []
 title: FAG dropout seed/offset 超 2^31 精度错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   detail: seed/offset>2^31 的 dropout 反向精度异常（950DT 实测，现象截图）；随机性掩码与 forward 不一致时梯度偏离，无报错。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: dropout 反向与固定 seed CPU 对账；seed/offset>2^31 边界用例。
   fix: 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486（open 2026-11-07）：preserve int64 dropout seed and offset on Ascend950；二级冒烟+算子泛化验证。未发布。
@@ -41,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

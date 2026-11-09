@@ -4,7 +4,7 @@ slug: ds_oversized_grad_stream_lifetime
 aliases: []
 title: ZeRO-1/2 超大梯度内存提前归还流复用坏梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0286
+pattern: PAT-TRN-0071
 original:
   mechanism: 'DeepSpeed #9031（open PR，2026-11-07）：overlap_comm=true 下 ZeRO-1/2 在 reduction_stream 入队梯度归约并立即返回不同步。大于 reduce_bucket_size 的参数跳过 contiguous IPG buffer、保留自身梯度存储（extra_large_param_to_reduce）。average_tensor() 入队归约后，不拥有该参数的 rank 立即走 clear_grad_attribute(param)（param.grad=None）：普通参数安全（grad.data 已重绑到持久 IPG bucket buffer，清引用无害），超大梯度从未重绑——存储回到 caching allocator，而归约流可能仍在读；allocator 把它复用给计算流张量（复现中是梯度检查点重计算的激活）→梯度损坏。8 GPU 0.19.1 于 step3 权重 NaN；master 上归约梯度含 3.4e38（bf16 max）导致更新被跳过。修复：为超大梯度记录 reduction stream。'
   source: https://github.com/deepspeedai/DeepSpeed/pull/9031
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  updates:
+  - date: '2026-11-09'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

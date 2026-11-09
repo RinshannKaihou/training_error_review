@@ -4,7 +4,7 @@ slug: fla_recurrent_gate_unmasked_oob_nan
 aliases: []
 title: FLA recurrent KDA/GDN2 gate 无掩码越界 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: kernel 把 head dim 铺到 BK=next_power_of_2(K)，gate g 每行以 stride K 无掩码读（q/k/dt_bias 有掩码）；K 非二次幂时每行越读 BK-K 条 lane
 effect:
   objects:
-  - 隐状态
   - 数值结果
+  - 隐状态
   detail: 越界垃圾进入 padded state 行，0*exp(NaN) 模式把整个 head 输出变 NaN
   visibility: 数值异常
 mitigation:
@@ -40,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

@@ -4,7 +4,7 @@ slug: trl_rollout_trainer_logprob_asymmetry_family
 aliases: []
 title: trl rollout/trainer logprob 口径不对称 IS 偏置族
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -38,6 +38,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0229
+pattern: PAT-TRN-0041
 original:
   mechanism: 'trl 四例同族（rollout 侧 logprob 含采样变换/受限候选集 vs trainer 全词表原始口径）：#7914（TRN-0460 已收）GRPO vLLM repetition_penalty——processed_logprobs 含惩罚、trainer raw logits 重算不含，IS ratio~1e-28、grad_norm 跌 0（2026-10-26 open）。#7954 GRPO structured outputs——vLLM 先施加 grammar mask 再采样，返回的是受限分布 logprob；trainer 对全词表打分同一 token，IS ratio 跌至 ~1e-17，GRPO 停止学习；修复 #8145 要求 top_k>0，vLLM>=0.28 colocate 返回候选集、trainer 在其上重归一化（#7866 机制），logprob 差从 5.5~8.9 nats 降至 <0.03、ratio 回 ~1。#8139 AsyncGRPO—— AsyncGRPO 恒用 processed_logprobs 训练，repetition_penalty!=1.0 时惩罚进 logprob 而 trainer 重算不含，且 vLLM 会从 generation config 回填省略字段（如 Qwen2.5-Instruct 1.05）；修复直接删配置项（请求仍发 1.0）。#7915 为 #7914 的警告守卫。共享机制与 TRN-0229（截断采样口径不一致）同族：rollout 侧口径变换后 IS 比值失真，触发面从截断采样扩展到重复惩罚与语法受限分布。'
   source: 'https://github.com/huggingface/trl/issues/7954 ｜ https://github.com/huggingface/trl/pull/8145 ｜ https://github.com/huggingface/trl/pull/8139 ｜ https://github.com/huggingface/trl/issues/7915（族内 #7914 已单独编为 TRN-0460，不重复引用链接）'
@@ -47,3 +48,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  updates:
+  - date: '2026-11-09'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

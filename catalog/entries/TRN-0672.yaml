@@ -4,7 +4,7 @@ slug: fa_v4_softmaxoutlayout_silent_default
 aliases: []
 title: FA V4 softmaxOutLayout 非法值静默按 BNS8
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0669
+pattern: PAT-TRN-0072
 original:
   mechanism: 'ops-transformer #7245（open；Atlas A2 910B2、CANN 9.3.0、SBH B=1 N=1 S=256 D=128 sparseMode=0）：资料 :639 写明 softmaxOutLayout 仅支持空串与 same_as_input，且 softmaxMax/softmaxSum 的输出 shape 由该参数决定（:450/:460）。实测传 "XYZ" 与大小写错的 "SAME_AS_INPUT"：第一段/第二段均 0/0，与合法值走同一条路。源码（master 5adf800c）aclnn_flash_attention_score.cpp 中该参数出现 13 处全部是形参声明与透传，全文件 same_as_input 0 命中、无白名单/strcmp/ACLNN_ERR_PARAM_INVALID；对照同接口 inputLayout 在 :223-227 有 else→OP_LOGE+161002 的校验范式，本参数漏网。tiling 层 arch22:1219-1220 / arch35:233-235 仅 strcmp(same_as_input)，其它值静默按 BNS8（等价空串）。修复 !15498（open）补校验仅接受空串或 same_as_input。与 TRN-0669（aclnn 首段 dtype 门缺口）同为首段校验分层缺口，本例终态静默。'
   source: https://gitcode.com/cann/ops-transformer/issues/7245 ｜ 修复 PR：https://gitcode.com/cann/ops-transformer/merge_requests/15498
@@ -43,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  updates:
+  - date: '2026-11-09'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

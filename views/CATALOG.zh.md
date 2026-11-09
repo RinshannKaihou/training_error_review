@@ -3,13 +3,13 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 687 条；状态：active 667、pending_audit 20
+共 687 条；状态：active 687
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
 | 算子/内核 | 198 |
-| 编译器 | 35 |
+| 编译器 | 36 |
 | 运行时/执行 | 17 |
 | 集合通信 | 13 |
 | 并行切分 | 36 |
@@ -20,7 +20,7 @@
 | 量化 | 30 |
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
-| 模型定义 | 14 |
+| 模型定义 | 13 |
 | 权重/检查点 | 33 |
 | 数据管线 | 39 |
 | 优化器 | 47 |
@@ -2299,10 +2299,10 @@
 
 ### TRN-0670 `aclnn_empty_input_early_return_unwritten_batch_1108` aclnn 空输入早退不写非空出参又五例
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / aclnn 空张量早退分支
-- **原因行为**：输入任一 tensor 为空即置 workspaceSize=0 直接返回 SUCCESS，不生成写非空输出的算子；MoeFusedTopk 的 CheckShape 首行还短路全部约束校验
+- **原因行为**：空输入早退返回 ACLNN_SUCCESS，不生成写非空输出的算子；判空针对特定张量（#7236 只判grad出参、#8389 indices 空且 offsets=[0]/[0,0]）；#7237 CheckShape 首行短路全部约束
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：空输入时非空输出（y/indices、probsGradOut、标量 loss、output）保持调用方预填 canary 未写，两段 API 均返回 0
 - **改进措施**：检测 空输入用例下对非空输出预填 canary 并在调用后读回校验；修复 待定（未见修复 PR）
@@ -2311,7 +2311,7 @@
 
 ### TRN-0671 `aclnn_out_shape_inferred_overwrite_oob` aclnn 出参 shape 未校验按推导 shape 越界写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / aclnn InferShape 输出覆写
 - **原因行为**：InferShape 无条件用推导 shape 覆写调用方传入的 out，不读取也不比对；A2 !IsRegbase 分支不做 shape 校验即委托，NormRopeConcat 第一段纯透传
@@ -2322,7 +2322,7 @@
 
 ### TRN-0672 `fa_v4_softmaxoutlayout_silent_default` FA V4 softmaxOutLayout 非法值静默按 BNS8
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / FA V4 softmaxOutLayout 校验
 - **原因行为**：该参数在 op_api 全文件仅形参与透传，无白名单/strcmp/161002 分支；tiling 层只 strcmp(same_as_input)，其它值一律按空串 BNS8 处理
@@ -2334,7 +2334,7 @@
 
 ### TRN-0673 `ops_math_floor_near_int_quotient_branch` FloorDivide/Remainder 真商近整 floor 分支错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / floor 取整分支
 - **原因行为**：把真商按 fp32 舍入成整数后再取 floor，无余数校正；真商贴近整数（相对差约 1e-7）时 floor 取错一档
@@ -2346,7 +2346,7 @@
 
 ### TRN-0675 `nonzero_negative_zero_bitpattern_misjudge` NonZero 按位模式判 -0.0 为非零坐标错位
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / NonZero IsNonZero 判零
 - **原因行为**：IsNonZero 按原始位模式判零（uint16/uint32 != 0），-0.0 位模式（0x8000/0x80000000）非零被误判为非零
@@ -2357,7 +2357,7 @@
 
 ### TRN-0676 `aclnn_out_dtype_gate_miss_cross_type_write` aclnn 出参 dtype 未校验按 self 类型写回
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / aclnn 出参 dtype 校验
 - **原因行为**：CheckDtypeValid(self,…) 参数列表不含出参，出参 dtype 可任意传；执行按 self 的 dtype 连续写入被声明为其它类型的输出
@@ -2369,7 +2369,7 @@
 
 ### TRN-0677 `aclnn_indexadd_out_variant_inplace_self` aclnnIndexAdd 出参版原地改写输入 self
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / cann / aclnnIndexAdd 连续分支
 - **原因行为**：self 连续时把结果原地写回输入张量再拷到 out；非连续时先 Contiguous 拷副本、改写落在副本上（连续改、非连续不改，证明是实现分支而非接口设计）
@@ -2381,22 +2381,22 @@
 
 ### TRN-0681 `mindspore_addcdiv_mixed_dtype_grad` mindspore addcdiv 混合类型输出与梯度 dtype 错
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / mindspore / AddcdivExt 类型推导
 - **原因行为**：InferType 固定返回第一个输入的类型而非 PTA result_type 提升；Bprop 广播归约后缺少把梯度 cast 回对应输入 dtype 的处理
-- **影响对象**：梯度（静默错误）
+- **影响对象**：数值结果；梯度（静默错误）
 - **影响详情**：fp16/fp32/fp16 输入 PTA 应返回 fp32，MS 返回 fp16；混合类型下 float32 梯度返回给 float16 输入、零维 float32 输入收到 float16 梯度
 - **改进措施**：检测 混合 dtype 输入 (fp16,fp32,fp16) 的前向 dtype 与各输入梯度 dtype 对拍 PTA；修复 修复 PR https://atomgit.com/mindspore/mindspore/merge_requests/93380（open，未发布）：新增公共 ResultType 推导 + Bprop 归约后 Cast 回输入 dtype
 - **来源**：https://atomgit.com/mindspore/mindspore/merge_requests/93380
 
 ### TRN-0685 `fla_recurrent_gate_unmasked_oob_nan` FLA recurrent KDA/GDN2 gate 无掩码越界 NaN
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：算子/内核 / triton / fused_recurrent gate load
 - **原因行为**：kernel 把 head dim 铺到 BK=next_power_of_2(K)，gate g 每行以 stride K 无掩码读（q/k/dt_bias 有掩码）；K 非二次幂时每行越读 BK-K 条 lane
-- **影响对象**：隐状态；数值结果（数值异常）
+- **影响对象**：数值结果；隐状态（数值异常）
 - **影响详情**：越界垃圾进入 padded state 行，0*exp(NaN) 模式把整个 head 输出变 NaN
 - **改进措施**：检测 head_dim 非二次幂（96/160/192）的 recurrent 前向与 eager 对账 NaN 检查；修复 修复：flash-linear-attention/fla-core 0.6.0 mask=mask_k,other=0（0.5.2 不含）；Megatron 侧 pin https://github.com/NVIDIA/Megatron-LM/pull/8861（open，未发布）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/8861
@@ -2784,7 +2784,7 @@
 
 ### TRN-0674 `te_welford_epilogue_unmasked_mean_var` TE 后端 Welford epilogue 无掩码 mean/var 损坏
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：编译器 / torch_npu / Welford epilogue 代码生成
 - **原因行为**：归约循环内 load 带掩码（正确），epilogue 读 weight/bias 与 store 均无掩码；wrapper 的 R0_BLOCK_HINT 被当候选补充而非硬约束
@@ -2794,9 +2794,20 @@
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5954
 - **关联**：var:TRN-0653；cross:INF-2460
 
+### TRN-0679 `torchair_fa_pse_silently_dropped` torchair FA converter 静默丢弃 pse 偏移
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+
+- **原因对象**：编译器 / torchair / FA converter pse 转发
+- **原因行为**：前向与反向接口均接收 pse，但 GE 调用分别无条件使用 real_shift=None 与 pse_shift=None，构图成功而偏移被静默丢弃
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：带 ALiBi 等位置偏移的请求被转换为无偏移的图，attention 结果系统性错位；无报错
+- **改进措施**：检测 mock ge.FlashAttentionScore 断言 pse 关键字非 None；对带 pse 用例与 eager 对账；修复 修复 PR https://gitcode.com/Ascend/torchair/merge_requests/3972（open，未发布）：把原 pse 直接传到两个 GE 输入
+- **来源**：https://gitcode.com/Ascend/torchair/issues/951；https://gitcode.com/Ascend/torchair/merge_requests/3972
+
 ### TRN-0689 `npu_inductor_flatten_unknown_axis_candidate` inductor 未知符号轴进 flatten 候选表
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：编译器 / torch_npu / flatten 候选轴注册
 - **原因行为**：FloorDiv 分支在查询轴注册表前调 init_new_vars，未知符号虽被跳过但返回值遗留 {size_only:{4:[None,None]}}；ModularIndexing 纯符号分支直接插入未知轴
@@ -2975,7 +2986,7 @@
 
 ### TRN-0678 `npu_graph_nondifferentiable_output_metadata` graph bridge 常量浮点输出被标记可微
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：运行时/执行 / torch_npu / graph bridge 常量输出标志
 - **原因行为**：自定义 Autograd Function 的 forward 未调用 mark_non_differentiable，原本不需要梯度的浮点常量输出被赋予 requires_grad=True 和 grad_fn
@@ -2986,10 +2997,10 @@
 
 ### TRN-0680 `npu_graph_backward_shared_grad_storage` graphed callable backward 返回共享静态梯度缓冲
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：运行时/执行 / torch_npu / graphed callables bridge
-- **原因行为**：bridge 的 backward 返回 b.detach() 与 capture 的静态梯度缓冲共享存储；外部 Autograd 保留该存储为 .grad，下一次 replay 覆盖静态缓冲时旧梯度被改写
+- **原因行为**：backward 返回 b.detach()，与 capture 的静态梯度缓冲共享存储；外部 Autograd 可能直接保留这块存储作为叶子的 .grad，下次 replay 覆盖静态缓冲时前一微批累计梯度或调用者保存的输入梯度也被覆盖
 - **影响对象**：梯度（静默错误）
 - **影响详情**：多微批梯度累积 w.grad 10 实得 8；调用者保存的输入梯度在第二次 replay 后被改值；连续两次 AdamW 与 eager 不同
 - **改进措施**：检测 四微批 x=1,2,3,4 的 w.grad 对账（应 10）；replay 后复读保存的旧梯度张量；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49262（open，未发布）：非 None 梯度 b.detach().clone() 到独立存储
@@ -3526,7 +3537,7 @@
 
 ### TRN-0682 `megatron_mfsdpv1_bucket_free_before_reduce` MFSDPv1 梯度桶在归约完成前被释放复用
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：并行切分 / megatron-lm / GradReducePipeline 桶生命周期
 - **原因行为**：1F1B overlap 下部分梯度 hook 跑在通信流上释放了默认流分配的桶；caching allocator 立即向分配流归还内存，默认流可在归约仍在读时复用
@@ -3538,7 +3549,7 @@
 
 ### TRN-0686 `ds_oversized_grad_stream_lifetime` ZeRO-1/2 超大梯度内存提前归还流复用坏梯度
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：并行切分 / deepspeed / 超大梯度流生命周期
 - **原因行为**：超大梯度保留自身存储且从不重绑到 IPG bucket；归约入队后非 owner rank 立即清引用，allocator 归还存储被计算流复用而归约流仍在读
@@ -4317,17 +4328,6 @@
 - **改进措施**：检测 同一随机种子分别传空 mask 与压缩因果 mask 调 local_v4_varlen_flash_attention 对拍因果前缀参考（Q/K [4096,32,192]、384 累积端点）。；修复 待定（修复 PR 载体未建；修复方向：把空 mask 分支限制到实际 DSA 稀疏路径，压缩因果 mask 按实际 variant 生成）。
 - **来源**：https://atomgit.com/mindspore/mindformers/issues/2624；https://github.com/hf1s/hyper-parallel/issues/353
 - **关联**：var:TRN-0143
-
-### TRN-0679 `torchair_fa_pse_silently_dropped` torchair FA converter 静默丢弃 pse 偏移
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-09
-
-- **原因对象**：模型定义 / torchair / FA converter pse 转发
-- **原因行为**：前向与反向接口均接收 pse，但 GE 调用分别无条件使用 real_shift=None 与 pse_shift=None，构图成功而偏移被静默丢弃
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：带 ALiBi 等位置偏移的请求被转换为无偏移的图，attention 结果系统性错位；无报错
-- **改进措施**：检测 mock ge.FlashAttentionScore 断言 pse 关键字非 None；对带 pse 用例与 eager 对账；修复 修复 PR https://gitcode.com/Ascend/torchair/merge_requests/3972（open，未发布）：把原 pse 直接传到两个 GE 输入
-- **来源**：https://gitcode.com/Ascend/torchair/issues/951；https://gitcode.com/Ascend/torchair/merge_requests/3972
 
 ## 权重/检查点
 
@@ -5670,12 +5670,12 @@
 
 ### TRN-0683 `ds_gptbigcode_kv_rows_double_counted_clip` TP 下 GPTBigCode K/V 复制行范数重复计数
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：优化器 / deepspeed / clip_grad_norm 复制行标记
 - **原因行为**：融合 attention 投影的 K/V 行在每个 TP rank 都存在，clip 范数的 all-reduce 把每份都加进去；K/V 行跨 rank 是同一份复制而非互斥分片
 - **影响对象**：梯度（静默错误）
-- **影响详情**：TP>1 的 clip 系数被 K/V 行份额放大，更新相对单卡被多缩；偏差随 K/V 占比与 TP 度增长；梯度值本身与单卡一致
+- **影响详情**：TP>1 且 K/V 占比越高，报告范数越大、clip_coef 被压小，有效更新比单卡弱，多卡结果与单卡不可比；梯度值本身与单卡一致，无报错或指标异常。
 - **改进措施**：检测 同一步 TP>1 vs TP=1 对比 clip_coef/grad_norm（梯度值应相同、范数偏大）；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9030（open，未发布）：融合层 weight/bias 记录首复制行/行数/TP world size，范数累加按复制标记去重
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/9030
 - **关联**：var:TRN-0472
@@ -5969,10 +5969,10 @@
 
 ### TRN-0684 `verl_bf16_topk_tail_kl_gradient_flip` verl bf16 top-k tail-KL 梯度方向反转
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：损失计算 / verl / forward_kl_topk_tail 精度
-- **原因行为**：BF16 logits 下被选 logprob 舍回 BF16，student tail mass 可为负（1.0017 vs 真值 0.9999），tail clamp 把梯度删掉甚至反号
+- **原因行为**：use_chunked_topk=True 且 BF16 logits 时，被选 logprob 舍回 BF16 使被选集质量超 1（0.9999→1.0017），student tail 质量为负，tail clamp 删掉梯度甚至反号
 - **影响对象**：梯度（静默错误）
 - **影响详情**：梯度方向反转：CPU 对 FP64 参照的梯度余弦 -0.9999976；蒸馏/RL 的 KL 项推向错误方向
 - **改进措施**：检测 BF16 下对 tail-KL 梯度与 FP64 参照比余弦；logits 接近均匀时重点检查；修复 修复 PR https://github.com/verl-project/verl/pull/8548（open，未发布）：被选 logprob 保 FP32（chunked helper 可选输出 dtype；非 chunked 路径显式 FP32 log_softmax）
@@ -5980,7 +5980,7 @@
 
 ### TRN-0688 `swift_label_smoothing_ga_renormalize` swift label smoothing 梯度累积下未按 token 归一
 
-`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-11-09
+`故障` · `active` · `sft` · `documented` · `NEW` · 发现 2026-11-09
 
 - **原因对象**：损失计算 / ms-swift / LabelSmoother 均值归一
 - **原因行为**：label_smoothing_factor>0 时 Seq2SeqTrainer 对每个 microbatch 返回 mean 而不是 token 归一，transformers 跳过 fallback 累积除法
@@ -7521,7 +7521,7 @@
 
 ### TRN-0687 `trl_rollout_trainer_logprob_asymmetry_family` trl rollout/trainer logprob 口径不对称 IS 偏置族
 
-`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-09
+`故障` · `active` · `rl` · `documented` · `var` · 发现 2026-11-09
 
 - **原因对象**：RL训练回路 / trl / 采样变换/候选集口径
 - **原因行为**：rollout 引擎返回的 logprob 含采样变换（重复惩罚、语法 mask 后重归一化）或只在受限候选集上定义，trainer 用原始 logits 全词表重算——同 token 两套口径直接取比值

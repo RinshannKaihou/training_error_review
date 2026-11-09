@@ -30,6 +30,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8379
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0072
 original:
   mechanism: 'cann/ops-nn #8379（2026-11-07 open）：aclnnAddRmsNormQuant 在 Atlas A2（910B2）上 x1/x2/gamma/xOut 同为 FLOAT32 时，第一段 GetWorkspaceSize 返回 0、第二段执行返回 561000（ACLNN_ERR_INNER）；资料对 A2/A3 明确写该四参数仅支持 FLOAT16/BFLOAT16，不支持 dtype 应在第一段返回 161002。同接口 x2 与 x1 不一致（fp16 vs fp32）时第一段已能 161002，说明校验路径存在但没覆盖「x 侧全 FLOAT32」组合。源码复核（d1efef7c30，2026-11-07 20:52）：aclnn_add_rms_norm_quant.cpp:49/52 的 x/scales 支持列表含 DT_FLOAT、:95 起为 DT_FLOAT 分支，未见 A2 平台额外拒绝——与实测一致。环境：910B2、CANN 9.2.0、g++ 11.4。训练面：动态 dtype 管线误配 fp32 时首段绿灯、执行段才报内部错（错误信息不含参数语义，定位成本高）；量化归约算子链路误配面。终态 fail-loud 非静默错值——按首段契约违反收录为校验分层族边界案例。'
   source: https://gitcode.com/cann/ops-nn/issues/8379
@@ -55,3 +56,7 @@ migration:
         to: 量化
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-09'
+    fields:
+    - pattern

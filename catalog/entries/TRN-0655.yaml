@@ -42,11 +42,15 @@ original:
   discovery: 2026-11-08 每日扫描
   notes:
   - '2026-11-08 2026-11-08：issue #5946 closed（快照 2026-11-07T10:33Z）——由修复闭环（!49255 open）；closed 非 merged，fix 维持未发布。'
+  - '2026-11-09 回访 2026-11-09：修复载体 !49255 批次快照（2026-11-08T23:01Z）显示 closed（2026-11-07T10:32Z updated；merged 状态快照未标——与 11-08 报告『仍 open』不一致，以本批次为准）。issue #5946 已 closed 修复闭环；发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-11-08'
   updates:
   - date: '2026-11-08'
+    fields:
+    - original.notes
+  - date: '2026-11-09'
     fields:
     - original.notes
   audit:

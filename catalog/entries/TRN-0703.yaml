@@ -4,7 +4,7 @@ slug: torchtitan_hc_sinkhorn_eps_placement
 aliases: []
 title: HcSplitSinkhorn eps 位置偏离 DeepSeek 参考
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -13,6 +13,7 @@ cause:
   behavior: 首行归一化用 E/(E.sum(-1,keepdim)+eps)，DeepSeek 参考实现为 E/E.sum(-1,keepdim)+eps（E=exp(logits-row_max)），其余 19 对行/列归一化一致
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 训练轨迹
   detail: 前向在 FP64 下也不同；ordinary 与合成下溢 stress 输入下 Sinkhorn 权重和梯度均与参考有差
@@ -40,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

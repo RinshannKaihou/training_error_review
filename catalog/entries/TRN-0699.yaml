@@ -4,7 +4,7 @@ slug: conv3dv2_output_channel_mismatch_oob
 aliases: []
 title: Conv3DV2 出参通道数不符被接受越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0671
+pattern: PAT-TRN-0073
 original:
   mechanism: 'cann/ops-nn #8440+!14004（open，2026-11-09，源码 d1efef7c30ca）：Conv3dBaseTilingV2::CheckOutputShape() 只校验输出 D/H/W 限值，y 通道数与 filter.N 不一致照进 tiling；tiling setup 以 oriWeightN 推 shapeInfo_.co，而输出描述符保留调用方 y.C——y.C 偏小时输出缓冲装不下 kernel 按 filter.N 写的通道数（越界写），偏大时 shape/语义错配。修复在 CheckOutputShape 拒绝 oriOutputC != oriWeightN 并报 y 与 filter；回归用例 input[1,16,8,16,16]/filter[16,16,1,1,1]/output[1,15,8,16,16] 基线接受、修复后拒绝，TestConv3dCheckInput 37/37 通过（outcome confirmed_bug，host UT）。适用 DAV_3510/Ascend950 与已注册 DAV_9201/9202 路径；正常 InferShape 生成的 y.C==filter.N 不受影响，缺陷面对静态畸形输出描述符。与 TRN-0671（出参 shape 未校验按推导 shape 越界写）同族，触发点为 tiling 入口输出通道校验。'
   source: https://gitcode.com/cann/ops-nn/issues/8440
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

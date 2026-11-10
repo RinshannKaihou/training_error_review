@@ -32,6 +32,7 @@ evidence:
 - url: https://gitcode.com/Ascend/pytorch/merge_requests/49261
   kind: gitcode_pr
 relations: []
+pattern: PAT-TRN-0074
 original:
   mechanism: 'Ascend/pytorch #5950（open；master ac0e1564，2026-11-07）：detect_flattened_dims 的 FloorDiv 分支在查询轴注册表之前调用 init_new_vars；未知符号随后被发现不在 active/removed 表并跳过，但返回值里遗留 {size_only:{4:[None,None]}}；ModularIndexing 纯符号分支也直接插入未知轴。后续 flatten/rebuild 因而可能处理没有 range-tree node 的符号。最小复现（CPU、SymPy 直接执行原函数，不依赖 NPU）：axis=sympy.Symbol(size_only, integer=True, nonnegative=True)，kernel range_tree_nodes/removed/axioms_index_map 全空，detect_flattened_dims(kernel, FloorDiv(axis,4)) 实际返回 {size_only:{4:[None,None]}}、期望 {}。修复 !49261（open）：只有确认轴存在后才添加 flatten 候选，不改原始符号索引与合法轴处理；CPU 回归修复前 5 测 3 败（含已注册 active/removed 轴、混合索引、复合基表达式覆盖）。这是主机索引分析回归，不等价于完整 Triton kernel 或模型的 NPU 执行验证。'
   source: https://gitcode.com/Ascend/pytorch/issues/5950 ｜ 修复 PR：https://gitcode.com/Ascend/pytorch/merge_requests/49261
@@ -51,3 +52,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - pattern

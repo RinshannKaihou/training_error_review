@@ -4,7 +4,7 @@ slug: softsign_grad_validation_chain_missing
 aliases: []
 title: softsign_grad 校验链缺失越域静默错果
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0676
+pattern: PAT-TRN-0072
 original:
   mechanism: 'cann/ops-nn #8415+!13530（issue closed 2026-11-09，修复前 master@3080cd900ad7，Ascend950 arch35）：softsign_grad 校验链缺失——InferShape 未读取/校验第二输入 features 的 shape（无 rank 一致性、逐维冲突、rank≤8 上限、UnknownRank 传播，输出直接取 *gradients_shape）；InferDataType 无 dtype 域（FP16/FP32/BF16）与双输入一致性校验、直接透传输入 0 dtype，且经 IMPL_OP_INFERSHAPE 与 op_graph 双注册同一槽位、生效实现取决于库加载顺序（不确定性缺陷）；tiling 无 rank≤8/IsUnknownShape/逐维非负/输出 dtype 域与一致性/format 三向 ND 校验。上板实测：complex128 输出产出错误结果、fp16 输出触发设备 VEC_ERROR、FRACTAL_NZ format 全链路静默接受并计算；空 tensor（totalNum=0）反而被 tiling 报错拒绝（家族算子 celu/relu6 惯例支持空 tensor 早退）。修复补全各级校验门+空 tensor 早退+注册收敛，三轮全量回归零精度失败。与 TRN-0676 同族：越域出参 dtype/元数据未在校验门拦截静默错果。'
   source: https://gitcode.com/cann/ops-nn/issues/8415
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

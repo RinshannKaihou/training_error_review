@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 708 条；状态：active 687、pending_audit 21
+共 708 条；状态：active 708
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 205 |
-| 编译器 | 40 |
-| 运行时/执行 | 17 |
+| 算子/内核 | 206 |
+| 编译器 | 39 |
+| 运行时/执行 | 18 |
 | 集合通信 | 13 |
 | 并行切分 | 38 |
 | KV缓存 | 2 |
@@ -21,14 +21,14 @@
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
 | 模型定义 | 14 |
-| 权重/检查点 | 34 |
+| 权重/检查点 | 35 |
 | 数据管线 | 40 |
 | 优化器 | 47 |
 | 损失计算 | 29 |
 | MoE路由 | 29 |
 | 重计算/卸载 | 21 |
-| RL训练回路 | 88 |
-| 观测/评测 | 24 |
+| RL训练回路 | 87 |
+| 观测/评测 | 23 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
@@ -2403,7 +2403,7 @@
 
 ### TRN-0692 `ascend950_sdpa_dropout_bwd_rng_meta_zero` 950 SDPA dropout 编译反向 RNG 状态丢失
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / torch_npu / SDPA v1 反向 RNG 元信息
 - **原因行为**：950 回落 v1 npu_fusion_attention，其 schema 返回 int seed/offset/numels 而 meta 实现写死 0，AOT 反向图取默认 0 重新生成 dropout 掩码
@@ -2414,7 +2414,7 @@
 
 ### TRN-0693 `msda_grad_bilinear_neighbor_oob_write` MultiScaleDeformableAttentionGrad 越界邻点写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / cann / 双线性邻点梯度写入
 - **原因行为**：kernel .h:386-391 四处双线性邻居 DataCopyPad 写入无条件执行，无越界判断（文档要求越界邻点不累加）
@@ -2423,9 +2423,20 @@
 - **改进措施**：检测 输出缓冲后设哨兵区（预填 0xA5）round-trip 校验；memcheck 定位 illegal write of size 160；修复 待定（issue open 2026-11-09，P1，memcheck 实测，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8429
 
+### TRN-0694 `transdata_rt2_infershape_overwrite` TransData RT2 推导覆写异格式输出 shape
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / cann / TransData RT2 infershape
+- **原因行为**：RT2 infershape 用逐元素 shape 传播函数无条件把输入 shape 写入输出；RT1 仅在输入输出 origin format 相同时传播
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：origin format 不同的 TransData 输出 shape 被错误覆盖为输入 shape，后续格式转换失败或按错 shape 生成布局
+- **改进措施**：检测 origin format 不同的 TransData 前后对账输出 shape；对照 RT1 行为；修复 待定（issue open 2026-11-09，910B3/CANN 9.2.0 端到端复现；对照 canndev transformation_ops.cc TransDataInferShape，未见修复 PR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4650
+
 ### TRN-0695 `grouped_matmul_splitk_early_success_skip_check` GroupedMatmul split-K 早退成功跳过校验
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / cann / CheckCaseSplitK 平台分支
 - **原因行为**：x 单 tensor 时 Ascend950/960DT 分支提前 return success，跳过 transpose_x 检查与其后 rank/shape 检查；group_type=2 单 x 需转置输入被放行
@@ -2437,7 +2448,7 @@
 
 ### TRN-0697 `opp_plugin_lazy_fusion_bn_gelu_backward` 无图融合 BN 反向误读保存统计量
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / torch_npu / lazy fusion BN/GELU 反向
 - **原因行为**：无图融合 BN 反向无条件把前向保存量当方差再算 1/sqrt(saved+eps)，950 保存的是标准差倒数；GELU backward 缺 approximate 检查
@@ -2448,7 +2459,7 @@
 
 ### TRN-0698 `concat_pure_copy_blockcount_truncation` Concat pure_copy blockCount 截断静默丢行
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / cann / Concat pure_copy 行批次
 - **原因行为**：rowFactor=bufferSize/colFactor 可超 65535，DataCopyPad 的 blockCount 为 uint16，超限 copyRows 被截断（65536→0）实际拷贝行数不足
@@ -2459,7 +2470,7 @@
 
 ### TRN-0699 `conv3dv2_output_channel_mismatch_oob` Conv3DV2 出参通道数不符被接受越界写
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / cann / Conv3DV2 CheckOutputShape
 - **原因行为**：CheckOutputShape 只校验输出 D/H/W 限值，不比 y.C 与 filter.N；tiling 按 oriWeightN 推 co 而输出描述符保留调用方通道维
@@ -2471,7 +2482,7 @@
 
 ### TRN-0700 `softsign_grad_validation_chain_missing` softsign_grad 校验链缺失越域静默错果
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：算子/内核 / cann / softsign_grad 校验门
 - **原因行为**：InferShape 不读第二输入 shape、无 rank/dtype 域校验；InferDataType 双注册顺序不定；tiling 无输出 dtype 域与 format ND 校验
@@ -2896,9 +2907,9 @@
 - **改进措施**：检测 对 detect_flattened_dims 输入含未注册符号的 FloorDiv/ModularIndexing 断言返回空；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49261（open，未发布）：确认轴存在后才添加 flatten 候选
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5950；https://gitcode.com/Ascend/pytorch/merge_requests/49261
 
-### TRN-0690 `torch_npu_rsplit_multiaxis_reduction_48x` torch_npu 编译多轴归约结果为正确值 48 倍
+### TRN-0690 `torch_npu_rsplit_multiaxis_reduction_48x` torch_npu 编译含 dim0 多轴归约输出为正确值 48 倍
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：编译器 / torch_npu / inductor rsplit 部分和改写
 - **原因行为**：rsplit partial 循环改写只匹配扁平单层 r 循环，遇 promoted r-tree 嵌套双层循环零匹配静默跳过，lo/hi 切片悬空，每核各算全量部分和再被 combine 加总
@@ -2910,7 +2921,7 @@
 
 ### TRN-0691 `torch_npu_inductor_index_symbolic_unsound` inductor 索引符号化简不可证等价仍改写
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：编译器 / torch_npu / inductor 索引符号分析
 - **原因行为**：eliminate_modular 用单轴代入结果判定完整乘法表达式，(6*i)%3 被错化简为 6*i；父子轴替换按结构比较漏判复合符号等价，repeat 场景 load 换子轴 store 留父轴
@@ -2920,20 +2931,9 @@
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5961；https://gitcode.com/Ascend/pytorch/issues/5962
 - **关联**：var:TRN-0689；cross:INF-2474；cross:INF-2468
 
-### TRN-0694 `transdata_rt2_infershape_overwrite` TransData RT2 推导覆写异格式输出 shape
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
-
-- **原因对象**：编译器 / cann / TransData RT2 infershape
-- **原因行为**：RT2 infershape 用逐元素 shape 传播函数无条件把输入 shape 写入输出；RT1 仅在输入输出 origin format 相同时传播
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：origin format 不同的 TransData 输出 shape 被错误覆盖为输入 shape，后续格式转换失败或按错 shape 生成布局
-- **改进措施**：检测 origin format 不同的 TransData 前后对账输出 shape；对照 RT1 行为；修复 待定（issue open 2026-11-09，910B3/CANN 9.2.0 端到端复现；对照 canndev transformation_ops.cc TransDataInferShape，未见修复 PR）
-- **来源**：https://gitcode.com/cann/ops-math/issues/4650
-
 ### TRN-0696 `torch_npu_template_gemm_epilogue_cast_miss` 模板 GEMM 融合 epilogue 缺 fp32 截断 cast
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：编译器 / torch_npu / NPU 模板 GEMM codegen
 - **原因行为**：codegen_template 复刻上游但漏调 _compute_fusion_metadata，has_epilogue_fusion 恒 False，跳过 fp32→fp16/bf16→fp32 两次截断 cast
@@ -3132,6 +3132,17 @@
 - **影响详情**：多微批梯度累积 w.grad 10 实得 8；调用者保存的输入梯度在第二次 replay 后被改值；连续两次 AdamW 与 eager 不同
 - **改进措施**：检测 四微批 x=1,2,3,4 的 w.grad 对账（应 10）；replay 后复读保存的旧梯度张量；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49262（open，未发布）：非 None 梯度 b.detach().clone() 到独立存储
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5951；https://gitcode.com/Ascend/pytorch/merge_requests/49262
+
+### TRN-0704 `msrun_signal_exit_success_deception` msrun 中断信号退出码 0 假成功
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：运行时/执行 / mindspore / msrun 进程管理信号处理
+- **原因行为**：SIGINT 处理函数 sys.exit(0) 且 SIGTERM 未注册不进清理路径；worker-only 节点 msn_process 为 None 时 kill_all_processes 直接 poll() 抛错
+- **影响对象**：可用性/进度；指标/日志（静默错误）
+- **影响详情**：被中断的分布式任务以退出码 0 结束、调用方误判成功；worker 节点 SIGTERM 后本地进程不清理（残留占卡）
+- **改进措施**：检测 编排层不信任 msrun 退出码，另查 checkpoint 步数/日志尾；CI 用 130/143 期望退出码回归；修复 修复 PR https://gitcode.com/mindspore/mindspore/merge_requests/93390 （open 2026-11-09，master 基线 27ea853f523，修复提交 b924fddb507 未合入）：注册 SIGINT/SIGTERM、退出码 130/143、scheduler 判空；7 参数化回归用例，Linux 多机实测待验证
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29730
 
 ## 集合通信
 
@@ -3688,7 +3699,7 @@
 
 ### TRN-0702 `megatron_lite_overlap_param_gather_stale` Lite overlap_param_gather 读上一步参数
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：并行切分 / megatron-lm / DDP 参数预取 hook 覆盖
 - **原因行为**：分布式优化器分片下 forward pre-hook 只覆盖被调用模块的参数；router gate 权重与 embedding 以 functional 方式使用绕过 hook；ckpt 保存/导出在 forward 外读参数
@@ -3699,7 +3710,7 @@
 
 ### TRN-0705 `megatron_gtp_eager_rs_ticket_buffer_share` GTP eager 归约票据共享输出缓冲错梯度
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：并行切分 / megatron-lm / GTP wgrad RS 票据缓冲
 - **原因行为**：GTPWeightCache.release() 归还缓冲但保留 slot.buf，同 RS cache key 的两个 eager wgrad reduce-scatter 票据共用一个 pending 输出缓冲，后发 RS 覆写前者结果
@@ -4481,11 +4492,11 @@
 
 ### TRN-0703 `torchtitan_hc_sinkhorn_eps_placement` HcSplitSinkhorn eps 位置偏离 DeepSeek 参考
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：模型定义 / torchtitan / dsv4 MHC Sinkhorn 归一化
 - **原因行为**：首行归一化用 E/(E.sum(-1,keepdim)+eps)，DeepSeek 参考实现为 E/E.sum(-1,keepdim)+eps（E=exp(logits-row_max)），其余 19 对行/列归一化一致
-- **影响对象**：隐状态；训练轨迹（静默错误）
+- **影响对象**：数值结果；隐状态；训练轨迹（静默错误）
 - **影响详情**：前向在 FP64 下也不同；ordinary 与合成下溢 stress 输入下 Sinkhorn 权重和梯度均与参考有差
 - **改进措施**：检测 与 DeepSeek 参考 kernel（HF 固定 revision）FP64 对拍前向与梯度；下溢 stress 输入专项；修复 待定（issue open 2026-11-09，含 CPU FP64 复现与 autograd 梯度对拍；未见修复 PR）
 - **来源**：https://github.com/pytorch/torchtitan/issues/5975
@@ -4867,7 +4878,7 @@
 
 ### TRN-0707 `torchtitan_async_pinned_staging_before_optim_step` 异步 ckpt 落盘先于优化器步存旧权重
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-10
 
 - **原因对象**：权重/检查点 / torchtitan / async ckpt staging 流排序
 - **原因行为**：DCP DefaultStager 在自有 stream 从后台线程拷贝、不等待当前流；不 log 的步上 train_step 在 optim.step() 后立即返回无 host 同步，save 开始时优化器步可能仍在执行
@@ -4875,6 +4886,17 @@
 - **影响详情**：ckpt 存进 step 前的权重/优化器状态或新旧混合，保存成功无警告；resume 后 loss 与原轨迹不一致（2xH100 验证，修复后 bitwise 相等）
 - **改进措施**：检测 ckpt 频率与 log 频率错开配置下做 resume 对拍（loss bitwise）；staging 前后对参数做 stream 同步 checksum；修复 修复 PR https://github.com/pytorch/torchtitan/pull/5989 （open，2026-11-09）：save 前让 stager 的 staging stream 等待当前流（不阻塞 CPU）；async 模式与 torch_checkpointing 后端不受影响
 - **来源**：https://github.com/pytorch/torchtitan/pull/5989
+
+### TRN-0708 `torchtitan_generator_lmhead_reshard_uninitialized` generator 权重加载 reshard 读未初始化分片
+
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：权重/检查点 / torchtitan / generator FSDP reshard
+- **原因行为**：lm_head/norm 组步间停留 FORWARD 态（norm 进 CUDA graph 无 hook），load 时 unshard 的 all-gather 在 prefetch stream 不等当前流填充分片
+- **影响对象**：模型权重；输出分布（质量退化）
+- **影响详情**：流式 LoRA adapter-only load 从未初始化分片 gather lm_head/norm——之后每个 rollout 全垃圾（reward 0、logprob diff -0.96，816B FULL CUDA graphs）
+- **改进措施**：检测 每次权重同步后对 generator/trainer logprob 差监控（阈值远小于 1）；load 后抽查 lm_head/norm 与 trainer 权重一致；修复 修复 PR https://github.com/pytorch/torchtitan/pull/5982 （open，2026-11-09）：_reshard 先 complete_fsdp_grouped_forward 再 reshard；Qwen3.5-35B LoRA 10 次 load 权重不变、logprob diff -0.001，816B 200 步保持 -0.004~-0.005
+- **来源**：https://github.com/pytorch/torchtitan/pull/5982
 
 ## 数据管线
 
@@ -5321,7 +5343,7 @@
 
 ### TRN-0710 `megatron_padded_vocab_below_tokenizer_silent_zero` padded-vocab 低于 tokenizer 静默零嵌入
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：数据管线 / megatron-lm / vocab 填充校验
 - **原因行为**：显式 padded_vocab_size 不与 tokenizer.vocab_size 比对；TP>1 时各 rank 切片外 id 被 mask 为零嵌入，CE 又把这些位置 mask 出 label
@@ -6176,11 +6198,11 @@
 
 ### TRN-0701 `trl_dpo_sft_loss_grad_accum_split` DPO SFT loss 权重随梯度累积划分变化
 
-`故障` · `pending_audit` · `sft` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `sft` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：损失计算 / trl / DPOTrainer SFT 辅助 loss 聚合
 - **原因行为**：DPOTrainer 的 SFT 辅助 loss 对不等长 chosen 按微批聚合，同一有效 batch 换梯度累积划分产生不同梯度
-- **影响对象**：训练信号（静默错误）
+- **影响对象**：梯度；训练信号（静默错误）
 - **影响详情**：batch_size=2×accum=1 与 batch_size=1×accum=2 一步梯度不同；含 SFC/MPO 配方受影响
 - **改进措施**：检测 固定有效 batch 改累积划分捕获梯度对比（on_pre_optimizer_step）；不等长 completion 专项；修复 待定（issue open 2026-11-08，含 pinned tiny 模型六组单步 CPU 对照脚本，未见修复 PR）
 - **来源**：https://github.com/huggingface/trl/issues/8176
@@ -6188,11 +6210,11 @@
 
 ### TRN-0706 `megatron_masked_loss_cp_microbatch_domain` masked/MTP loss 按本域归一随划分漂移
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `pretrain` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：损失计算 / megatron-lm / CP/微批 token 归一
 - **原因行为**：3806ec2754 删掉跨 CP 的 loss/token all-reduce 后各 CP rank 用本地有效 token 数除 masked loss；MTP loss 按微批 valid 比例 re-weight 再除全局分母
-- **影响对象**：训练信号；梯度（静默错误）
+- **影响对象**：梯度；训练信号（静默错误）
 - **影响详情**：CP ranks 有效 token 数不同（mask/padding/--eod-mask-loss）时优化的是 CP 局部均值之均值，CP=1 与 CP=2 同数据梯度方向不同；MTP token 有效权重随微批/DP 划分变化
 - **改进措施**：检测 同数据 CP=1/CP=2 梯度对拍；packed/masked 序列下改微批划分对比 MTP 梯度；修复 #9048（closed 2026-11-06）：forward_step_calc_loss 对 CP 组求和 count、loss 乘 CP size（与 #7513 同改、冲突关系未核实）；#8997（closed 2026-11-04）：opt-in --mtp-normalize-loss-by-main-tokens（默认关）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9048；https://github.com/NVIDIA/Megatron-LM/pull/8997
@@ -7739,20 +7761,9 @@
 - **来源**：https://github.com/huggingface/trl/issues/7954；https://github.com/huggingface/trl/pull/8145；https://github.com/huggingface/trl/pull/8139；https://github.com/huggingface/trl/issues/7915
 - **关联**：var:TRN-0229
 
-### TRN-0708 `torchtitan_generator_lmhead_reshard_uninitialized` generator 权重加载 reshard 读未初始化分片
-
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-10
-
-- **原因对象**：RL训练回路 / torchtitan / generator FSDP reshard
-- **原因行为**：lm_head/norm 组步间停留 FORWARD 态（norm 进 CUDA graph 无 hook），load 时 unshard 的 all-gather 在 prefetch stream 不等当前流填充分片
-- **影响对象**：模型权重；输出分布（静默错误）
-- **影响详情**：流式 LoRA adapter-only load 从未初始化分片 gather lm_head/norm——之后每个 rollout 全垃圾（reward 0、logprob diff -0.96，816B FULL CUDA graphs）
-- **改进措施**：检测 每次权重同步后对 generator/trainer logprob 差监控（阈值远小于 1）；load 后抽查 lm_head/norm 与 trainer 权重一致；修复 修复 PR https://github.com/pytorch/torchtitan/pull/5982 （open，2026-11-09）：_reshard 先 complete_fsdp_grouped_forward 再 reshard；Qwen3.5-35B LoRA 10 次 load 权重不变、logprob diff -0.001，816B 200 步保持 -0.004~-0.005
-- **来源**：https://github.com/pytorch/torchtitan/pull/5982
-
 ### TRN-0709 `megatron_rl_refit_sequential_mlp_local_index` RL refit 局部专家索引错配 rollout 权重
 
-`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-10
+`故障` · `active` · `rl` · `documented` · `var` · 发现 2026-11-10
 
 - **原因对象**：RL训练回路 / megatron-lm / refit EP 名字重写
 - **原因行为**：refit 名字重写只识别 TEGroupedMLP weightK/biasK；SequentialMLP 的 local_experts.K 局部名不改写，训练/推理 EP 尺寸不同时按名字拷错专家权重
@@ -8022,17 +8033,6 @@
 - **影响详情**：第 1 轮 refit 超阈或 NaN/Inf、末轮恢复正常时脚本打印 PASSED、退出码 0；29 项 CPU 回归测试在原脚本上 27 项失败/2 项通过，其中 17 项证实假成功退出码；QAT/低精度对齐验收结果失真。
 - **改进措施**：检测 对每轮 refit_runs 历史断言 finite kl 与 k3_kl<阈值；检查退出码与逐轮记录一致性。；修复 修复 PR https://github.com/verl-project/verl/pull/8564（open 2026-11-05）：校验每个已记录轮次（finite kl/k3_kl + k3_kl<--max-k3-kl），任一轮失败即失败并报轮号与指标；29 项 CPU 回归（原始脚本 27 失败/2 过）。未合。
 - **来源**：https://github.com/verl-project/verl/pull/8564
-
-### TRN-0704 `msrun_signal_exit_success_deception` msrun 中断信号退出码 0 假成功
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-10
-
-- **原因对象**：观测/评测 / mindspore / msrun 进程管理信号处理
-- **原因行为**：SIGINT 处理函数 sys.exit(0) 且 SIGTERM 未注册不进清理路径；worker-only 节点 msn_process 为 None 时 kill_all_processes 直接 poll() 抛错
-- **影响对象**：指标/日志；可用性/进度（静默错误）
-- **影响详情**：被中断的分布式任务以退出码 0 结束、调用方误判成功；worker 节点 SIGTERM 后本地进程不清理（残留占卡）
-- **改进措施**：检测 编排层不信任 msrun 退出码，另查 checkpoint 步数/日志尾；CI 用 130/143 期望退出码回归；修复 修复 PR https://gitcode.com/mindspore/mindspore/merge_requests/93390 （open 2026-11-09，master 基线 27ea853f523，修复提交 b924fddb507 未合入）：注册 SIGINT/SIGTERM、退出码 130/143、scheduler 判空；7 参数化回归用例，Linux 多机实测待验证
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29730
 
 ## 配置/参数
 

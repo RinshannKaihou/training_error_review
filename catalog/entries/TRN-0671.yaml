@@ -40,6 +40,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7250
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0073
 original:
   mechanism: 'ops-transformer（master 5adf800c，Atlas A2 910B2、CANN 9.3.0，2026-11-08 实测）同族五例：#7239 aclnnMoeTokenUnpermute——out=[4,3]（声明 12 float）按 hidden=4 写 16 float，多写 16 字节、尾部 canary 覆盖、两段 0/0；moe_token_unpermute_infershape.cpp:34-38 直接 SetDim 不读调用方 out，aclnn_moe_token_unpermute.cpp:90-94 A2 !IsRegbase 无 shape 校验即委托。#7240 MoeTokenUnpermuteWithEp——out=[3,1] 写 6 float 多写 12 字节（infershape:55-59 同款）。#7241 MoeTokenUnpermuteGrad、#7242 MoeTokenPermuteGrad——out hidden 维写小后按推导维多写 8 字节（moe_token_permute_grad_infershape.cpp:36-40 不比对 out）。#7244 aclnnNormRopeConcat——第一段接口纯透传 33 个参数无任何判空/dtype/shape 校验（aclnn_norm_rope_concat.cpp:52-57），queryOutput 末维 5（应 6）声明 1600 字节被写 1920 字节，区外 canary 覆盖。关联 #6294/#6132/#3562/#5235 为同接口其它缺口。'
   source: https://gitcode.com/cann/ops-transformer/issues/7239 ｜ https://gitcode.com/cann/ops-transformer/issues/7240 ｜ https://gitcode.com/cann/ops-transformer/issues/7241 ｜ https://gitcode.com/cann/ops-transformer/issues/7242 ｜ https://gitcode.com/cann/ops-transformer/issues/7244
@@ -70,3 +71,6 @@ migration:
   - date: '2026-11-10'
     fields:
     - original.notes
+  - date: '2026-11-10'
+    fields:
+    - pattern

@@ -4,7 +4,7 @@ slug: megatron_padded_vocab_below_tokenizer_silent_zero
 aliases: []
 title: padded-vocab 低于 tokenizer 静默零嵌入
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0086
+pattern: PAT-TRN-0029
 original:
   mechanism: 'NVIDIA/Megatron-LM #9149（closed IS 2026-11-09，修复 #9209）：megatron/training/vocab_utils.py:99-113 只在 padded_vocab_size 未设时计算填充；显式值（--padded-vocab-size 或 ckpt 恢复）直接使用、无与 tokenizer.vocab_size 的比较，模型 vocab 取该值（argument_utils.py:664-666）。TP=1：VocabParallelEmbedding 直接 gather（layers.py:486/501），首 forward 设备侧 assert（language_model_embedding.py:118，fail-loud）；TP>1：layers.py:479-484/503-504 把各 rank 切片外 id mask 为零嵌入，cross_entropy.py:44-58 同样把它们 mask 成 label——越界 token 嵌入为 0 且不进 loss，训练无错误继续。复现：NullTokenizer --vocab-size 1024 + --padded-vocab-size 512（mock 数据用满全部 id）。修复 #9209 在构建 tokenizer 时拒绝低于 tokenizer 词表的 padded vocab。'
   source: https://github.com/NVIDIA/Megatron-LM/issues/9149
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem
+    - effect

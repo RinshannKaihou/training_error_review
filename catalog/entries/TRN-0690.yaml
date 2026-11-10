@@ -2,9 +2,9 @@ id: TRN-0690
 legacy_ids: []
 slug: torch_npu_rsplit_multiaxis_reduction_48x
 aliases: []
-title: torch_npu 编译多轴归约结果为正确值 48 倍
+title: torch_npu 编译含 dim0 多轴归约输出为正确值 48 倍
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - title

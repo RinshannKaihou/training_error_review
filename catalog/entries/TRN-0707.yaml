@@ -4,7 +4,7 @@ slug: torchtitan_async_pinned_staging_before_optim_step
 aliases: []
 title: 异步 ckpt 落盘先于优化器步存旧权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -40,3 +40,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

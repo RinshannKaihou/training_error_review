@@ -4,7 +4,7 @@ slug: grouped_matmul_splitk_early_success_skip_check
 aliases: []
 title: GroupedMatmul split-K 早退成功跳过校验
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0669
+pattern: PAT-TRN-0072
 original:
   mechanism: 'cann/ops-transformer #7296+!15577（open，2026-11-09，源码 5adf800c91c9）：CheckCaseSplitK 在 Ascend950/960DT 上 x 只含一个 tensor 时立即返回成功，跳过必需的 transpose_x 检查与其后的 rank、shape 检查；group_type=2 的单 x split-K 路径要求转置输入，transpose_x=false 的非法组合被接受，进入通用 tiler 被按转置布局对待。回归用例（一个 x、group_type=2、transpose_x=false）基线返回 GRAPH_SUCCESS（用例期望 GRAPH_FAILED）；修复删除该早退成功返回，使既有 transpose/rank/shape 校验执行，ut GROUPED_MATMUL_INFERSHAPE_CSV nonquant_splitk_transposex_required_invalid_950 通过（outcome confirmed_bug）。与 TRN-0669（首段校验缺口放行）同族，差异在放行后 tiler 按转置解释静默错算。训练面：MoE/分组 GEMM split-K 训练图。'
   source: https://gitcode.com/cann/ops-transformer/issues/7296
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - detail

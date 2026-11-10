@@ -19,7 +19,7 @@ effect:
   visibility: 数值异常
 mitigation:
   detect: 同批样本逐样本重放 + 对除子梯度 NaN 断言；R0_BLOCK 候选固定复现（R0_BLOCK=1 正确、2/4/8/16/32 全 NaN 可实证）。
-  fix: 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49252（open 2026-11-07）：lattice 补除法族（truediv 非精确/倒数等一律 _PAD_TOP，fill 求解器可为除子选 other=-inf）；修复后完整方法冷/热混合多轮全过、无回归（910B3/CANN 9.1.0 实测）。未发布。
+  fix: 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49252 本批次快照 2026-11-09T13:44Z 已 merged（发布版本未核实）；修复内容：lattice 补除法族一律 _PAD_TOP，fill 求解器可为除子选 other=-inf，冷/热混合多轮全过（910B3/CANN 9.1.0 实测）。
 labels:
   stage:
   - shared
@@ -54,3 +54,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - mitigation.fix

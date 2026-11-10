@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: MM 融合开关 A/B 对拍完整网络输出（uint8 逐字节）；保留片段级真实中间输入回放。
-  fix: 修复 PR https://gitcode.com/Ascend/torchair/merge_requests/3950（open 2026-11-04，26.2.0 分支）：保留原生 bias 语义、非向量 bias 整体回退原生算子；另修 CV 共享输入 storage 别名漏保护。未发布。
+  fix: 修复载体更新：master 侧 https://gitcode.com/Ascend/torchair/merge_requests/3969 本批次快照 2026-11-09T22:58Z 已 merged（保留 MatMul bias 与别名语义、按原生 tiling 选择 BMM 输入布局，#939）；26.2.0 分支 !3950 状态未核实。发布版本未核实。
 labels:
   stage:
   - shared
@@ -57,6 +57,9 @@ migration:
   - date: '2026-11-08'
     fields:
     - original.notes
+  - date: '2026-11-10'
+    fields:
+    - mitigation.fix
   audit:
     round: daily-audit-2026-11-05
     base:

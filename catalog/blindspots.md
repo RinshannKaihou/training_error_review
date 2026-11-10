@@ -37,3 +37,11 @@
 ## B.7 mssanitizer UB 检测以物理上限 248KB 为界，漏检 SIMT DCache 越界
 
 `Ascend/mssanitizer #239`（open，2026-10-27，A5 + CANN 9.3.0 weekly）：SIMT VF 内 UB 越界场景（官方示例 cann/asc-devkit examples/05_simd_simt_hybrid/01_trouble_shooting/simd_simt_ub_usage_limit）实测工具未能检出。工具助手分析：A5 的 UB 检测方案以物理内存上限 248KB（256KB−8KB 预留）为有效范围；但混合场景下 SIMT 需要用到 DCache（GM 的缓存），越界到 DCache 属非法行为、被踩踏后造成难以定位的精度问题——检测边界按物理 UB 上限划，覆盖不了 DCache 区。观测/检测工具漏检面按口径记盲区不占故障条目；同工具同日新增 `--error-exitcode` 选项（!434，open）支持按检出结果返回退出码。
+
+## B.8 msprobe nan_check 落盘 tensor 命名错位（调用次数与参数序号）
+
+`Ascend/msprobe #676` / `#677`（open，2026-11-07/08，msprobe 26.0.0 e7bc732，vllm 0.30.0+empty + vllm_ascend 0.19.1rc2）：nan_check 的 is_nan 模式在 api 输出含 NaN 时落盘 tensor 文件，但命名与真实调用错位——#676：落盘文件名中的 `{API调用次数}` 从 0 重新计数，`Torch.vllm.all_reduce.2.forward` 的 dump data_name 指向的 pt 文件看起来属于 `all_reduce.0`；#677：图模式命名格式变成 `{api_type}.{api_name}.{input/output}.{参数序号}{API调用次数}`（与 tensor 场景字段序不一致），且 output 命名少一位 `{参数序号}`（如 `Torch.vllm.all_reduce.output.0.pt` 无调用序号）。NaN 取证时按文件名对回 API/轮次会定位到错误的调用点，污染「哪一层先出 NaN」的结论。观测工具落盘命名缺陷按口径记盲区不占故障条目。
+
+## B.9 mssanitizer 检测流程缺陷：MC2 保护区初始化/IPC 边界与 fixpipe quantPre 误报
+
+`Ascend/mssanitizer #251`（closed，2026-11-09）：MC2 检测的保护区初始化、IPC 资源边界及 ELF 加载处理流程存在问题（正文未展开机制细节）。`#252`（closed，2026-11-09，A5）：fixpipe quantPre 位宽解码漏配导致**误报**——检测器把合法的 fixpipe 量化前置操作报为越界/异常。两类都是检测工具自身缺陷：#252 假阳性会侵蚀告警可信度（狼来了效应），#251 流程缺陷可能漏检；正文均为标题级、修复已闭环（closed），按口径记盲区跟踪，不转述为模型计算已损坏。

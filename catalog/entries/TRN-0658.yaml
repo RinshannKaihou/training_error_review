@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: NHWC 小 C 的 maxpool 反向与 CPU 对账；构造完整 C 小于 vRegSize/(2·indexBytes) 阈值的用例。
-  fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/13770（open 2026-11-05）：仅完整 C 超过 BigC 阈值才继续切 C；静态分析 4 FAIL 用例修复后不再切；黄区回归待做、蓝区无 950 未上板。未发布。
+  fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/13770 本批次快照 2026-11-09T03:46Z 已 merged（发布版本未核实）；仅完整 C 超过 BigC 阈值才继续切 C。黄区回归与蓝区上板状态未随快照更新。
 labels:
   stage:
   - shared
@@ -50,6 +50,9 @@ migration:
   - date: '2026-11-08'
     fields:
     - pattern
+  - date: '2026-11-10'
+    fields:
+    - mitigation.fix
   audit:
     round: daily-audit-2026-11-08
     base:

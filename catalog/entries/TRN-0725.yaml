@@ -4,7 +4,7 @@ slug: opsnn_group_norm_grad_mix_dtype_half_write
 aliases: []
 title: GroupNormGrad mix dtype 写半 dgamma 缓冲
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,9 @@ cause:
   behavior: EmptyDgamma 按输入 dy 的 dtype 定宽：mix 组合（dy/x=fp16/bf16、mean 等=fp32）下 dgamma/dbeta 按 fp16 宽度只写 32B fp32 buffer 的前 16B，后半未定义
 effect:
   objects:
+  - 数值结果
   - 梯度
-  detail: A5/950PR 空进非空出（N=0 或 HW=0）+ mix dtype 下 dgamma/dbeta 精度仅 50%：字节级 dump 实锤前 16B 为 0、后 16B 保持预填值；同 dtype 组合行为不变，修复改按输出 buffer 自身 dtype 特化
+  detail: A5/950PR 实测：GroupNorm 反向空输入非空输出（N=0 或 HW=0）且 dy/x=fp16/bf16、mean/rstd/gamma=fp32 的 mix 组合下，dgamma/dbeta 每元素只写一半字节，后 16B 为未定义内存，对拍精度 50%；同 dtype 组合正常。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -38,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 梯度
+        to: 数值结果
+    rewritten:
+    - detail

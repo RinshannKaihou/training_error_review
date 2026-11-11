@@ -4,17 +4,17 @@ slug: triton_ascend_te_pointwise_4dtype_silent_wrong
 aliases: []
 title: triton-ascend 编译路径 4 dtype 组合静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
     component: triton_experimental 数值通道
-  behavior: torch.compile(triton_experimental) 生成 kernel 的数值通道 4 机制算错：abs/int64 按 32 位截断、add/bool 翻转、hypot/f32 无溢出保护、pow/f64 底数经 f32
+  behavior: triton_experimental 编译后端下 4 类算子/dtype 静默算错：abs/int64 大值被截小、add/bool 部分元素翻转、hypot/f32 大输入出 inf/NaN、pow/f64 底数精度掉到 f32
 effect:
   objects:
   - 数值结果
-  detail: 910B4 逐样本探针：abs 输入 8589934599 编译输出 7（低 32 位）；add/bool 25 元素 9 个翻转；hypot ±FLT_MAX 注入 inf/NaN；pow f64 36549.9322→36549.9258。4 例全部静默，eager 层零差异
+  detail: 910B4/CANN 9.2.0/torch_npu 2.16.0/triton-ascend 3.6.0 上用 torch.compile 跑训练代码触发：abs 输入 8589934599 编译输出 7；eager 模式全部正确，仅编译后错且不报错，需逐样本对拍才能发现。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -40,3 +40,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

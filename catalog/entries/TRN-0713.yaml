@@ -4,17 +4,17 @@ slug: cann_aicpu_sched_dead_worker_fake_success
 aliases: []
 title: aicpu_sched 已死 worker 假成功任务静默卡死
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: cann
     component: aicpu_sched CreateWorker
-  behavior: worker 初始化失败后线程退出但 threadStatusList_ 停留 THREAD_RUNNING，CreateWorker 校验被绕过对已死 worker 返回成功，该核事件从此无人消费
+  behavior: worker 初始化失败路径未把线程状态置 THREAD_EXIT，CreateWorker 的 THREAD_RUNNING 校验识别不了已退出 worker，对其返回成功
 effect:
   objects:
   - 可用性/进度
-  detail: 守护进程启动期若某 AICPU 核的 worker 初始化失败：CreateWorker 仍报启动成功、无错误上报，该核订阅的 kernel/msg 类事件从此无人消费，落到该核的任务挂起、host 侧同步等待超时，业务静默卡死且现场排查困难（守护进程自认健康）
+  detail: 守护进程启动期若某 AICPU 核的 worker 初始化失败（事件订阅或消息队列失败）：仍报启动成功、日志无错误，之后排到该核的任务永远不执行，host 侧同步等待超时，业务无报错卡死，健康检查全绿、定位困难
   visibility: 挂起
 mitigation:
   detect: 待定
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

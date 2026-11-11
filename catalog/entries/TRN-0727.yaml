@@ -4,7 +4,7 @@ slug: megatron_flashinfer_processed_logprobs_inf
 aliases: []
 title: FlashInfer processed logprobs 下溢报 -inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 训练信号
-  detail: 低温（T=0.05、logit 差 5→logprob 差 100）时 kept token processed logprob 为 -inf，top-N 在 -inf 位填 kept 集合外任意 token；训练配置默认即 FlashInfer sampler，RL 的 IS/KL 被污染
-  visibility: 静默错误
+  detail: 低温+top-k/top-p 请求下 kept token 的 processed logprob 变 -inf，top-N 榜单被 -inf 的无关 token 占位；训练默认用 FlashInfer sampler，喂给 IS/KL 污染训练信号，无报错，torch sampler 数值正常
+  visibility: 数值异常
 mitigation:
   detect: 待定
   fix: 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9296 （open，未合入）
@@ -38,3 +38,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail
+    uncertain:
+    - effect

@@ -4,7 +4,7 @@ slug: opsxfrm_lightning_indexer_grad_deadrow_dweights_uninit
 aliases: []
 title: LI Grad 滑窗死行 dweights 残留未初始化脏值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 梯度
-  detail: BSND+sparseMode=3+S1>S2 且 N1 使零化数非 16 倍数时，接口返回 0，dweights 含未初始化脏值（0.63~1.18e+37，98% 超阈案例存在）；同输入多次运行脏值元素数不同，N1=64 从不失败；50 个精度失败中 29 例由此引起
-  visibility: 静默错误
+  detail: sparseMode=3 滑窗裁剪、S1>S2 产生死行且头分组数使零化粒度不齐时，接口成功返回但 dweights 含未初始化内存值（case 913 128626/131072 超阈、case 884 最大 1.18e+37）；同输入三次运行脏值元素数不同；不单独对拍则脏梯度用于更新索引器权重
+  visibility: 不可复现
 mitigation:
   detect: 待定
   fix: 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15684 （open，WIP，未发布）
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0442
+pattern: PAT-TRN-0075
 original:
   mechanism: 'ops-transformer #7325（2026-11-10，open，910B3 / CANN 9.1.0）。aclnnLightningIndexerGrad：InitOutputDqAndDweights 对死行 dweights 的清零在奇偶分裂下每核零化元素数不满足 16 元素倍数时未写回/未覆盖未对齐尾部，死行残留脏值；代表 case 913（B2 S1=65536 N1=1）128626/131072 超阈、case 884 最大 1.18e+37；同输入三次运行脏值元素数不同是缓冲未初始化的直接证据。修复 PR !15684（open，WIP）。与 TRN-0442 同族：算子对声明输出区间（该写确定值的元素）未写、接口成功返回残留脏值——本条死行零化路径缺失、TRN-0442 为 BSND 尾部区间不写。'
   source: https://gitcode.com/cann/ops-transformer/issues/7325
@@ -40,3 +41,22 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior

@@ -4,7 +4,7 @@ slug: opsxfrm_lightning_indexer_topk_tie_order_cross_block
 aliases: []
 title: LightningIndexer 跨基块归并丢等分序致 top-K 选错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: actS2>512 且 K∈{16,32,64} 且非 decode 时 sparseIndicesOut 与 golden 不一致：接口返回 0 无报错，1000 用例 23 案失败、失配全部是等分行，NPU 选中后块（≥512）0 分索引；单基块/decode 不受影响
+  detail: actS2>512、K∈{16,32,64}、非 decode 时输出索引与 golden 不一致：无报错、loss 可继续算；23 失败用例 NPU 多出索引共 530,843 个，低于 512 的为 0（均在基块边界之后），非等分行 0 失配；等分候选集中时索引集合正确率可低至 64%。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: opsnn_threshold_backward_eps_zero_check_routeflip
 aliases: []
 title: ThresholdBackward 容差判零吞微小阈值静默走 ReluGrad
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

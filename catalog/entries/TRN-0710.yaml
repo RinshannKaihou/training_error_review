@@ -40,6 +40,8 @@ original:
   behavior: 把 --padded-vocab-size（或 ckpt 恢复值）设得比 tokenizer 词表小、TP>1 训练：所有 id ≥ padded vocab 的 token 静默变成零向量嵌入、并被 loss mask 当无效 label 丢弃——训练不报错、loss 正常下降，但一部分词表静默不参与训练（模型对这些 token 的行为退化）；TP=1 时才在第一个 forward 以设备 assert 失败（IndexKernelUtils vectorized_gather_kernel 报错）。
   trigger_surface: Megatron-LM；显式 padded_vocab_size < tokenizer.vocab_size（flag 或 ckpt 恢复）；TP>1
   discovery: 2026-11-10 每日扫描
+  notes:
+  - '2026-11-11 2026-11-11 回访：修复 #9209 closed 未标 merged（2026-11-09T20:17Z），维持跟踪。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-10'
     fields:
     - pattern
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-10
     base:

@@ -1,0 +1,44 @@
+id: TRN-0718
+legacy_ids: []
+slug: opsnn_softmax_focal_loss_pad_nan_gamma_overflow
+aliases: []
+title: SoftmaxFocalLoss pad 大负 gamma NaN 污染整行
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 算子/内核
+    stack: cann
+    component: softmax_focal_loss
+  behavior: CeFwTailSeg 对行尾 pad 列照公式计算 fw：gamma<-127.96 时 exp(gamma*log(0.5)) 上溢 INF，INF*0=NaN 经行内求和污染整行输出
+effect:
+  objects:
+  - 训练信号
+  - 数值结果
+  detail: 950 真机复现：gamma=-840 用例 NPU 输出全 NaN 而 golden 全 0（CI FAIL NaN/Inf mismatch）；NaN 仅由「pad+大负 gamma」组合触发，无 pad 或 gamma=0 不触发；修复后边界集 6/6 PASS，预编译 .o 仍为旧版
+  visibility: 数值异常
+mitigation:
+  detect: 待定
+  fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/14093 （open，未发布；CANN 内置预编译 .o 仍为旧版）
+labels:
+  stage:
+  - sft
+  - pretrain
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-11-11'
+remarks: ''
+evidence:
+- url: https://gitcode.com/cann/ops-nn/issues/8547
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/pull/14093
+  kind: gitcode_pr
+relations: []
+original:
+  mechanism: 'ops-nn #8547（2026-11-10，open，arch35）+ 修复 PR !14093（open）。!14093 拆分两类：kernel pad 列 NaN 污染（case 384/058，真实 bug）与大数病态归约判据假红（case 117/119/389，测试口径，mere_ratio 1.5→2.0）。NaN 机制：尾段 pad 列未显式写 0（求和单位元）而是照公式计算，exp 上溢 INF*0=NaN 后行内求和扩散；修复为尾段拆两级掩码（有效列照常、pad 列显式写 0）。另有关联旧 PR !13944（open，upd 2026-11-10）。'
+  source: https://gitcode.com/cann/ops-nn/issues/8547 https://gitcode.com/cann/ops-nn/pull/14093
+  behavior: focal loss 训练里带行尾 pad 且 gamma 取大负值（<-127.96，如 -840）时，NPU 上 SoftmaxFocalLoss 前向整行输出 NaN、训练 loss 变 NaN；同配置无 pad 或 gamma=0 时完全正常，问题只出现在「pad+大负 gamma」组合，容易在调 gamma 时被当成超参问题误判。
+  discovery: 2026-11-11 每日扫描
+migration:
+  method: scan
+  scanned: '2026-11-11'

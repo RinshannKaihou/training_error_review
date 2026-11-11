@@ -45,6 +45,8 @@ original:
   behavior: torch_npu 上用 torch.compile 编译含取模索引或 repeat 的模型：编译版本前向输出与 eager 不一致（社区用例 eager 得 24、编译得 22），或 repeat/带符号 shape 的操作后 load/store 行映射错、输出张量内容错位；无报错、无 NaN，数值看似合理，只有与 eager 对拍或下游指标异常时才暴露。同一代码关掉 compile 即恢复正确。
   trigger_surface: torch_npu master/dev（配套 PyTorch 2.13~2.16）inductor 路径；乘法取模索引、repeat 复合符号轴替换
   discovery: 2026-11-10 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：修复 !49132 已 merged（2026-11-09T09:17Z，批次快照）；!49133 无更新，维持 open 待核。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -52,6 +54,9 @@ migration:
   - date: '2026-11-10'
     fields:
     - pattern
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-10
     base:

@@ -45,3 +45,7 @@
 ## B.9 mssanitizer 检测流程缺陷：MC2 保护区初始化/IPC 边界与 fixpipe quantPre 误报
 
 `Ascend/mssanitizer #251`（closed，2026-11-09）：MC2 检测的保护区初始化、IPC 资源边界及 ELF 加载处理流程存在问题（正文未展开机制细节）。`#252`（closed，2026-11-09，A5）：fixpipe quantPre 位宽解码漏配导致**误报**——检测器把合法的 fixpipe 量化前置操作报为越界/异常。两类都是检测工具自身缺陷：#252 假阳性会侵蚀告警可信度（狼来了效应），#251 流程缺陷可能漏检；正文均为标题级、修复已闭环（closed），按口径记盲区跟踪，不转述为模型计算已损坏。
+
+## B.10 CANN runtime mstx 打点通道静默全失效（版本组合回归）
+
+`cann/runtime #1359`（2026-11-10，open）：合入 PR !6030（msproftx 资源命名）后的 runtime 配未适配的旧 mstx 客户端时，`mstxRangeStartA` 全部返回 0（MSTX_INVALID_RANGE_ID）、`host/data/` 不落 tx 原始数据、runtime 侧无任何报错日志。代码级根因：mstx 客户端对 `InitInjectionMstx` 结果全有或全无——失败即把 mark/range 指针全部置 0 并钉 FAILED；profapi 侧 `GetModuleTableFunc` 按对端枚举上限遍历、未知模块（CORE_MEM）走 default 判 MSTX_FAIL，触发全清空。修复 !6213（merged，按本仓实现清单遍历注册表）。profiling 打点整体无数据且无告警属观测通道静默失明，按口径记盲区不占故障条目。

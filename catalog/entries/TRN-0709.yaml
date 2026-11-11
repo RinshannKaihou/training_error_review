@@ -40,6 +40,8 @@ original:
   behavior: 用独立推理并行度跑 Megatron RL（训练 EP1、推理 EP2、SequentialMLP MoE）：refit 后部分 rank 的 rollouts 静默用错专家权重——训练照常、无报错，受害 rank 的 rollout 质量下降；只有开 --rl-verify-model-weights-swap 对拍（AssertionError max_diff=1.54）或奖励异常才暴露。反向组合（EP2→EP1）在 planner 直接 RuntimeError 缺参数（fail-loud）。
   trigger_surface: Megatron-LM RL refit + SequentialMLP（非 grouped GEMM MoE）+ 训练/推理 EP 尺寸不同
   discovery: 2026-11-10 每日扫描
+  notes:
+  - '2026-11-11 2026-11-11 回访：修复 #9141 closed 未标 merged（2026-11-09T20:20Z），维持跟踪。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-10'
     fields:
     - pattern
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-10
     base:

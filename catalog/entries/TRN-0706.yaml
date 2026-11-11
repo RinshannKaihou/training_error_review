@@ -42,6 +42,8 @@ original:
   behavior: CP>1 且各 rank 有效 token 数不同（padding/prompt mask、--eod-mask-loss）训练：换 CP 度（CP=1→2）相同数据得到不同梯度方向，loss 读数也不可比，静默改变训练目标；MTP 场景（packed/masked 序列）MTP token 的有效权重随微批/DP 划分漂移，重新划分数据即改变每个 token 的训练权重。两者均无报错，只有跨划分对拍梯度/loss 才暴露。
   trigger_surface: Megatron-LM；CP>1 + calculate_per_token_loss=False + 各 CP rank 有效 token 数不同；MTP + packed/masked 序列
   discovery: 2026-11-10 每日扫描
+  notes:
+  - '2026-11-11 2026-11-11 回访：修复 PR #9048/#9042 closed 未标 merged（2026-11-06）；#8997（MTP 按主 loss token 全局归一的 opt-in 开关）已 merged 2026-11-08T07:04Z。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -49,6 +51,9 @@ migration:
   - date: '2026-11-10'
     fields:
     - pattern
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-10
     base:

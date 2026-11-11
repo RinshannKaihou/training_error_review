@@ -40,6 +40,8 @@ original:
   behavior: MFSDP v1 + 1F1B overlap（overlap_moe_expert_parallel_comm）+ sharded gradients 训练：梯度临时桶的内存在其 reduce-scatter 还在读时被默认流复用——loss 无故变错或直接 NaN、训练可能崩或静默用坏梯度继续；MTP 场景（mtp.eh_proj/final_layernorm 的 hook 跑在通信流）是明确触发点；无显式报错指向桶生命周期。
   trigger_surface: Megatron-LM MFSDP v1 + overlap_moe_expert_parallel_comm（1F1B overlap schedule）+ optim_grads/optim_grads_params sharded gradients；含 MTP 时触发面更大
   discovery: 2026-11-09 每日扫描
+  notes:
+  - '2026-11-11 2026-11-11 回访：源 issue #9114 已 closed（search 快照）；合并修复载体未逐条核验（core 配额受限）。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-09'
     fields:
     - pattern
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-09
     base:

@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: ckpt 频率与 log 频率错开配置下做 resume 对拍（loss bitwise）；staging 前后对参数做 stream 同步 checksum
-  fix: 修复 PR https://github.com/pytorch/torchtitan/pull/5989 （open，2026-11-09）：save 前让 stager 的 staging stream 等待当前流（不阻塞 CPU）；async 模式与 torch_checkpointing 后端不受影响
+  fix: 修复 PR https://github.com/pytorch/torchtitan/pull/5989 已 merged（2026-11-10T07:14Z）；发布未核实
 labels:
   stage:
   - shared
@@ -37,6 +37,8 @@ original:
   behavior: torchtitan 开 async_with_pinned_mem 异步 checkpoint、且存盘频率与日志频率不对齐：checkpoint 文件里的权重/优化器状态是 step 前的旧值或新旧混合，保存成功、无任何警告；从该 ckpt resume 后 loss 与原轨迹不重合（bitwise 不同），训练表面继续，只有 resume 对拍才能发现存了旧状态。
   trigger_surface: torchtitan async_mode=async_with_pinned_mem；ckpt 间隔步不触发 log（无 host 同步）时保存
   discovery: 2026-11-10 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：修复 !5989 merged。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -50,3 +52,8 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - mitigation.fix
+    - original.notes

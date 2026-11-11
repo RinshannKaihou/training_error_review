@@ -20,7 +20,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 与 DeepSeek 参考 kernel（HF 固定 revision）FP64 对拍前向与梯度；下溢 stress 输入专项
-  fix: 待定（issue open 2026-11-09，含 CPU FP64 复现与 autograd 梯度对拍；未见修复 PR）
+  fix: 修复 PR https://github.com/pytorch/torchtitan/pull/5999 已 merged（2026-11-10T08:05Z，search 快照）；发布未核实
 labels:
   stage:
   - pretrain
@@ -38,6 +38,8 @@ original:
   behavior: 在 torchtitan 训练 DeepSeek-V4 系（MHC Sinkhorn 混合权重）：模型前向与 DeepSeek 官方参考 kernel 在任意精度（含 FP64）下都有系统差——普通与极端下溢输入的 Sinkhorn 权重和梯度都与参考不同，无报错；与参考实现/官方权重对拍时数值对不齐、行为迁移与蒸馏基准不可比，单看自身 loss 无法发现。
   trigger_surface: torchtitan dsv4 HcSplitSinkhorn（mhc.py c62c6a7）；eps 加法位置与参考不一致
   discovery: 2026-11-10 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：修复 !5999 merged。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -52,3 +54,8 @@ migration:
       effect:
         from: 隐状态
         to: 数值结果
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - mitigation.fix
+    - original.notes

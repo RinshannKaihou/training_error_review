@@ -1,0 +1,42 @@
+id: TRN-0723
+legacy_ids: []
+slug: megatron_swiglu_gtp_ckpt_gate_up_region_misorder
+aliases: []
+title: SwiGLU GTP 分片 ckpt 转换 gate/up 区域错位
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 权重/检查点
+    stack: megatron-lm
+    component: SwiGLU ckpt 工厂
+  behavior: ckpt 工厂假设本地 FC1 是 gate 半段接 up 半段（普通 TP 布局）；GTP 对 TP 本地对连续再切，一个分片可只含 gate 或只含 up 行，复用普通 TP 映射把行写进错误 gate/up 区域
+effect:
+  objects:
+  - 模型权重
+  detail: GTP>1 时 ckpt 转换行错位：TP=1/GTP=2 期望 [G0 G1 G2 G3|U0 U1 U2 U3]、实际 [G0 G1 U0 U1|G2 G3 U2 U3]，加载后 gate/up 权重静默错位无报错；附 TP 1/2/4 × GTP 1/2/3/4 数值布局测试
+  visibility: 静默错误
+mitigation:
+  detect: 待定
+  fix: 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9265 （open，未合入）
+labels:
+  stage:
+  - shared
+  confidence: documented
+  coverage: var
+  discovered: '2026-11-11'
+remarks: ''
+evidence:
+- url: https://github.com/NVIDIA/Megatron-LM/pull/9265
+  kind: github_pr
+relations:
+- kind: var
+  target: TRN-0244
+original:
+  mechanism: 'NVIDIA/Megatron-LM PR #9265（2026-11-10，open）。SwiGLU checkpoint factory 对 GTP 连续切片布局的映射假设失明：TP 内 [gate|up] 交错假设在 GTP 连续切分下不成立，行被分配到错误 checkpoint 区域。与 TRN-0244 同族：转换器对目标布局/重排失明、权重按错误位置静默写入（TRN-0244 为 verl FP8 refit 同形状 MoE 重排失明）。'
+  source: https://github.com/NVIDIA/Megatron-LM/pull/9265
+  behavior: 用 GTP（权重重切）训练 SwiGLU/MoE 模型并把 ckpt 转换到不同 TP/GTP 组合时，转换出的 checkpoint 里 FC1 的 gate 行与 up 行部分放错位置（示例：四分之二的行互换区域）；转换不报错、大小正常，加载后模型看似能跑但权重已错位，loss 异常时很难怀疑到 ckpt 布局。
+  discovery: 2026-11-11 每日扫描
+migration:
+  method: scan
+  scanned: '2026-11-11'

@@ -4,17 +4,17 @@ slug: verl_rollout_tq_cache_drops_relabel
 aliases: []
 title: verl rollout_tq 缓存重放丢轨迹并跨会话改标
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 数据管线
+  - subsystem: RL训练回路
     stack: verl
     component: RolloutTqSkip 重放
   behavior: 缓存重放循环把轨迹键硬编码 index=0 后缀，并按新 prompt 数强行填 rollout.n 行、以循环计数当 session_id 选组——不读缓存键的真实 session/index 语义。
 effect:
   objects:
   - 训练样本流
-  detail: agentic RL 单会话多轨迹（压缩重放/子代理链）时 index>0 的缓存轨迹被静默丢弃，行内容跨会话改标（n=2 时会话 1 的轨迹被标成会话 1 的第 2 行），重放步训练数据错位。
+  detail: agentic RL 单会话产多条轨迹时，index>0 的缓存轨迹被静默丢弃；n=2 下 old_0_1 被重放为 new_1_0，即会话 0 的 index=1 轨迹被标为会话 1，old_0_2 与 old_1_0 丢失；重放尺寸由新 prompt 数推导，训练无报错但数据错位。
   visibility: 静默错误
 mitigation:
   detect: 缓存重放步对 dump 的键集合与重放产出键集合做全量 diff；单会话多轨迹回归（old_0_0..2+old_1_0）断言无丢行不错标
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-12'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 数据管线
+        to: RL训练回路
+    rewritten:
+    - detail

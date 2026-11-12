@@ -4,7 +4,7 @@ slug: verl_gspo_seq_is_includes_rejected_tokens
 aliases: []
 title: verl GSPO 序列 IS 比率混入被拒 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-12'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

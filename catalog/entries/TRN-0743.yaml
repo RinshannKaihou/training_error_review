@@ -4,13 +4,13 @@ slug: swift_streaming_resume_replays_consumed
 aliases: []
 title: ms-swift streaming resume 从头重放已训样本
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 数据管线
     stack: ms-swift
     component: _prepare_dataloader
-  behavior: streaming 分支构造 DataLoaderDispatcher 后直接早退返回，不传任何 resume 信息；已存在的 skip_batches 快进机制（非 streaming 路径在用）未接线。
+  behavior: streaming 分支在 build_streaming_dataloader 后直接 return，不带任何 resume 信息；skip_batches 快进基础设施已存在但不可达，构造 dispatcher 时未传入。
 effect:
   objects:
   - 训练样本流
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-12'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

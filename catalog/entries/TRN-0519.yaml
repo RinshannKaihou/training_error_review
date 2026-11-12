@@ -34,6 +34,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/merge_requests/13567
   kind: gitcode_pr
 relations: []
+pattern: PAT-TRN-0078
 original:
   mechanism: CANN ops-nn FastGeluGrad 的 arch35 反向实现先计算 -1.702*x，随后把该中间量与 sigmoid(x)-1 相乘。有限 FP32 输入接近最大值时，缩放中间量上溢为 ±Inf，再参与 0*Inf 最终输出 NaN，而对应导数数学上仍有限。报告者在 master 575953ec、真实 Ascend950PR、CANN 9.1.0 完整构建源码暂存 vendor 上验证：x=3.40282346639e38、dy=1 实际 NaN（独立 long-double 参考 1）；x=-3.40282346639e38、dy=1 实际 NaN（参考 0）；x=0/1/-1 及常规梯度正常。同一 ACLNN 客户端 3 个张量共 331 个输出元素中 150 个数值不符、181 个控制通过；SDK debug 确认加载本轮源码 vendor。golden.py 与 kernel 用同一不稳定运算顺序，测试 golden 也会漏检。修复 PR !13091（open）：s=1/(1+exp(-1.702*x)) 先形成有界乘积 s*(s-1)，再乘原始有限 x 和 -1.702，最后加 s、乘 dy；96 个子场景修复树全部通过（原版 48 失败）。
   source: https://gitcode.com/cann/ops-nn/issues/7727 + 修复 https://gitcode.com/cann/ops-nn/pull/13091
@@ -64,3 +65,6 @@ migration:
   - date: '2026-11-06'
     fields:
     - original.notes
+  - date: '2026-11-12'
+    fields:
+    - pattern

@@ -30,6 +30,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7977
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0079
 original:
   mechanism: 'cann/ops-nn #7977（2026-11-02 open）。foreach_log1p.cpp:25-31 Log1pAdapter：Adds(dstLocal, srcLocal, 1) 后 Log<T>(dstLocal, srcLocal)，InnerComputer::Compute 传 op(dataLocal, dataLocal, count) 别名 dst==src，实际算 log(fl(x+1))。fl(1+x) 在 |x|<ulp(1)/2 恒为 1（fp32 ulp(1)=1.19e-7、fp16 4.88e-4）→ 输出 0。三条旁证证明是缺陷非设计取舍：foreach_log10 注释明示 log 系拒绝别名 dst/src 并写了 out-of-place 类；foreach_log2 用 Log2<T,false>；log1p 自己的 arch35 SIMT 路径用 log1pf 正确。PyTorch 触达面：torch.log1p（单算子）对同输入正确、torch._foreach_log1p 错——优化器多参数组/foreach 优化路径直接命中。同日 UT 失效 issue #7998 佐证：foreach_log/Log1p/Log2 的 compare_data.py 无条件打印 PASSED 且 log1p golden 用 np.log(x+1) 与错误实现同源，本缺陷在 UT 层不可见。'
   source: cann/ops-nn https://gitcode.com/cann/ops-nn/issues/7977（open）
@@ -53,3 +54,6 @@ migration:
   - date: '2026-11-12'
     fields:
     - original.notes
+  - date: '2026-11-12'
+    fields:
+    - pattern

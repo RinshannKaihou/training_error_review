@@ -1,0 +1,207 @@
+{"job": "baseC|TRN-0729|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0728|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0730|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0728|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0731|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0728|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0732|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0729|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0730|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0732|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0731|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0735|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0730|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0729|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0733|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "优化器状态", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0733|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "优化器状态", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0735|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0737|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0732|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0734|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0734|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0738|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0734|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "静默错误"}, "attempts": 2}
+{"job": "baseC|TRN-0735|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0736|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}, "attempts": 2}
+{"job": "baseC|TRN-0738|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0738|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0739|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0740|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0737|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0739|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0739|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0742|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0741|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0741|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0743|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0740|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0741|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0742|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0733|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "优化器状态", "visibility": "数值异常"}}
+{"job": "baseC|TRN-0742|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0744|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0743|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "质量退化"}}
+{"job": "baseC|TRN-0743|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0745|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0745|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0744|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0737|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "质量退化"}, "attempts": 2}
+{"job": "baseC|TRN-0745|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0729|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "直绑原始 workspace 踩系统 mailbox", "evidence": "group 分支把原始 workspace 交 InitGroup……带 SyncAll 硬同步直绑会踩 mailbox（行为效应：group 分支可能踩跨核同步 mailbox）"}}], "attempts": 2}
+{"job": "baseC|TRN-0736|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0730|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0728|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0744|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0731|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "baseC|TRN-0736|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|TRN-0731|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0732|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0730|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "超 int32 范围的合法配置值回绕撞上真实类索引。", "evidence": "截断后的回绕值若等于某真实 target 类索引"}}]}
+{"job": "baseF|TRN-0728|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "950 regbase/wide 路径反向在 kernel 内用 x/w/init 状态重算 FP32 门值与隐状态再递推", "evidence": "在 950 系列 regbase 小形状路径与大形状 wide 路径中，FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再执行反向递推"}}]}
+{"job": "baseF|TRN-0733|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0729|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "group 分支直绑原始 workspace 踩系统 mailbox。", "evidence": "带 SyncAll 硬同步直绑会踩 mailbox。"}, "detail": {"problem": "overstated", "quote": "机制由随 PR 新增 UT 覆盖。", "evidence": "缺陷证据为源码定位+随 PR 新增 UT（RejectNonZeroDimProductOverflow 等），无端到端训练任务影响实测。"}}]}
+{"job": "baseF|TRN-0731|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0733|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0731|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0735|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|TRN-0740|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "质量退化"}}
+{"job": "baseF|TRN-0732|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "denom 大 g 小时中间商下溢为 0", "evidence": "两者数学等价但浮点不等价：denom 很大（如 1e20）、g 很小（如 1e-20）时，g/sqrt(denom)=1e-20/1e-10 先下溢为 0（fp32 最小正规约 1.2e-38，构造值已越过），update 静默变 0。"}}]}
+{"job": "baseF|TRN-0733|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0734|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "有限加数相加溢出直接输出 Inf", "evidence": "有限加数相加溢出时按加数减半、梯度加倍的二次幂缩放保留有限结果及真实 NaN/Inf 传播——旧算子包已复现单元素 0.25*(2^127+2^127) 错误输出 Inf（应有限 2^126）"}}]}
+{"job": "baseF|TRN-0732|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0736|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0735|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0737|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0735|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0734|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0738|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "step() 前窗口和相对最大误差", "evidence": "16 微步、梯度在 bf16 精确：stage2 误差 0，stage1 相对最大误差 2.4e-3"}}]}
+{"job": "baseF|TRN-0736|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0739|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0736|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0728|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "950 regbase/wide 路径反向在 kernel 内用 x/w/init 状态重算", "evidence": "在 950 系列 regbase 小形状路径与大形状 wide 路径中，FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再执行反向递推"}}]}
+{"job": "baseF|TRN-0729|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0734|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "有限加数相加溢出直接输出 Inf", "evidence": "旧算子包已复现单元素 0.25*(2^127+2^127) 错误输出 Inf（应有限 2^126）"}, "detail": {"problem": "mixed", "quote": "QAT 低比特量化 clamp 的梯度按错误公式静默计算", "evidence": "梯度按错误表达式静默计算"}}]}
+{"job": "baseF|TRN-0730|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0741|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0737|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0742|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0737|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0738|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "step() 前窗口和相对最大误差 2.4e-3", "evidence": "复现：tests/unit/v1/zero/test_zero_offload_accum_precision.py，16 微步、梯度在 bf16 精确：stage2 误差 0，stage1 相对最大误差 2.4e-3；同值在 a4c989b7 已存在（非 #9044 回归）。"}}]}
+{"job": "baseF|TRN-0740|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "策略可用一个类定义在全部 APPS/TACO call-based 题拿满奖励", "evidence": "（continuous=True，即无 sandbox_fusion_url 时默认路径）。RL 中这是策略可发现的奖励：一个类定义即可在全部 APPS/TACO 风 call-based 题拿满奖励。sandbox_fusion 路径未测"}}]}
+{"job": "baseF|TRN-0742|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0740|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0741|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0744|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0740|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "返回 __eq__ 恒 True 的 int/list 子类即可通过全部测试且 json.dumps 不报错。", "evidence": "实测：correct→True、wrong→0.0、always_equal_int/always_equal_list→True（continuous=True，即无 sandbox_fusion_url 时默认路径）"}, "detail": {"problem": "missing_condition", "quote": "正确答案 True、真错答案 0.0、_Any(int)/_Any(list) 恒等类均 True", "evidence": "实测：correct→True、wrong→0.0、always_equal_int/always_equal_list→True（continuous=True，即无 sandbox_fusion_url 时默认路径）"}}]}
+{"job": "baseF|TRN-0742|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0743|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "非 streaming 路径在用", "evidence": "非 streaming 路径用 consumed_samples 线程进 batch sampler；skip 基础设施已存在但不可达"}}]}
+{"job": "baseF|TRN-0744|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0739|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "被拒 token 反转全部幸存 token 的裁剪判定与损失幅度。", "evidence": "继续操纵序列 importance ratio 与幸存 token 的 clip 判定/损失幅度"}}]}
+{"job": "baseF|TRN-0745|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "n=2 时会话 1 的轨迹被标成会话 1 的第 2 行", "evidence": "在 n=2 下重放出 new_0_0=old_0_0、new_1_0=old_0_1，old_0_2 与 old_1_0 丢失、会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "baseF|TRN-0739|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0741|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0744|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "外部改 GA 提前发布不完整梯度", "evidence": "GA 增大时在重叠 DDP 同步下发布不完整梯度（可能出现多次 RS、DDP 梯度错）；GA 减小时 RS 延迟到 finalization"}}]}
+{"job": "baseF|TRN-0743|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "已存在的 skip_batches 快进机制（非 streaming 路径在用）未接线", "evidence": "原文：『非 streaming 路径用 consumed_samples 线程进 batch sampler；skip 基础设施已存在但不可达——DataLoaderDispatcher.__init__(skip_batches=0) 与 _skip_batches 已能按 world_size 基批快进，而 build_streaming_dataloader……构造 MegatronDataLoaderDispatcher 时不传 skip_batches』——原文说非 streaming 路径用的是 consumed_samples，skip 基础设施是『不可达』，并未说 skip_b"}}]}
+{"job": "baseF|TRN-0745|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "n=2 时会话 1 的轨迹被标成会话 1 的第 2 行", "evidence": "会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "baseF|TRN-0743|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "（非 streaming 路径在用）", "evidence": "非 streaming 路径用 consumed_samples 线程进 batch sampler；skip 基础设施已存在但不可达——DataLoaderDispatcher.__init__(skip_batches=0) 与 _skip_batches 已能按 world_size 基批快进，而 build_streaming_dataloader（swift/megatron/trainers/utils.py）构造 MegatronDataLoaderDispatcher 时不传 skip_batches。"}}]}
+{"job": "baseF|TRN-0738|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|TRN-0745|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "（n=2 时会话 1 的轨迹被标成会话 1 的第 2 行）", "evidence": "在 n=2 下重放出 new_0_0=old_0_0、new_1_0=old_0_1，old_0_2 与 old_1_0 丢失、会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "panelC|TRN-0728|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0728|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0729|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0728|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0729|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0729|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0730|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "损失计算", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0731|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0732|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0734|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0732|kimi-k3", "model": "kimi-k3", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"算子/内核\", \"effect\": \"数值结果、训练轨迹\", \"visibility\": \"静默错误\"}"}
+{"job": "panelC|TRN-0734|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0733|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "优化器状态", "visibility": "数值异常"}}
+{"job": "panelC|TRN-0730|kimi-k3", "model": "kimi-k3", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"算子/内核\", \"effect\": \"数值结果、梯度\", \"visibility\": \"静默错误\"}"}
+{"job": "panelC|TRN-0736|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0731|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0730|glm-5.3", "model": "glm-5.3", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"算子/内核\", \"effect\": \"训练信号、梯度\", \"visibility\": \"静默错误\"}"}
+{"job": "panelC|TRN-0737|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0738|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0739|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0734|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "梯度", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelC|TRN-0739|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0733|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}, "attempts": 2}
+{"job": "panelC|TRN-0737|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelC|TRN-0738|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0733|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "优化器状态", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0732|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0737|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0739|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0743|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0743|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0740|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0740|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0740|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练信号", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelC|TRN-0744|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0745|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0736|kimi-k3", "model": "kimi-k3", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"KV缓存\", \"effect\": \"KV状态; 隐状态\", \"visibility\": \"静默错误\"}"}
+{"job": "panelC|TRN-0736|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0738|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0743|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "数据管线", "effect": "训练样本流", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelC|TRN-0745|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0745|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "RL训练回路", "effect": "训练样本流", "visibility": "静默错误"}}
+{"job": "panelC|TRN-0744|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0728|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "950 regbase/wide 路径反向在 kernel 内用 x/w/init 状态重算 FP32 门值与隐状态再递推", "evidence": "在 950 系列 regbase 小形状路径与大形状 wide 路径中，FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再执行反向递推……同形状 FP32 通过"}}]}
+{"job": "panelF|TRN-0729|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0731|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0730|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "超 int32 范围的合法配置值回绕撞上真实类索引", "evidence": "截断后的回绕值若等于某真实 target 类索引；截断未撞号时行为可能与预期一致，问题随词表内容漂移出现/消失"}}]}
+{"job": "panelF|TRN-0731|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|TRN-0731|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelF|TRN-0730|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0728|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "反向在 kernel 内用 x/w/init 状态重算 FP32 门值与隐状态再递推，不消费调用方保存的前向状态，重算值与实际前向存在舍入差异", "evidence": "FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再执行反向递推，重算值与调用方实际保存的前向状态存在舍入差异（原文明确限定为 FP16/BF16 反向，且同形状 FP32 通过，字段去掉该限定使说法变宽）"}}]}
+{"job": "panelF|TRN-0731|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0732|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0732|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0729|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0733|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0728|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "950 regbase/wide 路径反向在 kernel 内用 x/w/init 状态重算 FP32 门值与隐状态再递推，不消费调用方保存的前向状态，重算值与实际前向存在舍入差异", "evidence": "FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再执行反向递推，重算值与调用方实际保存的前向状态存在舍入差异……同形状 FP32 通过"}}]}
+{"job": "panelF|TRN-0733|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0736|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0734|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0732|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0736|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0737|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0733|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0734|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0736|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0737|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0730|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "超 int32 范围的合法配置值回绕撞上真实类索引", "evidence": "截断后的回绕值若等于某真实 target 类索引，该类样本被误判为『需忽略』……截断未撞号时行为可能与预期一致"}}]}
+{"job": "panelF|TRN-0739|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0737|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0738|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0739|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0734|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0744|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0740|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0739|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0729|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0744|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0744|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0738|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0740|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|TRN-0743|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "（非 streaming 路径在用）", "evidence": "skip 基础设施已存在但不可达——DataLoaderDispatcher.__init__(skip_batches=0) 与 _skip_batches 已能按 world_size 基批快进；非 streaming 路径用 consumed_samples 线程进 batch sampler"}}]}
+{"job": "panelF|TRN-0745|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "（n=2 时会话 1 的轨迹被标成会话 1 的第 2 行）", "evidence": "缓存组 [old_0_0,old_0_1,old_0_2,old_1_0]（会话 0 三条+会话 1 一条）在 n=2 下重放出 new_0_0=old_0_0、new_1_0=old_0_1，old_0_2 与 old_1_0 丢失、会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "panelC|TRN-0744|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "梯度", "visibility": "静默错误"}}
+{"job": "panelF|TRN-0745|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "n=2 时会话 1 的轨迹被标成会话 1 的第 2 行", "evidence": "在 n=2 下重放出 new_0_0=old_0_0、new_1_0=old_0_1，old_0_2 与 old_1_0 丢失、会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "panelF|TRN-0743|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "skip_batches 快进机制（非 streaming 路径在用）", "evidence": "（非 streaming 路径用 consumed_samples 线程进 batch sampler）；skip 基础设施已存在但不可达"}}]}
+{"job": "panelF|TRN-0738|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "step() 前窗口和相对最大误差 2.4e-3", "evidence": "16 微步、梯度在 bf16 精确：stage2 误差 0，stage1 相对最大误差 2.4e-3；实测窗口和相对最大误差 2.4e-3（ZeRO-2 同配置为 0）"}}]}
+{"job": "panelF|TRN-0745|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "n=2 时会话 1 的轨迹被标成会话 1 的第 2 行", "evidence": "new_1_0=old_0_1，old_0_2 与 old_1_0 丢失、会话 0 的第 1 条被标为会话 1"}}]}
+{"job": "panelF|TRN-0740|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "返回 __eq__ 恒 True 的 int/list 子类即可通过全部测试", "evidence": "实测：……（continuous=True，即无 sandbox_fusion_url 时默认路径）……sandbox_fusion 路径未测；【触发面】verl prime_code 计分 + call-based 任务（fn_name）+ 无 sandbox_fusion_url"}}]}
+{"job": "panelF|TRN-0743|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "（非 streaming 路径在用）", "evidence": "（非 streaming 路径用 consumed_samples 线程进 batch sampler）；skip 基础设施已存在但不可达——……而 build_streaming_dataloader……不传 skip_batches"}}]}
+{"job": "fix|TRN-0728", "model": "qwen3.8-max", "result": {"behavior": "950 系列 regbase 小形状与大形状 wide 路径下，FP16/BF16 反向此前在 kernel 内用 x/w/init_h/init_c/b 重算 FP32 门值与状态再递推，与调用方保存的前向状态存在舍入差异。"}}
+{"job": "fix|TRN-0743", "model": "qwen3.8-max", "result": {"behavior": "streaming 分支在 build_streaming_dataloader 后直接 return，不带任何 resume 信息；skip_batches 快进基础设施已存在但不可达，构造 dispatcher 时未传入。"}}
+{"job": "fix|TRN-0745", "model": "qwen3.8-max", "result": {"detail": "agentic RL 单会话产多条轨迹时，index>0 的缓存轨迹被静默丢弃；n=2 下 old_0_1 被重放为 new_1_0，即会话 0 的 index=1 轨迹被标为会话 1，old_0_2 与 old_1_0 丢失；重放尺寸由新 prompt 数推导，训练无报错但数据错位。"}}
+{"job": "verify|TRN-0728|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0728|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0745|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0743|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0743|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|TRN-0745|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

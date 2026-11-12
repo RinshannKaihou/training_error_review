@@ -4,7 +4,7 @@ slug: meg_gtp_external_ga_incomplete_gradient
 aliases: []
 title: Megatron GTP 外部改 GA 提前发布不完整梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-12'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem

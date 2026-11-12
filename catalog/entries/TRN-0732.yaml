@@ -4,7 +4,7 @@ slug: sparse_adadelta_division_order_underflow
 aliases: []
 title: SparseApplyAdadelta 先除后乘中间量下溢
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 优化器
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0519
+pattern: PAT-TRN-0078
 original:
   mechanism: 'cann/ops-nn issue #8581（2026-11-11 open，Ascend 950）。SparseApplyAdadelta kernel 侧 update 计算为 sqrtf(numer)*(g/sqrtf(denom))——先做除法再做乘法；README 公式与 TensorFlow 参考实现为 (sqrt(numer)/sqrt(denom))*g。两者数学等价但浮点不等价：denom 很大（如 1e20）、g 很小（如 1e-20）时，g/sqrt(denom)=1e-20/1e-10 先下溢为 0（fp32 最小正规约 1.2e-38，构造值已越过），update 静默变 0。同 issue 另报 tiling 对 kCount/varShapeSize 无负值与乘法溢出校验（核数计算窄位宽）、infershape 对 var/accum/accum_update/grad/indices 秩与形状一致性无校验，非法输入不返回 GRAPH_FAILED 而是继续执行，存在越界与结果错误风险。来源：https://gitcode.com/cann/ops-nn/issues/8581 。训练面：稀疏 Adadelta 用于嵌入行稀疏更新，长跑后 accum 增大、grad 变小的组合可命中下溢区，更新静默归零。'
   source: https://gitcode.com/cann/ops-nn/issues/8581
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-12'
+  updates:
+  - date: '2026-11-12'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem

@@ -3,31 +3,31 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 725 条；状态：active 725
+共 743 条；状态：active 725、pending_audit 18
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 215 |
+| 算子/内核 | 218 |
 | 编译器 | 41 |
 | 运行时/执行 | 19 |
 | 集合通信 | 14 |
-| 并行切分 | 38 |
+| 并行切分 | 40 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
 | 输出解析 | 2 |
 | 解码/采样 | 3 |
-| 量化 | 30 |
+| 量化 | 31 |
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
-| 模型定义 | 15 |
-| 权重/检查点 | 36 |
-| 数据管线 | 40 |
-| 优化器 | 47 |
-| 损失计算 | 29 |
+| 模型定义 | 16 |
+| 权重/检查点 | 37 |
+| 数据管线 | 42 |
+| 优化器 | 49 |
+| 损失计算 | 31 |
 | MoE路由 | 29 |
 | 重计算/卸载 | 21 |
-| RL训练回路 | 88 |
+| RL训练回路 | 92 |
 | 观测/评测 | 23 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -1204,7 +1204,7 @@
 - **影响对象**：数值结果；隐状态；训练信号（静默错误）
 - **影响详情**：极端数值输入下 BN 前向/训练更新精度崩坏：rstd 清零后输出 y 精确等于 offset；inf 输入把 NaN 写进滚动统计扩散到后续 batch；方差抵消使更新结果与 golden 不一致。无报错。
 - **改进措施**：检测 BN 输出 golden 对拍覆盖 var+eps∈(8.5e37,3.4e38]、x==mean（含 ±inf）、square_sum≈(sum/num)² 三类输入；修复 修复 MR https://gitcode.com/cann/ops-nn/pull/12611 已 merged（2026-10-26，随 ops-nn 后续发布，版本未核实）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7314；https://gitcode.com/cann/ops-nn/pull/12611
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7314；https://gitcode.com/cann/ops-nn/pull/12611；https://gitcode.com/cann/ops-nn/merge_requests/14219
 
 ### TRN-0456 `inplace_adagrad_v2_tail_accum_and_tiling_overflow` AdagradV2 尾块 accum 错值与 tiling 溢出
 
@@ -2272,7 +2272,7 @@
 - **原因行为**：A5 FAG（FlashAttentionGrad）dropout 场景 seed 或 offset 大于 2^31 时精度异常；int64 截断疑点由修复 PR 标题「preserve int64」指向，issue 未展开根因。
 - **影响对象**：梯度（静默错误）
 - **影响详情**：seed/offset>2^31 的 dropout 反向精度异常（950DT 实测，现象截图）；随机性掩码与 forward 不一致时梯度偏离，无报错。
-- **改进措施**：检测 dropout 反向与固定 seed CPU 对账；seed/offset>2^31 边界用例。；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486（open 2026-11-07）：preserve int64 dropout seed and offset on Ascend950；二级冒烟+算子泛化验证。未发布。
+- **改进措施**：检测 dropout 反向与固定 seed CPU 对账；seed/offset>2^31 边界用例。；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486 已 merged（2026-11-10）：preserve int64 dropout seed and offset on Ascend950；随 ops-transformer 后续发布，版本未核实
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7226；https://gitcode.com/cann/ops-transformer/merge_requests/15486
 
 ### TRN-0663 `celu_subnormal_ftz_expm1_rounding` Celu 次正规 FTZ 与近零 expm1 双舍入错值
@@ -2592,6 +2592,39 @@
 - **影响详情**：A5/950PR 实测：GroupNorm 反向空输入非空输出（N=0 或 HW=0）且 dy/x=fp16/bf16、mean/rstd/gamma=fp32 的 mix 组合下，dgamma/dbeta 每元素只写一半字节，后 16B 为未定义内存，对拍精度 50%；同 dtype 组合正常。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/14117 （open，未发布）
 - **来源**：https://gitcode.com/cann/ops-nn/pull/14117
+
+### TRN-0728 `lstm_backward_recompute_rounding_divergence` SingleLayerLstmGrad 反向重算前向门值舍入分叉
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：算子/内核 / cann / SingleLayerLstmGrad 反向重算
+- **原因行为**：950 regbase/wide 路径反向在 kernel 内用 x/w/init 状态重算 FP32 门值与隐状态再递推，不消费调用方保存的前向状态，重算值与实际前向存在舍入差异。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：FP16/BF16 反向 dw/db 参数梯度超精度限值：仓内注释实测 T=64 B=2 I=128 H=128 bfloat16 下 dw mare=11.4、db=14.9（限值 2.0，FP32 通过），无报错，带偏梯度进优化器。
+- **改进措施**：检测 bf16 LSTM 反向 dw/db 与「消费保存前向状态」的参考实现对账；固定形状 bf16 用例做 mare 看护；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14259（open）：移除 kernel 内前向重算、改为消费调用方保存状态并在公共 dtype 边界显式舍入，FP32 加跨块舍入残差补偿；未发布
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8641；https://gitcode.com/cann/ops-nn/merge_requests/14259
+
+### TRN-0729 `gntraining_reduce_tiling_wrap_mask_fail` GNTrainingReduce tiling 回绕与补偿归约掩码失效
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：算子/内核 / cann / GNTrainingReduce
+- **原因行为**：tiling 预算判定写成乘法式比较且无元素总数门限，超大 shape 乘积在 int64 回绕后静默放过；Σx 补偿归约尾块掩码在 shape 特化编译产物中整块失效；group 分支直绑原始 workspace 踩系统 mailbox。
+- **影响对象**：数值结果；训练信号（静默错误）
+- **影响详情**：GroupNorm 训练统计量（补偿 two-sum 归约）在尾块路径（rProd%8==0 且 <64）数值算错、超大 shape 产出回绕 tiling 的错误执行计划，均无报错；机制由随 PR 新增 UT 覆盖。
+- **改进措施**：检测 对尾块形状（rProd 非整向量宽）与超长归约轴用例做与 fp64 参考的对账；tiling 输入做元素总数上限断言；修复 加固 PR https://gitcode.com/cann/ops-nn/pull/14145（open）：tiling 溢出校验、尾项标量 two-sum 续算+编译期常量掩码、group 分支绑定用户 workspace 起始地址；未发布
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8599；https://gitcode.com/cann/ops-nn/pull/14145
+
+### TRN-0735 `concatv2_infershape_pointer_base_misjudge` ConcatV2 InferShape 指针比较误判基底漏加轴维
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：算子/内核 / cann / concat_v2 infershape 基底
+- **原因行为**：推导 concat 维大小时以实例指针相等（shapeI==baseShape）识别并跳过基底，运行时同形多输入 desc 同源共享同一 ge::Shape 对象时后续输入被误判为基底跳过求和。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：输出 concat（axis）维尺寸漏加：两输入 {16,4,8} 沿 axis=2 拼接，正确输出 16、实际推导 8——图编译按偏小 shape 推导/分配，无报错。
+- **改进措施**：检测 同形多输入 ConcatV2 图构图后断言输出 axis 维=各输入之和；对比 eager 路径输出 shape；修复 修复 PR https://gitcode.com/cann/ops-math/merge_requests/7301（open WIP）：基底识别改按索引 baseIdx，求和循环按 i==baseIdx 跳过
+- **来源**：https://gitcode.com/cann/ops-math/issues/4685；https://gitcode.com/cann/ops-math/merge_requests/7301
 
 ## 编译器
 
@@ -3867,6 +3900,28 @@
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9124
 - **关联**：var:TRN-0286
 
+### TRN-0738 `ds_zero1_window_sum_comm_dtype_rounding` DeepSpeed ZeRO-1 窗口和在归约前舍入到通信 dtype
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：并行切分 / deepspeed / ZeRO-1 allreduce_bucket
+- **原因行为**：ZeRO-1+16bit 模型+fp32 梯度累积时，fp32 窗口和在 all-reduce 边界被一次性舍入到 communication_data_type（默认随模型 bf16），累积精度丢弃。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：16 个微步、梯度本身在 bf16 精确的构造下，step() 前窗口和相对最大误差 2.4e-3（ZeRO-2 同配置为 0；a4c989b7 起既有，非 #9044 回归）。
+- **改进措施**：检测 对 ZeRO-1 fp32 累积配置在 step() 前读取窗口和与 fp64 参考对账（tests/unit/v1/zero/test_zero_offload_accum_precision.py 已有该测试形态）；修复 待定（issue open；提案：communication_data_type 未显式设置时 ZeRO-1 按 gradient_accumulation_dtype 归约，显式设置保留现义——代价是这些配置 all-reduce 字节翻倍）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9047
+
+### TRN-0744 `meg_gtp_external_ga_incomplete_gradient` Megatron GTP 外部改 GA 提前发布不完整梯度
+
+`故障` · `pending_audit` · `rl；shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：并行切分 / megatron-lm / GTP 输出头梯度累积优化
+- **原因行为**：输出头梯度累积优化假设反向贡献数恒定，microbatch calculator 显示固定调度或未初始化时复用上一迭代计数触发提前归约；外部 RL 框架改 GA 不更新该 calculator，假设被打破。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：GA 增大时在重叠 DDP 同步下发布不完整梯度（可多次 RS、DDP 梯度错），GA 减小时归约延迟到 finalization——RL+GTP 训练梯度静默错或同步退化。
+- **改进措施**：检测 外部改 GA 的回归（2→4 带重叠 DDP）比对梯度与逐份累积参考；GTP+RL 下监控每步 RS 次数；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9349（open）：改为在当前累积窗口内正向计数，非流水 schedule 自动在最后一次 backward 前调 finish_gtp_wgrad_forward() 保早归约与重叠；含外部改 GA（2→4）回归测试
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9349
+
 ## KV缓存
 
 ### TRN-0346 `msllm_kvcompress_fp32_compressor_recursed_cast` MindSpeed-LLM kv-compress 误压 fp32 权重
@@ -4306,6 +4361,17 @@
 - **改进措施**：检测 按资料 dtype 表构造全组合首段返回码扫描。；修复 待定：issue open（2026-11-07），复核基线 d1efef7c30 缺陷仍在（x/scales 支持列表含 DT_FLOAT），未见修复 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8379
 
+### TRN-0734 `actulq_clampmin_grad_formula_error` ActULQClampMinGrad 公式实现错误输出 Inf
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：量化 / cann / ActULQClampMinGrad 公式
+- **原因行为**：原 mask 计算公式实现有误（未统一为 sum(y_grad*(x_clamped_loss+abs(clamp_min_mask)))），FP32 严格三方比较有舍入误差，有限加数相加溢出直接输出 Inf。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：QAT 低比特量化 clamp 的梯度按错误公式静默计算；旧算子包实测单元素 0.25*(2^127+2^127) 错误输出 Inf（应为有限 2^126），NaN/Inf 传播语义未定义。
+- **改进措施**：检测 clamp 梯度与修正后动态公式的三方参考（torch/TF）对账；单元素大值哨兵用例（0.25*(2^127+2^127) 应有限）；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14168（open，CANNBot）：统一动态公式、TwoSum/FMA 高低位补偿、加数减半梯度加倍二次幂缩放保有限结果、跨核归约部分和；GPU 三方 4/4、NPU 22 项定向回归通过；未发布
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/14168
+
 ## 位置编码
 
 ### TRN-0055 `config_default_swallows_cli_override` Megatron VLM 入口漏传 --rotary-base
@@ -4669,6 +4735,17 @@
 - **影响详情**：触发条件为 BF16 参数、eager（未编译）路径：门控值带 ~2^-8 量级系统性偏差，与参考实现/编译路径数值不一致；训练不报错、loss 看不出异常，编译路径不受影响。维护者修复 PR 在 H20-3e 验证为真实精度缺陷而非预期舍入；无本地复现，置信度 documented。
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9257 （open，未合入）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9129；https://github.com/NVIDIA/Megatron-LM/pull/9257
+
+### TRN-0736 `verl_linear_attn_packing_state_leak` verl 线性注意力 packing 无 FLA 时状态跨样本泄漏
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：模型定义 / verl / qwen3_5 packing 分发
+- **原因行为**：_call_accepts_kwarg 见 transformers 纯 PyTorch 实现签名带 **kwargs 即判可传 cu_seqlens，传入后被静默吞掉，逐样本切分路径被跳过。
+- **影响对象**：跨请求/跨样本数据；输出分布（静默错误）
+- **影响详情**：packed 微批被当一个序列，门控 delta 网络循环状态从一样本带入下一样本：单层对照后续样本相对误差 20%~90%+，trainer/rollout logprob 不再一致，训练无告警继续。
+- **改进措施**：检测 step 1（未更新策略）校验 trainer/rollout logprob 一致性；packed vs 逐样本调用对照；FLA 可用性启动期显式检查；修复 待定（issue open；规避=安装 FLA 或禁用 remove_padding；触发环境 Ascend NPU 无 FLA Triton 内核）
+- **来源**：https://github.com/verl-project/verl/issues/8629
 
 ## 权重/检查点
 
@@ -5078,6 +5155,17 @@
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9265 （open，未合入）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9265
 - **关联**：var:TRN-0244
+
+### TRN-0737 `verl_model_only_resume_stale_main_params` verl 只载模型 resume 首步以初始权重覆盖 ckpt
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：权重/检查点 / verl / MegatronCheckpointManager
+- **原因行为**：load_contents 不含 optimizer 时只加载模型分片，不调 optimizer.reload_model_params，混精下优化器 FP32 main params 仍是建优化器时的初始权重。
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：resume 后首个 optimizer.step() 用陈旧 main params 把刚加载的 ckpt 权重覆盖为『初始权重+一步』；无报错，actor/lr、loss、grad norm 均显示正常。
+- **改进措施**：检测 resume 后第一步前后各 dump 一步参数范数与 ckpt 对照；model-only resume 后首个 step 的权重与 ckpt 差应仅为一步更新量；修复 修复 PR https://github.com/verl-project/verl/pull/8605（open）：model-only resume 后 reload optimizer params；未合入
+- **来源**：https://github.com/verl-project/verl/issues/8604
 
 ## 数据管线
 
@@ -5533,6 +5621,28 @@
 - **改进措施**：检测 启动后断言 padded_vocab_size >= tokenizer.vocab_size；抽查高频 token 嵌入非零率；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9209 （closed 2026-11-09，"Reject a padded vocabulary smaller than the tokenizer's"；合入未核实）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9149
 - **关联**：var:TRN-0086
+
+### TRN-0743 `swift_streaming_resume_replays_consumed` ms-swift streaming resume 从头重放已训样本
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：数据管线 / ms-swift / _prepare_dataloader
+- **原因行为**：streaming 分支构造 DataLoaderDispatcher 后直接早退返回，不传任何 resume 信息；已存在的 skip_batches 快进机制（非 streaming 路径在用）未接线。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：断点续训把流从位置 0 重启，静默重训上次 ckpt 以来全部样本：生产实测 1200 步间隔 ~74 分钟数据/rank 被重放，唯一症状是 resume 后 loss 回退。
+- **改进措施**：检测 resume 后首个 batch 与 ckpt 时消费位置对账；监控 resume 后 loss 是否出现回退跳变；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10520（open）：streaming 路径接 skip_batches 快进
+- **来源**：https://github.com/modelscope/ms-swift/issues/10519；https://github.com/modelscope/ms-swift/pull/10520
+
+### TRN-0745 `verl_rollout_tq_cache_drops_relabel` verl rollout_tq 缓存重放丢轨迹并跨会话改标
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：数据管线 / verl / RolloutTqSkip 重放
+- **原因行为**：缓存重放循环把轨迹键硬编码 index=0 后缀，并按新 prompt 数强行填 rollout.n 行、以循环计数当 session_id 选组——不读缓存键的真实 session/index 语义。
+- **影响对象**：训练样本流（静默错误）
+- **影响详情**：agentic RL 单会话多轨迹（压缩重放/子代理链）时 index>0 的缓存轨迹被静默丢弃，行内容跨会话改标（n=2 时会话 1 的轨迹被标成会话 1 的第 2 行），重放步训练数据错位。
+- **改进措施**：检测 缓存重放步对 dump 的键集合与重放产出键集合做全量 diff；单会话多轨迹回归（old_0_0..2+old_1_0）断言无丢行不错标；修复 待定（issue open；触发功能 skip.rollout_tq.enable=True + action=cache + steps 含该步）
+- **来源**：https://github.com/verl-project/verl/issues/8651
 
 ## 优化器
 
@@ -6067,6 +6177,30 @@
 - **来源**：https://github.com/deepspeedai/DeepSpeed/pull/9030
 - **关联**：var:TRN-0472
 
+### TRN-0732 `sparse_adadelta_division_order_underflow` SparseApplyAdadelta 先除后乘中间量下溢
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-12
+
+- **原因对象**：优化器 / cann / SparseApplyAdadelta
+- **原因行为**：update 按 sqrtf(numer)*(g/sqrtf(denom)) 先除后乘，与 README/TF 参考 (sqrt(numer)/sqrt(denom))*g 浮点不等价，denom 大 g 小时中间商下溢为 0。
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：构造 denom=1e20、g=1e-20 时 g/sqrt(denom) 中间结果下溢为 0，update 静默变 0（参考非 0），稀疏嵌入行更新被吞；同 issue 另有 tiling/infershape 缺校验的越界风险。
+- **改进措施**：检测 极小 grad/极大 accum 组合与 TF 参考对账 update 是否为 0；长时间训练后 update 范数监控；修复 待定（issue open，未见修复 PR；期望按参考公式 (sqrt(numer)/sqrt(denom))*g 计算）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8581
+- **关联**：var:TRN-0519
+
+### TRN-0733 `addsign_mout_beta_cancellation_nan` InplaceApplyAddSign 结合序消光与 Inf 抵消 NaN
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-12
+
+- **原因对象**：优化器 / cann / InplaceApplyAddSign 求值序
+- **原因行为**：m_out 未按 beta 域自适应选择结合序，大幅值合法输入下出现灾难性消光点与 Inf+(-Inf)=NaN 精度失真；同批加固含非连续存储静默错映射等 P1。
+- **影响对象**：优化器状态（静默错误）
+- **影响详情**：大动态范围合法输入的 AddSign 更新中动量 m_out 精度失真或产出 NaN，无报错写入优化器状态并传到后续步；TF golden 三方对账 272 例覆盖。
+- **改进措施**：检测 大幅值合法输入（含 +Inf/-Inf 混合）与 TensorFlow 参考逐元素对账 m_out/update；beta 域边界用例；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14267（open，Closes #8648）：m_out 按 beta 域自适应选择结合序消除消光点；附 tiling 健壮性、Host 校验、AutoContiguous、UT/golden 资产；未发布
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/14267；https://gitcode.com/cann/ops-nn/issues/8648
+- **关联**：var:TRN-0519
+
 ## 损失计算
 
 ### TRN-0015 `low_precision_absorption_slingshot` 低精度浮点吸收使正确类梯度归零，引发 Slingshot loss spike
@@ -6400,6 +6534,29 @@
 - **改进措施**：检测 同数据 CP=1/CP=2 梯度对拍；packed/masked 序列下改微批划分对比 MTP 梯度；修复 #9048（closed 2026-11-06）：forward_step_calc_loss 对 CP 组求和 count、loss 乘 CP size（与 #7513 同改、冲突关系未核实）；#8997（closed 2026-11-04）：opt-in --mtp-normalize-loss-by-main-tokens（默认关）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9048；https://github.com/NVIDIA/Megatron-LM/pull/8997
 - **关联**：var:TRN-0173
+
+### TRN-0730 `ce_loss_ignoreindex_int32_truncation` CE loss ignoreIndex 截断误吞合法 target
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：损失计算 / cann / cross_entropy_loss 路径
+- **原因行为**：arch35 FullLoad 与 BigC 路径把 ignoreIndex 按 int32 截断后与 target 比较，超 int32 范围的合法配置值回绕撞上真实类索引。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：大词表/字节级词表场景 ignoreIndex 取超 int32 值时被截断，被截断值恰为某真实类索引的话该类全部样本被静默当作 ignore 从 loss 与梯度中剔除。
+- **改进措施**：检测 ignoreIndex 配置超 int32 的用例做 loss 与逐类梯度贡献对账；FullLoad/BigC + int32/int64 target 回归；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14223（open）：FullLoad 对 int64 target 用 64 位比较、int32 加超范围保护并在 Gather 前屏蔽；BigC 用 int64 保存 ignoreIndex；新增回归用例，未执行上板 ST；未发布
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/14223
+
+### TRN-0731 `soft_margin_loss_log1p_small_e_zero` SoftMarginLoss log(1+e) 小值退化为 0
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-12
+
+- **原因对象**：损失计算 / cann / soft_margin_loss Adds+Log
+- **原因行为**：kernel 以 Adds(1)+Log 组合实现 log(1+e)，e 极小时 fl(1+e) 舍入为 1、log 结果退化为精确 0，未用 log1p 语义。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：实测 x=1e-8、y=-1 时 ascend 输出 0.000000，numpy log1p 参考为 1e-08；e=inf 时行为亦不正确——小值段 loss 贡献被静默清零。
+- **改进措施**：检测 小值段（-x*y 极小）与 e=inf 用例和 numpy log1p 参考对账；reduction=none 逐元素比较；修复 待定（issue open，未见修复 PR；期望 kernel 侧改 log1p 语义：e 极小返回精确 log1p(e)、e=inf 返回 inf）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8580
+- **关联**：var:TRN-0604
 
 ## MoE路由
 
@@ -7964,6 +8121,51 @@
 - **影响详情**：AsyncGRPO 训练带长共享前缀（system prompt/工具 schema）时，权重同步后 rollout 仍用最初权重算出的前缀 KV；实测 KL 虚高 80 倍（0.082 vs 0.0010）、采样掩码错误率 3.2%；训练照常、指标看似合理，on-policy 假设被静默破坏。
 - **改进措施**：检测 待定；修复 待定（SkyRL/prime-rl 的 cache_salt 方案可借鉴；TRL 侧未见修复 PR）
 - **来源**：https://github.com/huggingface/trl/issues/8212
+
+### TRN-0739 `verl_gspo_seq_is_includes_rejected_tokens` verl GSPO 序列 IS 比率混入被拒 token
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：RL训练回路 / verl / compute_policy_loss_gspo
+- **原因行为**：序列级 importance ratio 在 rollout-correction 权重应用前对全部有效 token 求均值，IcePop 置 0 的 token 的 log-ratio 仍进入序列 KL 均值。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：复现：1 个被拒 token（log-ratio +3.0）使序列 IS 均值 0.75（正确 0），pg_loss -0.90（应 -1.00）、pg_clipfrac 1.00（应 0.00）——被拒 token 反转全部幸存 token 的裁剪判定与损失幅度。
+- **改进措施**：检测 rollout_correction 开启时对 IS 权重为 0 的 token 构造单边复现（序列其余 token on-policy）断言 clipfrac=0；单测化 seq IS 只含幸存 token；修复 待定（issue open；同语义问题在 GMPO/geo_mean #8406 已由 PR #8421 修复，GSPO 路径未同步）
+- **来源**：https://github.com/verl-project/verl/issues/8636
+
+### TRN-0740 `verl_prime_code_eq_spoof_full_reward` verl prime_code 被 __eq__ 恒真答案骗满奖励
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：RL训练回路 / verl / prime_code run_test
+- **原因行为**：call-based 任务以 output == expected 判定且答案对象在 == 左侧，返回 __eq__ 恒 True 的 int/list 子类即可通过全部测试且 json.dumps 不报错。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：compute_score 实测：正确答案 True、真错答案 0.0、_Any(int)/_Any(list) 恒等类均 True——策略可用一个类定义在全部 APPS/TACO call-based 题拿满奖励，奖励涨能力掉。
+- **改进措施**：检测 奖励沙箱内注入 __eq__ 恒真哨兵答案断言得 0 分；对 call-based 任务监控答案源码含 __eq__ 定义的样本；修复 待定（issue open；sandbox_fusion 路径是否同判未测；continuous=False 时失败答案还会 UnboundLocalError）
+- **来源**：https://github.com/verl-project/verl/issues/8656
+
+### TRN-0741 `orl_grade_answer_equal_marked_wrong` OpenRLHF grade_answer 数学等价答案判错
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-12
+
+- **原因对象**：RL训练回路 / openrlhf / grade_answer_sympy 短路
+- **原因行为**：元素循环里双侧分数形式走 gt_elem==given_elem 字符串比较、单侧整数字面量直接判 False，两分支都在 are_equal_under_sympy 符号等价判定之前短路。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：实测 2/4 vs 1/2、8/2 vs 4、2*2 vs 4、sqrt(4) vs 2、0.5+0.5 vs 1 全判 False——数学 RLVR 中写法不同的正确答案得零奖励，模型学到形式大于值。
+- **改进措施**：检测 等价形式答案对（分数/根号/算式）作为 grader 回归用例；抽查零奖励样本里 sympy 可证等价的比例；修复 修复 PR https://github.com/OpenRLHF/OpenRLHF/pull/1395（open）：短路前先符号化归约，9**9**9 指数防护不变
+- **来源**：https://github.com/OpenRLHF/OpenRLHF/issues/1394；https://github.com/OpenRLHF/OpenRLHF/pull/1395
+
+### TRN-0742 `orl_k3_cancellation_zero_gradient` OpenRLHF k3 KL 相减消去把梯度舍入为 0
+
+`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-12
+
+- **原因对象**：RL训练回路 / openrlhf / k3 KL 估计器
+- **原因行为**：actor 与参考 logprob 接近时 k3 的 FP32 表达式 exp(-d)-1+d 发生相减消去，前向值变负或梯度舍入为 0。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：CPU 复现：k3 从 -4.47e-8 修到 +1.36e-13（FP64 参考同值）；KL 项梯度由 0 变 -2.98e-11 与 FP64 一致——近 on-policy 时 KL 正则静默失效或符号错。
+- **改进措施**：检测 k3 对近零 d 的 FP64 参考回归（近 on-policy 用例）；KL 系数非零但 KL 梯度范数恰为 0 的告警；修复 修复 PR https://github.com/OpenRLHF/OpenRLHF/pull/1406（open）：改 expm1(-d)+d，|d|<1e-3 用三阶泰勒展开稳定前向值与梯度；62 CPU 测试通过
+- **来源**：https://github.com/OpenRLHF/OpenRLHF/pull/1406
+- **关联**：var:TRN-0510
 
 ## 观测/评测
 

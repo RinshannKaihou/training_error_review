@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: dropout 反向与固定 seed CPU 对账；seed/offset>2^31 边界用例。
-  fix: 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486（open 2026-11-07）：preserve int64 dropout seed and offset on Ascend950；二级冒烟+算子泛化验证。未发布。
+  fix: 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/15486 已 merged（2026-11-10）：preserve int64 dropout seed and offset on Ascend950；随 ops-transformer 后续发布，版本未核实
 labels:
   stage:
   - shared
@@ -38,6 +38,8 @@ original:
   behavior: NPU（Ascend 950DT）上训练/调用带 dropout 的 FlashAttentionGrad：当传入的 seed 或 offset 超过 2^31（int64 大值）时该算子输出精度异常（实测截图），常规小 seed 正常。无报错；dropout 掩码若与 forward 不一致，反向梯度被静默带偏，训练表现为 loss/质量劣化而非崩溃。
   trigger_surface: CANN ops-transformer FAG dropout + seed/offset>2^31；Ascend950DT 实测；修复 !15486 open 未合
   discovery: 2026-11-08 每日扫描
+  notes:
+  - 2026-11-12 2026-11-12 回访：!15486 已 merged（批次索引 2026-11-10）。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -55,3 +57,8 @@ migration:
       visibility:
         from: 质量退化
         to: 静默错误
+  updates:
+  - date: '2026-11-12'
+    fields:
+    - mitigation.fix
+    - original.notes

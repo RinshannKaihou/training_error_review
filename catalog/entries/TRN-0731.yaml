@@ -40,6 +40,8 @@ original:
   behavior: 在 950 上训练用 SoftMarginLoss：当样本被分得很对（-x*y 大、e=exp(-x*y) 极小，训练后期常态）时，该样本的 log(1+e) 项在 NPU 上直接算成 0（正确值≈e，如实测 1e-8 算成 0.000000）；无报错，易样本的损失贡献被静默清零，loss 数值系统性偏低，e=inf 极值行为也不正确。
   trigger_surface: Ascend 950；aclnnSoftMarginLoss reduction=none 小值段与 e=inf；issue open 无修复 PR
   discovery: 2026-11-12 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：源 issue #8580 已 closed，未见关联修复 MR；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-12'
     fields:
     - pattern
+  - date: '2026-11-13'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-12
     base:

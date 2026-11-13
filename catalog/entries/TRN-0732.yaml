@@ -39,6 +39,8 @@ original:
   behavior: 用 SparseApplyAdadelta 训练嵌入时，若某行的 accum_update（denom）已很大而梯度很小（长跑后期常见组合），该行 update 的中间商 g/sqrt(denom) 在 fp32 下溢为 0，整步更新静默变 0——不报错、loss 无异常，但这些行的权重从此停止有效更新；构造值（denom=1e20、g=1e-20）已复现该路径，与 TF 参考实现不等价。
   trigger_surface: Ascend 950；SparseApplyAdadelta update 公式，denom 极大 × g 极小组合；issue open 无修复 PR
   discovery: 2026-11-12 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：源 issue #8581 已 closed，未见关联修复 MR；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -46,6 +48,9 @@ migration:
   - date: '2026-11-12'
     fields:
     - pattern
+  - date: '2026-11-13'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-12
     base:

@@ -38,6 +38,8 @@ original:
   behavior: 图模式（GEIR）下对多个 shape 完全相同的张量做 ConcatV2 时：若这些输入的描述符同源共享同一个 Shape 对象，推导出的输出 shape 的拼接维会少加一份（如两个 {16,4,8} 沿第 3 维拼接，输出该维被推成 8 而非 16）——编译期无报错，下游按错误 shape 分配缓冲/构图，错误是否显式取决于消费方；是否触发取决于运行时对象共享，问题随构图路径漂移。
   trigger_surface: GEIR 图编译 infershape 路径；同形多输入且 desc 同源共享 Shape 对象；修复 !7301 open 未发布
   discovery: 2026-11-12 每日扫描
+  notes:
+  - 2026-11-13 2026-11-13 回访：修复 MR !7301 已 merged（batch 索引 state=merged），#4685 仍 open；机制判定不变，发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -48,3 +50,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes

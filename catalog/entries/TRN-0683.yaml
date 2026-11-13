@@ -39,6 +39,8 @@ original:
   behavior: GPTBigCode 类 multi-query 模型 TP>1 训练开梯度裁剪：梯度值本身与单卡一致，但 clip 参考范数把每 rank 复制的 K/V 行加了 TP 次——clip_coef 被压小、有效更新比单卡弱；TP 度越大、K/V 占比越高偏得越多，多卡结果与单卡不可比；无任何报错或指标异常。
   trigger_surface: DeepSpeed clip_grad_norm + tensor-parallel multi-query GPTBigCode（c_attn 融合投影，weight/bias 标记 model-parallel）；TP>1
   discovery: 2026-11-09 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：修复 PR #9030（open，Count replicated GPTBigCode K/V rows once in clip_grad_norm_）与本条同机制，补作证据；状态未合入。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -46,6 +48,9 @@ migration:
   - date: '2026-11-09'
     fields:
     - pattern
+  - date: '2026-11-13'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-09
     base:

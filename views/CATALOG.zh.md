@@ -3,13 +3,13 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 743 条；状态：active 743
+共 755 条；状态：active 743、pending_audit 12
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 220 |
-| 编译器 | 41 |
+| 算子/内核 | 226 |
+| 编译器 | 42 |
 | 运行时/执行 | 19 |
 | 集合通信 | 14 |
 | 并行切分 | 40 |
@@ -21,13 +21,13 @@
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
 | 模型定义 | 16 |
-| 权重/检查点 | 37 |
+| 权重/检查点 | 38 |
 | 数据管线 | 41 |
 | 优化器 | 48 |
 | 损失计算 | 30 |
-| MoE路由 | 29 |
+| MoE路由 | 30 |
 | 重计算/卸载 | 21 |
-| RL训练回路 | 93 |
+| RL训练回路 | 96 |
 | 观测/评测 | 23 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -2306,7 +2306,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：空输入时非空输出（y/indices、probsGradOut、标量 loss、output）保持调用方预填 canary 未写，两段 API 均返回 0
 - **改进措施**：检测 空输入用例下对非空输出预填 canary 并在调用后读回校验；修复 待定（未见修复 PR）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/7237；https://gitcode.com/cann/ops-transformer/issues/7236；https://gitcode.com/cann/ops-transformer/issues/7238；https://gitcode.com/cann/ops-nn/issues/8387；https://gitcode.com/cann/ops-nn/issues/8389
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7237；https://gitcode.com/cann/ops-transformer/issues/7236；https://gitcode.com/cann/ops-transformer/issues/7238；https://gitcode.com/cann/ops-nn/issues/8387；https://gitcode.com/cann/ops-nn/issues/8389；https://gitcode.com/cann/ops-nn/issues/8729；https://gitcode.com/cann/ops-nn/issues/8743
 - **关联**：var:TRN-0275
 
 ### TRN-0671 `aclnn_out_shape_inferred_overwrite_oob` aclnn 出参 shape 未校验按推导 shape 越界写
@@ -2410,7 +2410,7 @@
 - **影响对象**：梯度（静默错误）
 - **影响详情**：前向逐位一致、反向约 310k/311k 元素超差（max_abs 0.68~4.75）；dropout_p=0 或 910B3 恢复一致
 - **改进措施**：检测 保存/恢复 npu RNG 状态后编译与 eager 梯度对拍（aot_eager/inductor × dynamic）；950 上 SDPA+dropout 训练加梯度抽检；修复 修复 MR https://gitcode.com/Ascend/op-plugin/merge_requests/6179 （open 2026-11-09）：新增 npu_fusion_attention_tensor_rng/_grad_tensor_rng 把 int RNG 状态以 int64 Tensor 暴露；Python 同语义原型验证 4 组合 max_abs=0，未合入
-- **来源**：https://gitcode.com/Ascend/op-plugin/issues/694
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/694；https://gitcode.com/Ascend/pytorch/merge_requests/49537
 
 ### TRN-0693 `msda_grad_bilinear_neighbor_oob_write` MultiScaleDeformableAttentionGrad 越界邻点写
 
@@ -2649,6 +2649,74 @@
 - **影响详情**：输出 concat（axis）维尺寸漏加：两输入 {16,4,8} 沿 axis=2 拼接，正确输出 16、实际推导 8——图编译按偏小 shape 推导/分配，无报错。
 - **改进措施**：检测 同形多输入 ConcatV2 图构图后断言输出 axis 维=各输入之和；对比 eager 路径输出 shape；修复 修复 PR https://gitcode.com/cann/ops-math/merge_requests/7301（open WIP）：基底识别改按索引 baseIdx，求和循环按 i==baseIdx 跳过
 - **来源**：https://gitcode.com/cann/ops-math/issues/4685；https://gitcode.com/cann/ops-math/merge_requests/7301
+
+### TRN-0746 `opsnn_foreach_div_list_inplace_ftz_subnormal_inf` arch35 ForeachDiv 非规格数除数被冲零算成 Inf
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / cann / ForeachDiv 除法档
+- **原因行为**：arch35 regbase kernel 把除法档固定为 PRECISION_0ULP_FTZ_TRUE，fp32 非规格数除数被 FTZ 冲零，x/0 输出 ±Inf，真商本为有限值
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：1e-4/1e-40 真商约 1e36，实测输出 ±Inf，TTK cross_check 报 NaN/Inf mismatch；仅 ascend950/ascend350 的 fp32/fp16/bf16 路径
+- **改进措施**：检测 对含非规格数元素的除数做 foreach 除法后核对 isfinite；或直接与 torch._foreach_div 的 CPU/FP64 结果对拍；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14143 （merged 2026-11-12，DIV_PRECISE 改 PRECISION_0ULP_FTZ_FALSE；发布版本未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8650；https://gitcode.com/cann/ops-nn/merge_requests/14143
+
+### TRN-0747 `opsnn_add_rms_norm_eps_attr_float_truncation` AddRmsNorm epsilon attr 按 float 截断致 NaN
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / cann / add_rms_norm epsilon attr
+- **原因行为**：proto 以 Float(1e-6) 承载 epsilon，API 的 double 在执行前被截断；tiling 按 GetFloat 读出，|eps|<7e-46 下溢为 ±0.0f，-0.0f 令 epsilon<0 判假
+- **影响对象**：数值结果；隐状态（数值异常）
+- **影响详情**：eps=1e-50 与 0 位级一致：全零行 yOut 全 NaN（4096/4096）、rstdOut=inf；eps=-1e-50 两段 rc=0 放行；910B3/CANN 9.2.0
+- **改进措施**：检测 配置里把 epsilon 设到 1e-30 以下或负值后做全零行前向；输出出现 NaN/inf 或 rc=0 但语义错误即为命中；修复 待定（issue #8745 open，未见关联修复 MR；同族 #8694/#8731 在 AddRmsNormDynamicQuant（V2）上被执行段 561103 拒绝）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8745；https://gitcode.com/cann/ops-nn/issues/8694；https://gitcode.com/cann/ops-nn/issues/8731
+
+### TRN-0751 `megatron_batch_invariant_gemm_strided_bias_int32_offsets` batch-invariant GEMM 非连续 bias 读错与偏移回绕
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / megatron-lm / persistent GEMM 替换
+- **原因行为**：替换 aten::addmm 的 persistent GEMM 按连续布局取 bias 并忽略其 stride，64 位偏移标志按 numel>2^31 选，且不接受 alpha/beta 与多维 bias
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：bf16 addmm(storage[::2],...) 1486/1650 元素错、部分 NaN（H100/GB200 实测），fp32 deepgemm 1518/1650；strided view 元素数不足但偏移过 2^31 时 int32 行偏移回绕读越界
+- **改进措施**：检测 在 batch-invariant 进程里对 addmm 用 fp64 参考对拍（含 strided/多维 bias 与 alpha/beta）；用 launch spy 检查 A_LARGE/B_LARGE/C_LARGE 是否按最大元素偏移置位；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9305 （open，堆叠在 #8957/#8867 之上）：按 stride 取 bias、支持任意可广播 bias 与 alpha/beta、按最大元素偏移选 64 位
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9305
+
+### TRN-0752 `torch_npu_put_negative_index_zero_grad` torch_npu put_ 负索引静默不写致 take 梯度全零
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / torch_npu / aclnnInplacePut 负索引回绕
+- **原因行为**：aclnnInplacePut 不回绕负索引：遇到负索引既不写也不报错返回成功；torch.take 的导数正是 zeros_like(self).put_(index, grad, accumulate=True)
+- **影响对象**：梯度（静默错误）
+- **影响详情**：put_ 负索引后 NPU 存储全 0（CPU 为 [1,0,0,0,1,0,0,0,1]），take 负索引反向梯度恒 0、无告警；同一 issue 的编译路径则报 507035
+- **改进措施**：检测 对负索引张量做 put_/take 后与 CPU 或 eager 结果比对梯度；检查是否有非零梯度落在预期位置；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49519 （open，只修编译路径根因一：index_select 重写前回绕负索引）；eager put_ 根因二未见修复 MR
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/6059；https://gitcode.com/Ascend/pytorch/merge_requests/49519
+
+### TRN-0755 `aclnn_autogen_opapi_output_stride_ignored` aclnn 自动生成接口忽略出参 stride 静默错写
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / cann / 自动生成 aclnn 出参回写
+- **原因行为**：无 op_host/op_api 的接口由 op def 自动生成，回写时按连续布局写 storage 前 numel 个元素，出参 stride 不参与寻址，也不在 GetWorkspaceSize 拒绝
+- **影响对象**：数值结果；梯度（静默错误）
+- **影响详情**：RmsNormGrad dxOut stride{16,2} 时 16/32 为 0；GemmaRmsNorm yOut 30/32 超差；CrossEntropyLoss logProbOut 20/40 未写、38/40 超差；两段均返回 0
+- **改进措施**：检测 把出参构造成 stride 带空洞的合法 view（max_offset < storage numel），与连续基线逐元素比对并按 stride 读回；修复 待定（issue #8663/#8702 等均 open；RmsNorm/RmsNormGrad 文档已把出参非连续列由 √ 改为 ×，但实现仍不拒绝）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8684；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8746
+- **关联**：var:TRN-0524
+
+### TRN-0756 `opstransformer_sparse_flash_mla_grad_out_stride_ignored` SparseFlashMlaGrad 四出参非连续静默错值
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-13
+
+- **原因对象**：算子/内核 / cann / SparseFlashMlaGrad 出参回写
+- **原因行为**：接口由 op def 自动生成，出参按连续布局写 storage 前缀，dQuery/dOriKv/dCmpKv/dSinks 的 stride 全部未参与寻址，两段返回 0
+- **影响对象**：梯度（静默错误）
+- **影响详情**：非零哨兵下 dOriKv 524288/1048576 未写、dSinks 8/16；未写数命中 N-ceil(N/K) 解析预测；910B3/CANN 9.3.0 实测，物理 dump 前 numel 与连续基线一致
+- **改进措施**：检测 用非连续 view 作出参、非零哨兵预填，按 stride 读回与连续基线逐元素比对；同时枚举 offset 确认 view 合法（aliases=0、max_offset<storage numel）；修复 待定（issue #7472 open，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7472
+- **关联**：var:TRN-0524
 
 ## 编译器
 
@@ -3124,6 +3192,17 @@
 - **改进措施**：检测 待定；修复 待定（合并单跟踪 4 机制，未见独立修复 PR）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/3076
 - **关联**：cross:INF-2489
+
+### TRN-0753 `ascend_pytorch_dvm_batchnorm_backward_mismatch` DVM 编译 BatchNorm 训练反向梯度与 eager 不一致
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：编译器 / torch_npu / DVM 后端 batch_norm 反向分解
+- **原因行为**：TORCHINDUCTOR_NPU_BACKEND=dvm 编译训练态 F.batch_norm 时，反向图分解与 eager 实现不同，前向逐位一致但输入与权重梯度偏离
+- **影响对象**：梯度（静默错误）
+- **影响详情**：fp32 4x3x8x8、无 running stats：前向 max diff 0，x grad 3.886、weight grad 37.97、bias grad 0；509/768 元素超差（66.3%），910B4/CANN 9.2.1
+- **改进措施**：检测 同一模型分别用 eager 与 torch.compile(DVM) 跑一步，对拍 x/weight/bias 梯度；前向一致而梯度不一致即命中；修复 待定（issue #6073 open；同期 !49574 只涉及保留 BN 前向原生算子，未见针对本反向的修复）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/6073
 
 ## 运行时/执行
 
@@ -5191,6 +5270,17 @@
 - **改进措施**：检测 resume 后第一步前后各 dump 一步参数范数与 ckpt 对照；model-only resume 后首个 step 的权重与 ckpt 差应仅为一步更新量；修复 修复 PR https://github.com/verl-project/verl/pull/8605（open）：model-only resume 后 reload optimizer params；未合入
 - **来源**：https://github.com/verl-project/verl/issues/8604
 
+### TRN-0748 `deepspeed_checkpoint_tag_nonatomic_latest_mixed` DeepSpeed 检查点 tag 非原子提交致混合状态
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：权重/检查点 / deepspeed / save_checkpoint latest 写入
+- **原因行为**：rank0 在本 rank 文件落盘后、dist.barrier() 之前就写 <save_dir>/latest，且各 rank 用 torch.save 直接写最终文件名并原地截断 latest，中间无临时文件与 fsync
+- **影响对象**：模型权重；优化器状态（静默错误）
+- **影响详情**：#9067：latest 指向缺 ZeRO 分片的 tag，每次重启抛 ZeRORuntimeException 直到人工改 latest；#9066：回滚后重存崩溃留两次 run 混合分片，load 成功且静默续训
+- **改进措施**：检测 保存后校验 tag 目录内各 rank 分片齐全再读 latest；跨 run 复用 tag 时比对 client_state 与分片内的 run 标识；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9071 （open，fixes #9067：latest 写入前加 barrier 并改临时文件+replace；#9066 的原地重写未见修复）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9067；https://github.com/deepspeedai/DeepSpeed/issues/9066；https://github.com/deepspeedai/DeepSpeed/pull/9071
+
 ## 数据管线
 
 ### TRN-0057 `epoch_boundary_resume_silent_skip` verl SFT 在 epoch 边界 resume 静默跳过下一 epoch
@@ -6876,6 +6966,17 @@
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7222；https://gitcode.com/cann/ops-transformer/issues/7155
 - **关联**：cross:INF-2437
 
+### TRN-0757 `opstransformer_moe_init_routing_expert_scale_offset_missing` MoeInitRouting 大 H 分块漏专家偏移读错 scale
+
+`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：MoE路由 / cann / MoeInitRouting scale 取址
+- **原因行为**：INT8 动态量化按专家配置 smooth scale 时，H 维分块路径取 scale 漏掉 expertIdx*H 偏移，所有专家都读第 0 行 scale；两代共用该 kernel
+- **影响对象**：训练样本流；数值结果（静默错误）
+- **影响详情**：BF16 x=(1,14788)、FP32 scale=(3775,14788)、expertNum=7758、quantMode=1 时 expandedX 精度失败且调用正常返回；修复后 199/199 用例通过
+- **改进措施**：检测 每专家给不同的 smooth scale，跑 MoeInitRouting 后逐专家比对 expandedX 与参考实现；用 ACLNN 用例 aclnnMoeInitRoutingV3_L1_0844 形态；修复 修复 PR https://gitcode.com/cann/ops-transformer/pull/15813 （已合入，仓库回归 199/199 PASS；发布版本未核实）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7469；https://gitcode.com/cann/ops-transformer/pull/15813
+
 ## 重计算/卸载
 
 ### TRN-0121 `zero2_lowp_master_offload_scratch_stale_poisons_next_step` ZeRO-2 offload 残留 NaN 致后续有限 step 被跳过
@@ -8167,6 +8268,39 @@
 - **改进措施**：检测 缓存重放步对 dump 的键集合与重放产出键集合做全量 diff；单会话多轨迹回归（old_0_0..2+old_1_0）断言无丢行不错标；修复 待定（issue open；触发功能 skip.rollout_tq.enable=True + action=cache + steps 含该步）
 - **来源**：https://github.com/verl-project/verl/issues/8651
 
+### TRN-0749 `verl_megatron_snapshot_persistent_buffer_missing` verl Megatron 策略快照漏存 persistent buffer
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：RL训练回路 / verl / 策略快照拷贝函数
+- **原因行为**：快照只存参数与 DDP 参数桶，不存 persistent nn.Module buffer；restore 时 buffer 保留新值，旧参数与新路由偏置被拼在一起
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：Decoupled PPO 旧策略 logprob 恢复误差 0.0589986（两层 MoE 诊断），补存 buffer 后归零；router bias 更新开、router replay 关时触发
+- **改进措施**：检测 快照前后修改 expert_bias 等 persistent buffer，restore 后断言 buffer 回到旧值；或对拍旧策略 logprob；修复 修复 PR https://github.com/verl-project/verl/pull/8633 （open，fixes #8632：随参数保存并原地恢复 persistent buffer，排除 nonpersistent 计数与缓存）
+- **来源**：https://github.com/verl-project/verl/issues/8632；https://github.com/verl-project/verl/pull/8633
+
+### TRN-0750 `verl_clip_cov_microbatch_dependent_selection` verl Clip-Cov 选点随 PPO 微批大小变化
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：RL训练回路 / verl / clip_cov loss 统计配额
+- **原因行为**：协方差统计与 clip 配额都按到达 loss 函数的 microbatch 张量计算，配额 max(int(ratio*n_mb),1) 每微批各保底 1，选点再用未固定种子的 randperm
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：ratio=0.0002 时全批裁 1 个 token、8 微批共裁 8 个：pg_clipfrac 0.000977→0.007812，pg_loss +0.001451→-0.005974（变号）；ratio=0.05 时反向欠裁
+- **改进措施**：检测 固定同一 minibatch，改变 ppo_micro_batch_size 后比对 pg_clipfrac 与 pg_loss；两者应一致；修复 修复 PR https://github.com/verl-project/verl/pull/8635 （open，fixes #8634：把协方差统计、配额与选点移到 optimizer minibatch 上，同 KL-Cov #7829/#7830 的做法）
+- **来源**：https://github.com/verl-project/verl/issues/8634；https://github.com/verl-project/verl/pull/8635
+
+### TRN-0754 `openrlhf_entropy_logsumexp_offset_cancellation` OpenRLHF entropy 用 logsumexp 相减致偏移抵消
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：RL训练回路 / openrlhf / compute_entropy 相减实现
+- **原因行为**：entropy 由 logsumexp(logits) 减期望 logit 两个大数相减得到，logits 有公共偏移时两项相消，float32 上把熵抹成 0 并留下非零梯度
+- **影响对象**：训练信号；梯度（静默错误）
+- **影响详情**：四个相等的 float32 logits=1e8 实测 entropy=0、梯度非零（应为 log4 与零梯度）；接近 dtype 极值的有限 logits 还会给出非有限结果
+- **改进措施**：检测 对同一 logits 加减公共常数后比对 entropy 与 d(entropy)/d(logits)；理论上应不变，实测会变即命中；修复 修复 PR https://github.com/OpenRLHF/OpenRLHF/pull/1411 （open）：改用 log_softmax 与概率计算，零概率项的 log prob 置 0 以保持 0*log0 极限；新增 33 例（主干 27 失败）
+- **来源**：https://github.com/OpenRLHF/OpenRLHF/pull/1411
+
 ## 观测/评测
 
 ### TRN-0096 `metric_flush_key_set_rank_local_contamination` GRPO/RLOO 指标 flush 按本地 key 集合聚合致混列/死锁
@@ -8450,7 +8584,7 @@
 - **影响对象**：模型权重；性能/资源（静默错误）
 - **影响详情**：无报错、无日志差：ms-swift 训出 N 层独立 MTP 权重而非部署用的单层重复 drafter；verl 自定义 critic 引擎静默退回 stock；SP、FSDP2、router replay 等设置静默不生效，曾被误读成显存容量问题。
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/modelscope/ms-swift/issues/9936；https://github.com/verl-project/verl/issues/7460；https://github.com/verl-project/verl/issues/7463；https://github.com/verl-project/verl/issues/7462；https://github.com/verl-project/verl/issues/7476；https://github.com/huggingface/trl/issues/6791；https://github.com/verl-project/verl/pull/7597；https://github.com/verl-project/verl/issues/7662
+- **来源**：https://github.com/modelscope/ms-swift/issues/9936；https://github.com/verl-project/verl/issues/7460；https://github.com/verl-project/verl/issues/7463；https://github.com/verl-project/verl/issues/7462；https://github.com/verl-project/verl/issues/7476；https://github.com/huggingface/trl/issues/6791；https://github.com/verl-project/verl/pull/7597；https://github.com/verl-project/verl/issues/7662；https://github.com/NVIDIA/Megatron-LM/issues/9376
 - **关联**：var:TRN-0055
 
 ### TRN-0246 `fsdp_engine_dtype_config_ignored_rollout_trainer_split` verl FSDP 引擎不读 dtype 配置，训练侧静默保持 BF16

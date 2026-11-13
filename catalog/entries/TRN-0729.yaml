@@ -39,6 +39,8 @@ original:
   behavior: 950PR/950DT 上跑 GroupNorm 训练：特定尾块形状（归约长度非整向量宽）下 batch 统计量的补偿归约按失效掩码求和，统计量与梯度用的均值/方差静默偏差；构造超大 shape 时 tiling 预算回绕后照常下发错误执行计划；group 分支可能踩跨核同步 mailbox。均无报错；缺陷证据为源码定位+随 PR 新增 UT（RejectNonZeroDimProductOverflow 等），无端到端训练任务影响实测。
   trigger_surface: Ascend 950PR/950DT（arch35），CANN 9.0.0；尾块 rProd%8==0 且 rProd<64、超大 shape、group 分支 SyncAll；修复 !14145 open 未发布
   discovery: 2026-11-12 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：源 issue #8599 已 closed（2026-11-12 索引 state=closed），关联修复 !14145 未见 merged 标记；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -52,3 +54,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes

@@ -4,7 +4,7 @@ slug: verl_clip_cov_microbatch_dependent_selection
 aliases: []
 title: verl Clip-Cov 选点随 PPO 微批大小变化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -15,7 +15,7 @@ effect:
   objects:
   - 训练信号
   detail: ratio=0.0002 时全批裁 1 个 token、8 微批共裁 8 个：pg_clipfrac 0.000977→0.007812，pg_loss +0.001451→-0.005974（变号）；ratio=0.05 时反向欠裁
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 固定同一 minibatch，改变 ppo_micro_batch_size 后比对 pg_clipfrac 与 pg_loss；两者应一致
   fix: '修复 PR https://github.com/verl-project/verl/pull/8635 （open，fixes #8634：把协方差统计、配额与选点移到 optimizer minibatch 上，同 KL-Cov #7829/#7830 的做法）'
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    uncertain:
+    - subsystem

@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 755 条；状态：active 743、pending_audit 12
+共 755 条；状态：active 755
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -17,7 +17,7 @@
 | 调度/服务 | 1 |
 | 输出解析 | 2 |
 | 解码/采样 | 3 |
-| 量化 | 31 |
+| 量化 | 32 |
 | 位置编码 | 8 |
 | 分词/模板 | 9 |
 | 模型定义 | 16 |
@@ -25,7 +25,7 @@
 | 数据管线 | 41 |
 | 优化器 | 48 |
 | 损失计算 | 30 |
-| MoE路由 | 30 |
+| MoE路由 | 29 |
 | 重计算/卸载 | 21 |
 | RL训练回路 | 96 |
 | 观测/评测 | 23 |
@@ -2307,7 +2307,7 @@
 - **影响详情**：空输入时非空输出（y/indices、probsGradOut、标量 loss、output）保持调用方预填 canary 未写，两段 API 均返回 0
 - **改进措施**：检测 空输入用例下对非空输出预填 canary 并在调用后读回校验；修复 待定（未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7237；https://gitcode.com/cann/ops-transformer/issues/7236；https://gitcode.com/cann/ops-transformer/issues/7238；https://gitcode.com/cann/ops-nn/issues/8387；https://gitcode.com/cann/ops-nn/issues/8389；https://gitcode.com/cann/ops-nn/issues/8729；https://gitcode.com/cann/ops-nn/issues/8743
-- **关联**：var:TRN-0275
+- **关联**：var:TRN-0275；cross:INF-2522
 
 ### TRN-0671 `aclnn_out_shape_inferred_overwrite_oob` aclnn 出参 shape 未校验按推导 shape 越界写
 
@@ -2652,7 +2652,7 @@
 
 ### TRN-0746 `opsnn_foreach_div_list_inplace_ftz_subnormal_inf` arch35 ForeachDiv 非规格数除数被冲零算成 Inf
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / cann / ForeachDiv 除法档
 - **原因行为**：arch35 regbase kernel 把除法档固定为 PRECISION_0ULP_FTZ_TRUE，fp32 非规格数除数被 FTZ 冲零，x/0 输出 ±Inf，真商本为有限值
@@ -2663,7 +2663,7 @@
 
 ### TRN-0747 `opsnn_add_rms_norm_eps_attr_float_truncation` AddRmsNorm epsilon attr 按 float 截断致 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / cann / add_rms_norm epsilon attr
 - **原因行为**：proto 以 Float(1e-6) 承载 epsilon，API 的 double 在执行前被截断；tiling 按 GetFloat 读出，|eps|<7e-46 下溢为 ±0.0f，-0.0f 令 epsilon<0 判假
@@ -2674,7 +2674,7 @@
 
 ### TRN-0751 `megatron_batch_invariant_gemm_strided_bias_int32_offsets` batch-invariant GEMM 非连续 bias 读错与偏移回绕
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / megatron-lm / persistent GEMM 替换
 - **原因行为**：替换 aten::addmm 的 persistent GEMM 按连续布局取 bias 并忽略其 stride，64 位偏移标志按 numel>2^31 选，且不接受 alpha/beta 与多维 bias
@@ -2685,7 +2685,7 @@
 
 ### TRN-0752 `torch_npu_put_negative_index_zero_grad` torch_npu put_ 负索引静默不写致 take 梯度全零
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / torch_npu / aclnnInplacePut 负索引回绕
 - **原因行为**：aclnnInplacePut 不回绕负索引：遇到负索引既不写也不报错返回成功；torch.take 的导数正是 zeros_like(self).put_(index, grad, accumulate=True)
@@ -2696,19 +2696,19 @@
 
 ### TRN-0755 `aclnn_autogen_opapi_output_stride_ignored` aclnn 自动生成接口忽略出参 stride 静默错写
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / cann / 自动生成 aclnn 出参回写
 - **原因行为**：无 op_host/op_api 的接口由 op def 自动生成，回写时按连续布局写 storage 前 numel 个元素，出参 stride 不参与寻址，也不在 GetWorkspaceSize 拒绝
 - **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：RmsNormGrad dxOut stride{16,2} 时 16/32 为 0；GemmaRmsNorm yOut 30/32 超差；CrossEntropyLoss logProbOut 20/40 未写、38/40 超差；两段均返回 0
+- **影响详情**：出参为非连续 view 时：RmsNormGrad dxOut 16/32 为 0，GemmaRmsNorm yOut 30/32 超差，CrossEntropyLoss logProbOut 按 stride{10,2} 读回 20/40 未写、38/40 超差；两段接口均返回成功
 - **改进措施**：检测 把出参构造成 stride 带空洞的合法 view（max_offset < storage numel），与连续基线逐元素比对并按 stride 读回；修复 待定（issue #8663/#8702 等均 open；RmsNorm/RmsNormGrad 文档已把出参非连续列由 √ 改为 ×，但实现仍不拒绝）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8684；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8746
-- **关联**：var:TRN-0524
+- **关联**：var:TRN-0524；cross:INF-2521
 
 ### TRN-0756 `opstransformer_sparse_flash_mla_grad_out_stride_ignored` SparseFlashMlaGrad 四出参非连续静默错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-13
 
 - **原因对象**：算子/内核 / cann / SparseFlashMlaGrad 出参回写
 - **原因行为**：接口由 op def 自动生成，出参按连续布局写 storage 前缀，dQuery/dOriKv/dCmpKv/dSinks 的 stride 全部未参与寻址，两段返回 0
@@ -3195,7 +3195,7 @@
 
 ### TRN-0753 `ascend_pytorch_dvm_batchnorm_backward_mismatch` DVM 编译 BatchNorm 训练反向梯度与 eager 不一致
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：编译器 / torch_npu / DVM 后端 batch_norm 反向分解
 - **原因行为**：TORCHINDUCTOR_NPU_BACKEND=dvm 编译训练态 F.batch_norm 时，反向图分解与 eager 实现不同，前向逐位一致但输入与权重梯度偏离
@@ -4475,6 +4475,17 @@
 - **改进措施**：检测 clamp 梯度与修正后动态公式的三方参考（torch/TF）对账；单元素大值哨兵用例（0.25*(2^127+2^127) 应有限）；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14168（open，CANNBot）：统一动态公式、TwoSum/FMA 高低位补偿、加数减半梯度加倍二次幂缩放保有限结果、跨核归约部分和；GPU 三方 4/4、NPU 22 项定向回归通过；未发布
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/14168
 
+### TRN-0757 `opstransformer_moe_init_routing_expert_scale_offset_missing` MoeInitRouting 大 H 分块漏专家偏移读错 scale
+
+`故障` · `active` · `pretrain；sft；rl` · `documented` · `NEW` · 发现 2026-11-13
+
+- **原因对象**：量化 / cann / MoeInitRouting scale 取址
+- **原因行为**：INT8 动态量化按专家配置 smooth scale 时，H 维分块路径取 scale 漏掉 expertIdx*H 偏移，所有专家都读第 0 行 scale；两代共用该 kernel
+- **影响对象**：数值结果；训练样本流（静默错误）
+- **影响详情**：BF16 x=(1,14788)、FP32 scale=(3775,14788)、expertNum=7758、quantMode=1 时 expandedX 精度失败且调用正常返回；修复后 199/199 用例通过
+- **改进措施**：检测 每专家给不同的 smooth scale，跑 MoeInitRouting 后逐专家比对 expandedX 与参考实现；用 ACLNN 用例 aclnnMoeInitRoutingV3_L1_0844 形态；修复 修复 PR https://gitcode.com/cann/ops-transformer/pull/15813 （已合入，仓库回归 199/199 PASS；发布版本未核实）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7469；https://gitcode.com/cann/ops-transformer/pull/15813
+
 ## 位置编码
 
 ### TRN-0055 `config_default_swallows_cli_override` Megatron VLM 入口漏传 --rotary-base
@@ -5272,7 +5283,7 @@
 
 ### TRN-0748 `deepspeed_checkpoint_tag_nonatomic_latest_mixed` DeepSpeed 检查点 tag 非原子提交致混合状态
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：权重/检查点 / deepspeed / save_checkpoint latest 写入
 - **原因行为**：rank0 在本 rank 文件落盘后、dist.barrier() 之前就写 <save_dir>/latest，且各 rank 用 torch.save 直接写最终文件名并原地截断 latest，中间无临时文件与 fsync
@@ -6966,17 +6977,6 @@
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7222；https://gitcode.com/cann/ops-transformer/issues/7155
 - **关联**：cross:INF-2437
 
-### TRN-0757 `opstransformer_moe_init_routing_expert_scale_offset_missing` MoeInitRouting 大 H 分块漏专家偏移读错 scale
-
-`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `NEW` · 发现 2026-11-13
-
-- **原因对象**：MoE路由 / cann / MoeInitRouting scale 取址
-- **原因行为**：INT8 动态量化按专家配置 smooth scale 时，H 维分块路径取 scale 漏掉 expertIdx*H 偏移，所有专家都读第 0 行 scale；两代共用该 kernel
-- **影响对象**：训练样本流；数值结果（静默错误）
-- **影响详情**：BF16 x=(1,14788)、FP32 scale=(3775,14788)、expertNum=7758、quantMode=1 时 expandedX 精度失败且调用正常返回；修复后 199/199 用例通过
-- **改进措施**：检测 每专家给不同的 smooth scale，跑 MoeInitRouting 后逐专家比对 expandedX 与参考实现；用 ACLNN 用例 aclnnMoeInitRoutingV3_L1_0844 形态；修复 修复 PR https://gitcode.com/cann/ops-transformer/pull/15813 （已合入，仓库回归 199/199 PASS；发布版本未核实）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/7469；https://gitcode.com/cann/ops-transformer/pull/15813
-
 ## 重计算/卸载
 
 ### TRN-0121 `zero2_lowp_master_offload_scratch_stale_poisons_next_step` ZeRO-2 offload 残留 NaN 致后续有限 step 被跳过
@@ -8270,7 +8270,7 @@
 
 ### TRN-0749 `verl_megatron_snapshot_persistent_buffer_missing` verl Megatron 策略快照漏存 persistent buffer
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：RL训练回路 / verl / 策略快照拷贝函数
 - **原因行为**：快照只存参数与 DDP 参数桶，不存 persistent nn.Module buffer；restore 时 buffer 保留新值，旧参数与新路由偏置被拼在一起
@@ -8281,18 +8281,18 @@
 
 ### TRN-0750 `verl_clip_cov_microbatch_dependent_selection` verl Clip-Cov 选点随 PPO 微批大小变化
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：RL训练回路 / verl / clip_cov loss 统计配额
 - **原因行为**：协方差统计与 clip 配额都按到达 loss 函数的 microbatch 张量计算，配额 max(int(ratio*n_mb),1) 每微批各保底 1，选点再用未固定种子的 randperm
-- **影响对象**：训练信号（静默错误）
+- **影响对象**：训练信号（不可复现）
 - **影响详情**：ratio=0.0002 时全批裁 1 个 token、8 微批共裁 8 个：pg_clipfrac 0.000977→0.007812，pg_loss +0.001451→-0.005974（变号）；ratio=0.05 时反向欠裁
 - **改进措施**：检测 固定同一 minibatch，改变 ppo_micro_batch_size 后比对 pg_clipfrac 与 pg_loss；两者应一致；修复 修复 PR https://github.com/verl-project/verl/pull/8635 （open，fixes #8634：把协方差统计、配额与选点移到 optimizer minibatch 上，同 KL-Cov #7829/#7830 的做法）
 - **来源**：https://github.com/verl-project/verl/issues/8634；https://github.com/verl-project/verl/pull/8635
 
 ### TRN-0754 `openrlhf_entropy_logsumexp_offset_cancellation` OpenRLHF entropy 用 logsumexp 相减致偏移抵消
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-13
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-13
 
 - **原因对象**：RL训练回路 / openrlhf / compute_entropy 相减实现
 - **原因行为**：entropy 由 logsumexp(logits) 减期望 logit 两个大数相减得到，logits 有公共偏移时两项相消，float32 上把熵抹成 0 并留下非零梯度

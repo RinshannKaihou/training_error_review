@@ -4,7 +4,7 @@ slug: opstransformer_sparse_flash_mla_grad_out_stride_ignored
 aliases: []
 title: SparseFlashMlaGrad 四出参非连续静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0524
+pattern: PAT-TRN-0058
 original:
   mechanism: 'CANN ops-transformer 的 aclnnSparseFlashMlaGrad 没有 op_host/op_api、接口由 op def 自动生成，回写时按连续布局把 numel(view) 个元素写到 storage 起始处，出参 stride 不参与寻址且两段接口都返回 0/0。issue #7472 在 CANN 9.3.0 上补齐四个主出参、多 stride 的完整实测：dQueryOut（FP16，[1,16,512]/{16384,1024,2}/[1,16,1024]）非零哨兵下 4096/8192 未写、真实 FP16 数值下 8163/8192 bitwise 差异；dOriKvOut（[2048,1,512]/{1024,1024,2}）非零哨兵下 524288/1048576 未写，恰等于 N-ceil(N/K)；dCmpKvOut 7504/8192 不一致；dSinksOut（[16]/{2}/[32]）8/16 未写，K=2/3/4/5 时未写数 8/10/12/12 全部命中 16-ceil(16/K) 的解析预测，排除偶然。所有 view 均枚举 offset 检查 aliases=0、max_offset<storage_numel，连续基线重复两次四出参 bitwise_diff=0、非连续用例全部 ret=0/0 sync=0；物理 dump 显示四个失败出参 storage 前 numel 个元素与连续基线逐元素 100% 相同——写入按 storage[0],storage[1],… 连续推进，stride 完全未参与。文档矛盾：参数表四个出参的「非连续Tensor」列标 √，公共约束又写「本接口不支持非连续输出」；issue 主张若以后者为准应在第一段明确拒绝。初版曾把 dQueryOut 判为一致，是全零基线配零哨兵遮蔽，改非零哨兵后复现。'
   source: https://gitcode.com/cann/ops-transformer/issues/7472
@@ -42,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-14'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -44,6 +44,8 @@ evidence:
 relations:
 - kind: var
   target: TRN-0275
+- kind: cross
+  target: INF-2522
 pattern: PAT-TRN-0069
 original:
   mechanism: 'ops-transformer #7237 aclnnMoeFusedTopk：CheckShape 首行 if (x->IsEmpty()) return true 短路 topK>0、topK<=expertNum、y/x 第 0 维一致等全部约束，GetWorkspaceSize 在 :280-284 再次判空直接 return ACLNN_SUCCESS，不生成写 y/indices 的算子（x=[4,0]、y/indices=[4,2] 非空，实测 0/0 未写）。#7236 aclnnMoeTokenPermuteWithRoutingMapGrad：早退只判 permutedTokenOutputGrad/tokensGradOut 为空（aclnn_moe_token_permute_with_routing_map_grad.cpp:468），probsGradOut=[4,4] 一个字节未写（对照组 hidden=2 写出 1 3 0 0 0 4 5 0，probs 梯度与 hidden 无关本应逐值一致）。#7238 aclnnLightningIndexerKLLoss：targetScore=[4,0,8] 或 [0,8]（B/K 合法、S/T=0）时标量 loss=[1] 未写（对照 -88.7228；aclnn_lightning_indexer_kl_loss.cpp:146-150）。ops-nn #8387 aclnnSoftmaxCrossEntropyWithLogits：features=[4,0] 时 loss=[4] 未写（对照 0.823959×4；:122-126 早退分支无写 loss 算子；#1497 早年把空输入从拦截报错改为返回 SUCCESS 留下的另一半）。ops-nn #8389 aclnnEmbeddingBag：indices 空、offsets=[0]/[0,0] 时 output=(numBags,D) 整块保持未初始化（aclnn_embedding_bag.cpp:414-418；对照 10.0）。环境：Atlas A2 910B2、CANN 9.3.0；ops-transformer master 5adf800c、ops-nn master d1efef7c；复现日期 2026-11-08。与 TRN-0275/TRN-0659 同机制（host 侧空输入早退不写非空出参）第三批，ops-transformer 侧首批。'
@@ -64,6 +66,9 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-14'
+    fields:
+    - relations
   audit:
     round: daily-audit-2026-11-09
     base:

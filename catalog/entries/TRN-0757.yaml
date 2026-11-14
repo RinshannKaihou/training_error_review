@@ -4,17 +4,17 @@ slug: opstransformer_moe_init_routing_expert_scale_offset_missing
 aliases: []
 title: MoeInitRouting 大 H 分块漏专家偏移读错 scale
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 量化
     stack: cann
     component: MoeInitRouting scale 取址
   behavior: INT8 动态量化按专家配置 smooth scale 时，H 维分块路径取 scale 漏掉 expertIdx*H 偏移，所有专家都读第 0 行 scale；两代共用该 kernel
 effect:
   objects:
-  - 训练样本流
   - 数值结果
+  - 训练样本流
   detail: BF16 x=(1,14788)、FP32 scale=(3775,14788)、expertNum=7758、quantMode=1 时 expandedX 精度失败且调用正常返回；修复后 199/199 用例通过
   visibility: 静默错误
 mitigation:
@@ -45,3 +45,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 量化
+      effect:
+        from: 训练样本流
+        to: 数值结果

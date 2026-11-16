@@ -4,10 +4,10 @@ slug: msswift_qwen_reasoning_content_dropped
 aliases: []
 title: Qwen SFT 丢 reasoning_content 且错切标签
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 分词/模板
+  - subsystem: 数据管线
     stack: ms-swift
     component: RowPreprocessor/Qwen 模板
   behavior: RowPreprocessor 只保留 role/content/loss/loss_scale，独立 reasoning_content 被删；并入 content 后模板把思考中字面标签当边界。
@@ -44,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 分词/模板
+        to: 数据管线

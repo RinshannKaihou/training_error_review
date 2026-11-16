@@ -30,6 +30,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6708
   kind: gitcode_issue
 relations: []
+pattern: PAT-TRN-0080
 original:
   mechanism: 'cann/ops-transformer #6708（2026-10-25，open，950PR / CANN 9.2.0-beta.2 / master）。aclnnGroupedMatmulV5（groupType=0、splitItem=2、x 单 Tensor、weight 多个 2 维）对 Tensor 版 groupList 末值不校验：末值从 32（=M）改成 40（>M）两段仍 0/0 且输出正常写出。源码定位 aclnn_grouped_matmul.cpp:676-723 CheckGroupListSplitM 在 V5/V4/V3/WeightNz 分支调用 CheckGroupListCommonTensor（:593-623，只查长度/组数/dtype）后直接 return ACLNN_SUCCESS；「末值==x dim0」校验只存在于 int-array 分支（:717-719）。资料平台约束写明 groupListType=0 末值须 ≤ x 第一维。同用例 memcheck 下（合法 groupList）已观察到 GroupedMatmul_* kernel illegal read of size 256（一行 128 个 fp16），报告者注明将另行单独反馈。'
   source: https://gitcode.com/cann/ops-transformer/issues/6708
@@ -55,3 +56,6 @@ migration:
   - date: '2026-11-16'
     fields:
     - original.notes
+  - date: '2026-11-16'
+    fields:
+    - pattern

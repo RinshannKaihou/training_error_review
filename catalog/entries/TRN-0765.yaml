@@ -4,7 +4,7 @@ slug: openrlhf_unbiased_kl_forward_value_rounding
 aliases: []
 title: OpenRLHF unbiased KL 前向值被大代理项舍掉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: RL训练回路
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

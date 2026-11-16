@@ -4,15 +4,16 @@ slug: msswift_packed_gdn_qk_l2norm_missing
 aliases: []
 title: ms-swift packed GDN 回退漏 Q/K L2 归一化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 模型定义
+  - subsystem: 算子/内核
     stack: ms-swift
     component: MegatronAdaptor GDN 回退
   behavior: MegatronAdaptor 原生 GDN 回退在 packed 路径未执行 use_qk_l2norm_in_kernel 请求的 Q/K L2 归一化，递推输入被改变。
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 梯度
   detail: cu_seqlens + use_qk_l2norm=True 时输出与梯度错误；修复后在 FP32 以 eps=1e-6 归一化，四卡 Qwen3.5-35B-A3B LoRA 三步 smoke 与真 FLA 路径 loss MAE 0.00993、最大差 0.01179。
@@ -41,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 模型定义
+        to: 算子/内核
+      effect:
+        from: 隐状态
+        to: 数值结果

@@ -4,7 +4,7 @@ slug: opstransformer_grouped_matmul_add_grouplist_unchecked
 aliases: []
 title: GroupedMatmulAdd 非法 groupList 静默产 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0439
+pattern: PAT-TRN-0080
 original:
   mechanism: 'cann/ops-transformer #7614（2026-11-15，open，Ascend950PR / CANN 9.3.0-950，fp16）。aclnnGroupedMatmulAdd 的 op_api/aclnn_grouped_matmul_add.cpp 共 7 个 check（CheckNotNull:46、CheckFormat:58、CheckShape:76、CheckZeroShape:156、CheckDtype:184、CheckAttrs:207、CheckParams:221）无一处校验 groupList 值域；docs/aclnnGroupedMatmulAdd.md:273 要求 groupList 非负、单调非递减、末值≤x 第一维。实测参数 dtype=fp16、3d、ND、x=[128,64]、weight=[128,32]、groupList=int64[2]、yRef=fp32[2,64,32]、transposeX=true、groupType=2，只改 groupList_data：[-64,128] 首组为负 → 输出含 256 个 NaN；[-64,-32] 全负 → max=8.02（合法 [64,128] 基线 max=10.54）；[128,64] 递减 → max=12.49；[200,300] 末值>K=128 → max=272.0 越界值；四类均 rc=0/0。单算子接口测试检出，报告标 P0。'
   source: https://gitcode.com/cann/ops-transformer/issues/7614
@@ -42,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - visibility

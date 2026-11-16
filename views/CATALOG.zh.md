@@ -3,13 +3,13 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 755 条；状态：active 755
+共 767 条；状态：active 755、pending_audit 12
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 226 |
-| 编译器 | 42 |
+| 算子/内核 | 230 |
+| 编译器 | 43 |
 | 运行时/执行 | 19 |
 | 集合通信 | 14 |
 | 并行切分 | 40 |
@@ -19,17 +19,17 @@
 | 解码/采样 | 3 |
 | 量化 | 32 |
 | 位置编码 | 8 |
-| 分词/模板 | 9 |
-| 模型定义 | 16 |
-| 权重/检查点 | 38 |
+| 分词/模板 | 10 |
+| 模型定义 | 17 |
+| 权重/检查点 | 39 |
 | 数据管线 | 41 |
 | 优化器 | 48 |
-| 损失计算 | 30 |
-| MoE路由 | 29 |
+| 损失计算 | 31 |
+| MoE路由 | 30 |
 | 重计算/卸载 | 21 |
-| RL训练回路 | 96 |
+| RL训练回路 | 97 |
 | 观测/评测 | 23 |
-| 配置/参数 | 4 |
+| 配置/参数 | 5 |
 | 构建/发布 | 1 |
 | 待定 | 1 |
 
@@ -2718,6 +2718,52 @@
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7472
 - **关联**：var:TRN-0524
 
+### TRN-0758 `ops_nn_geglu_noncontiguous_layout_silent_wrong` GeGlu 伪转置入参静默错值且出参部分写
+
+`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-16
+
+- **原因对象**：算子/内核 / cann / aclnnGeGlu 布局校验
+- **原因行为**：ge_glu_v2 手写 Contiguous+ViewCopy 只按连续布局物化，合法伪转置入参静默算错；出参描述符不一致时部分写入并越过声明 numel，输入侧与出参侧校验不对称。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：FP32 self=[2,4,8] strides=[1,32,8] 时 rel=5.8e+02；出参 strides=[1,16,4]/storage numel=32 仅写 9/32 且触达 addr=32；同型描述符输入侧拒 561103、出参侧放行。
+- **改进措施**：检测 出参预填哨兵，非连续 stride 组合与连续布局对拍；校验出参描述符跨度与 numel 一致。；修复 待定（issue open 2026-11-14，无修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8846
+- **关联**：var:TRN-0524
+
+### TRN-0759 `cann_ops_math_acosh_grad_wrong_formula` AcoshGrad 用错前向输入反向公式致梯度错
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：算子/内核 / cann / AcoshGrad 反向公式
+- **原因行为**：AcoshGrad 把前向输出 y 当成前向输入，反向实现为 dy/sqrt(y*y-1) 而非 dy/sinh(y)，正常输入也会得到错误梯度。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：acosh 反向在正常有限输入上梯度与真值不符；修复 MR 改为 dy/sinh(y) 并补 dtype/shape 校验，FP16/BF16 舍入对齐 TensorFlow，原精度用例 025/026 修复后 TTK PASS。
+- **改进措施**：检测 与 autograd/TensorFlow acosh 反向逐元素对拍；覆盖 y 接近 1 与大 y 两段。；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/7412（open 2026-11-13，未合入）
+- **来源**：https://gitcode.com/cann/ops-math/merge_requests/7412
+
+### TRN-0760 `opstransformer_grouped_matmul_add_grouplist_unchecked` GroupedMatmulAdd 非法 groupList 静默产 NaN
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `var` · 发现 2026-11-16
+
+- **原因对象**：算子/内核 / cann / GroupedMatmulAdd 校验
+- **原因行为**：op_api 7 个 check 函数无一处校验 groupList 值域：首组为负、全负、递减、末值>K 四类输入全部 0/0 进入 kernel。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：[-64,128] 输出含 256 个 NaN；[-64,-32] max=8.02（合法 10.54）；[128,64] max=12.49；[200,300] max=272.0 越界值；两段均返回成功。
+- **改进措施**：检测 groupList 四类变异（负/全负/递减/末值>K）负向回归，断言 161002；输出哨兵与合法基线对拍。；修复 待定（issue open 2026-11-15，标 P0，无修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7614
+- **关联**：var:TRN-0439
+
+### TRN-0766 `opstransformer_normropeconcat_backward_half_permutation` NormRopeConcatGrad Half 置换与掩码错
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：算子/内核 / cann / NormRopeConcat Half 分支
+- **原因行为**：ropeType=2(Half) 分支的交替置换与 negMask 未按资料实现：对照 Interleave max|diff|=0，Half 组 max|diff|=11。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：B=1,H=1,D=8,seqQ=2,seqK=2,normType=0,concatOrder=0,fp32、gradQueryOutput 全 1、sin=i+1、cos=0 时两段 rc=0，查询梯度与资料语义不符（max|diff|=11）；Interleave 对照为 0。
+- **改进措施**：检测 对 ropeType=Half 与 Interleave 两路输出做逐元素对拍；用 sin=i+1、cos=0 的构造放大符号差异。；修复 待定（issue open 2026-11-15，无修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7592
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -3203,6 +3249,17 @@
 - **影响详情**：fp32 4x3x8x8、无 running stats：前向 max diff 0，x grad 3.886、weight grad 37.97、bias grad 0；509/768 元素超差（66.3%），910B4/CANN 9.2.1
 - **改进措施**：检测 同一模型分别用 eager 与 torch.compile(DVM) 跑一步，对拍 x/weight/bias 梯度；前向一致而梯度不一致即命中；修复 待定（issue #6073 open；同期 !49574 只涉及保留 BN 前向原生算子，未见针对本反向的修复）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6073
+
+### TRN-0769 `torchtitan_flexattention_compile_history_resume_nondeterminism` FlexAttention 编译历史使 resume 与非中断训练不逐位一致
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：编译器 / torchtitan / FlexAttention 编译
+- **原因行为**：torch.compile 未固定 dynamic，首个 shape 决定静态 kernel、变 shape 再重编译；resume 进程无编译历史，同一步可能用不同 kernel。
+- **影响对象**：训练轨迹（不可复现）
+- **影响详情**：Qwen3.8-Flash-Next、GB300×2、FSDP2/EP2、seed 42：不中断 10 步逐位一致；step5 resume 后 step9 起 loss 差至 9.9e-4、grad_norm 差 6.3e-3；两次 resume 彼此一致。
+- **改进措施**：检测 resume run 与不中断 run 逐步对比 loss/grad_norm；固定 torch._dynamo.config.automatic_dynamic_shapes=False 复测。；修复 待定（issue open 2026-11-13；建议 dynamic=True/False 或显式标记动态维，未实现）
+- **来源**：https://github.com/pytorch/torchtitan/issues/6093
 
 ## 运行时/执行
 
@@ -4681,6 +4738,17 @@
 - **来源**：https://github.com/modelscope/ms-swift/issues/10506；https://github.com/modelscope/ms-swift/pull/10507；https://github.com/modelscope/ms-swift/pull/10509
 - **关联**：var:TRN-0178
 
+### TRN-0768 `msswift_qwen_reasoning_content_dropped` Qwen SFT 丢 reasoning_content 且错切标签
+
+`故障` · `pending_audit` · `sft` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：分词/模板 / ms-swift / RowPreprocessor/Qwen 模板
+- **原因行为**：RowPreprocessor 只保留 role/content/loss/loss_scale，独立 reasoning_content 被删；并入 content 后模板把思考中字面标签当边界。
+- **影响对象**：训练样本流；输入编码（静默错误）
+- **影响详情**：reasoning_content='BEFORE quote 字面起始标签 then AFTER' 预处理后整字段消失；同一文本放进 content 后规范化只剩 '" then AFTER'，前文被删除；发生在 tokenization 之前。
+- **改进措施**：检测 预处理后回读 messages，断言 reasoning_content 保留；用含字面标签的思考文本做模板渲染回归。；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10570 、https://github.com/modelscope/ms-swift/pull/10571（均 open 2026-11-14，未合入）
+- **来源**：https://github.com/modelscope/ms-swift/issues/10569；https://github.com/modelscope/ms-swift/pull/10570；https://github.com/modelscope/ms-swift/pull/10571
+
 ## 模型定义
 
 ### TRN-0097 `sparse_attn_window_crosses_packed_document_boundary` torchtitan DSV4 稀疏注意力窗口跨越 packed 文档边界
@@ -4860,6 +4928,17 @@
 - **影响详情**：packed 微批被当一个序列，门控 delta 网络循环状态从一样本带入下一样本：单层对照后续样本相对误差 20%~90%+，trainer/rollout logprob 不再一致，训练无告警继续。
 - **改进措施**：检测 step 1（未更新策略）校验 trainer/rollout logprob 一致性；packed vs 逐样本调用对照；FLA 可用性启动期显式检查；修复 待定（issue open；规避=安装 FLA 或禁用 remove_padding；触发环境 Ascend NPU 无 FLA Triton 内核）
 - **来源**：https://github.com/verl-project/verl/issues/8629
+
+### TRN-0763 `msswift_packed_gdn_qk_l2norm_missing` ms-swift packed GDN 回退漏 Q/K L2 归一化
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：模型定义 / ms-swift / MegatronAdaptor GDN 回退
+- **原因行为**：MegatronAdaptor 原生 GDN 回退在 packed 路径未执行 use_qk_l2norm_in_kernel 请求的 Q/K L2 归一化，递推输入被改变。
+- **影响对象**：隐状态；梯度（静默错误）
+- **影响详情**：cu_seqlens + use_qk_l2norm=True 时输出与梯度错误；修复后在 FP32 以 eps=1e-6 归一化，四卡 Qwen3.5-35B-A3B LoRA 三步 smoke 与真 FLA 路径 loss MAE 0.00993、最大差 0.01179。
+- **改进措施**：检测 真 FLA 与 no-FLA 回退两条路径同输入对拍 loss/梯度；检查 packed 路径是否应用 Q/K L2 norm。；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10567（open 2026-11-13，未合入）
+- **来源**：https://github.com/modelscope/ms-swift/pull/10567
 
 ## 权重/检查点
 
@@ -5291,6 +5370,17 @@
 - **影响详情**：#9067：latest 指向缺 ZeRO 分片的 tag，每次重启抛 ZeRORuntimeException 直到人工改 latest；#9066：回滚后重存崩溃留两次 run 混合分片，load 成功且静默续训
 - **改进措施**：检测 保存后校验 tag 目录内各 rank 分片齐全再读 latest；跨 run 复用 tag 时比对 client_state 与分片内的 run 标识；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9071 （open，fixes #9067：latest 写入前加 barrier 并改临时文件+replace；#9066 的原地重写未见修复）
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9067；https://github.com/deepspeedai/DeepSpeed/issues/9066；https://github.com/deepspeedai/DeepSpeed/pull/9071
+
+### TRN-0764 `torchtitan_resume_step_rollback_torn_checkpoint` resume-step 回滚重存覆盖旧 step 目录致撕裂 ckpt
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：权重/检查点 / torchtitan / Checkpointer 保存路径
+- **原因行为**：--resume-step K 只设 load_step，重训仍写回被放弃 run 的 step-N；DCP 默认 overwrite=True 原地截断分片，崩溃可留半新半旧 step，旧 .metadata 仍让它成为最新可恢复点。
+- **影响对象**：模型权重；可用性/进度（静默错误）
+- **影响详情**：重存崩溃后重启：或每次 CheckpointException EOFError（loud），或不报错加载 rank0 新 run、rank1 旧 run 的混合分片；不崩溃时无 flag 重启续旧 run 最新 ckpt，带 flag 回 K 丢进度。
+- **改进措施**：检测 rollback 时检查目标 step 目录是否已存在；保存后校验各 rank 分片来源与 .metadata 一致。；修复 待定（issue open 2026-11-12；维护者建议配置期 ValueError，未实现）
+- **来源**：https://github.com/pytorch/torchtitan/issues/6064
 
 ## 数据管线
 
@@ -6648,6 +6738,17 @@
 - **改进措施**：检测 ignoreIndex 配置超 int32 的用例做 loss 与逐类梯度贡献对账；FullLoad/BigC + int32/int64 target 回归；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14223（open）：FullLoad 对 int64 target 用 64 位比较、int32 加超范围保护并在 Gather 前屏蔽；BigC 用 int64 保存 ignoreIndex；新增回归用例，未执行上板 ST；未发布
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/14223
 
+### TRN-0762 `deepspeed_tiled_fused_logits_loss_head_grad_scaling` TiledFusedLogitsLoss 忽略外部 loss 缩放致头梯度偏大
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：损失计算 / deepspeed / TiledFusedLogitsLoss
+- **原因行为**：前向用 sum 归约，反向对 LM-head 梯度按 tile 求和但未乘外部归一化系数，head 梯度被放大有效 token 数倍。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：output_reduction=sum 后除以有效 token 数 11：loss 误差 0、hidden grad 误差 1e-17，但 head.weight.grad 范数比 11.0，20/20 元素不符；CPU FP64 可复现。
+- **改进措施**：检测 对 loss 归一化/加权后的 head.weight.grad 与单卡参考梯度逐元素对拍。；修复 待定（issue open 2026-11-15，无修复 PR）
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9087
+
 ## MoE路由
 
 ### TRN-0017 `bf16_token_count_rounding_flips_bias_sign` BF16 token 计数舍入翻转 MoE 路由 bias 更新方向
@@ -6976,6 +7077,17 @@
 - **改进措施**：检测 调用前本地断言 out 末维==k（三输出 host 侧 shape 可得，比较零成本）。；修复 待定：issue open（2026-11-06），建议 CheckOutShape 补 GetDim(dimNum-1)==k（一处改动三输出全覆盖）+ 负向回归用例，未见 MR。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7222；https://gitcode.com/cann/ops-transformer/issues/7155
 - **关联**：cross:INF-2437
+
+### TRN-0761 `opstransformer_moe_token_permute_grad_default_range_zero` MoeTokenPermuteWithEpGrad 缺省 range 全零梯度
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：MoE路由 / cann / MoeTokenPermute 梯度 tiling
+- **原因行为**：rangeOptional 为空时 tiling 把 start/end 都置 0（应 end=R），kernel needCopyIn 恒 false，任何 token 梯度都不搬运。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：rangeOptional=nullptr 时 tokenGradOut 全 0（两段/sync 均 0）；同输入传 [0,6] 输出正确 [4.5,6.5,12.375,15.125,20.75,23.25]，5 次重复逐位一致。
+- **改进措施**：检测 rangeOptional 缺省与显式 [0,R] 两路对拍；输出预填哨兵检查是否整块未写。；修复 待定（issue open 2026-11-15，无修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7602
 
 ## 重计算/卸载
 
@@ -8301,6 +8413,17 @@
 - **改进措施**：检测 对同一 logits 加减公共常数后比对 entropy 与 d(entropy)/d(logits)；理论上应不变，实测会变即命中；修复 修复 PR https://github.com/OpenRLHF/OpenRLHF/pull/1411 （open）：改用 log_softmax 与概率计算，零概率项的 log prob 置 0 以保持 0*log0 极限；新增 33 例（主干 27 失败）
 - **来源**：https://github.com/OpenRLHF/OpenRLHF/pull/1411
 
+### TRN-0765 `openrlhf_unbiased_kl_forward_value_rounding` OpenRLHF unbiased KL 前向值被大代理项舍掉
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-16
+
+- **原因对象**：RL训练回路 / openrlhf / compute_approx_kl
+- **原因行为**：返回式先算 value+grad_surrogate 再减 detached surrogate；有限但很大的代理项把裁剪后的前向 KL 值舍掉，前向 loss 改变。
+- **影响对象**：训练信号（静默错误）
+- **影响详情**：logprob -12000/-1 时有限平方代理远大于裁剪 k2 值 10，loss 与预期不同；44 个新测试在原实现 42 失败、修复后 44 通过；默认 unbiased_gradient=False 不受影响。
+- **改进措施**：检测 unbiased_gradient=True 时对前向 loss 与所选估计器公式对拍；覆盖大 logprob 差距与 k1/k2/k3。；修复 修复 PR https://github.com/OpenRLHF/OpenRLHF/pull/1416（open 2026-11-13，未合入）
+- **来源**：https://github.com/OpenRLHF/OpenRLHF/pull/1416
+
 ## 观测/评测
 
 ### TRN-0096 `metric_flush_key_set_rank_local_contamination` GRPO/RLOO 指标 flush 按本地 key 集合聚合致混列/死锁
@@ -8609,6 +8732,18 @@
 - **影响详情**：Megatron-FSDP v1 + use_precision_aware_optimizer=True（MCore 0.19.x）出现零梯度范数、参数不更新；训练继续跑、无报错，官方 Megatron-LM 入口同配置正常，swift 封装下静默失效
 - **改进措施**：检测 开启精度优化器时核对 megatron_fsdp_use_decoupled_grad 实际取值；观察 grad_norm 是否恒 0/参数指纹不变；修复 待定（issue open：最小示例已隔离 swift 配置构造缺陷，期望按官方入口把 decoupled-gradient 跟随 use_precision_aware_optimizer；swift 侧修复未提交）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10351
+
+### TRN-0767 `megatron_perform_rl_step_silently_ignored` pretrain 入口接受 --perform-rl-step 却静默不跑 RL
+
+`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-16
+
+- **原因对象**：配置/参数 / megatron-lm / RL 参数注册/pretrain
+- **原因行为**：RL 参数对所有入口注册，但 perform_rl_step 只在 train_rl.py 读取；pretrain 入口不传 next_train_iterator，标志解析后无消费。
+- **影响对象**：训练轨迹（静默错误）
+- **影响详情**：带 --perform-rl-step 的 pretrain 入口按普通预训练跑完，不执行 rollout/GRPO、无警告；RLConfig 校验仍生效（batch 不整除 128 报 GRPO 错、offload 开关改 grad_buffer）。
+- **改进措施**：检测 入口启动时断言：若 perform_rl_step 为真且未走 train_rl.py 的 hooks，直接报错；检查 RLConfig 校验是否误作用到预训练 run。；修复 未修复：issue 2026-11-09 closed as not_planned，0 评论，无 PR（未核实替代实现）
+- **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9182
+- **关联**：var:TRN-0056
 
 ## 构建/发布
 

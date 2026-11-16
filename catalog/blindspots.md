@@ -49,3 +49,7 @@
 ## B.10 CANN runtime mstx 打点通道静默全失效（版本组合回归）
 
 `cann/runtime #1359`（2026-11-10，open）：合入 PR !6030（msproftx 资源命名）后的 runtime 配未适配的旧 mstx 客户端时，`mstxRangeStartA` 全部返回 0（MSTX_INVALID_RANGE_ID）、`host/data/` 不落 tx 原始数据、runtime 侧无任何报错日志。代码级根因：mstx 客户端对 `InitInjectionMstx` 结果全有或全无——失败即把 mark/range 指针全部置 0 并钉 FAILED；profapi 侧 `GetModuleTableFunc` 按对端枚举上限遍历、未知模块（CORE_MEM）走 default 判 MSTX_FAIL，触发全清空。修复 !6213（merged，按本仓实现清单遍历注册表）。profiling 打点整体无数据且无告警属观测通道静默失明，按口径记盲区不占故障条目。
+
+## B.11 torchair eager-override 对融合 kernel 喂零，精度对拍失去意义
+
+`Ascend/torchair !3823`（open，2026-10-09，基于 #3816）：AscendC 后端复用 inductor lowering 后，融合 kernel 的 aten 子图只能在 codegen 期用启发式从 `IR.origins` + `read_writes` 事后重建；`aggregate_origins` 跨 kernel 累积未 realize 输入、`origin_node` 多为 None 时退化为 `origins[0]` 猜测、matmul→epilogue 的寄存器内传递对 `read_writes` 不可见。`TORCHINDUCTOR_ASCENDC_EAGER_OVERRIDE` 还原不出的 fragment 输入会 `fabricate`（喂零），`eager_fn` 拿零当真实张量重放——精度对拍显示一致，但参考语义已错。PR 用 `traced_graph` 在 lowering 期记录精确 aten 子图，把“事后启发式”换成“编译期记录”。观测/验证工具假一致，按口径记盲区不占故障条目。

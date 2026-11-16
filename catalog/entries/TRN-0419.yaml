@@ -49,6 +49,8 @@ original:
   behavior: MoE 训练反向路径里，门控/排列类反向算子对明显非法的输入（越界或负的专家索引、负的 top-k 数、非法枚举、空张量、start>end 的区间）不报参数错误：轻则两段接口成功返回、那一项梯度被当 -1 悄悄丢掉；重则设备侧向量核异常（507035）把作业打断；没有一处是 host 侧第一段干净地拒绝。上游路由正常时看不到，一旦上游索引错配，训练要么静默少梯度要么莫名崩溃。
   trigger_surface: CANN ops-transformer MoE 反向算子族（MoeGatingTopKBackward / MoeTokenPermute(WithEp)Grad / MoeTokenUnpermute(WithEp)Grad 等）host 第一段校验；A2 910B2 / CANN 9.2.0 实测。
   discovery: 2026-10-25 每日扫描
+  notes:
+  - 2026-11-16 2026-11-16 回访：#6690 已 closed（2026-11-11）；同族仍有新报（#7602 等），机制判定不变。
 migration:
   method: scan
   scanned: '2026-10-25'
@@ -69,3 +71,7 @@ migration:
     - subsystem
     - effect
     - visibility
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - original.notes

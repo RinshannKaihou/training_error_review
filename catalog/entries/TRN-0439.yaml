@@ -36,6 +36,8 @@ original:
   behavior: 分组矩阵乘按文档传累计分组行数时，末值写大了（超过 x 的实际行数）也不会被拒绝：接口返回成功、结果照常写出，但 kernel 会按越界的行区间取数；memcheck 能看到越界读。
   trigger_surface: aclnnGroupedMatmulV5，groupType=0 + Tensor 版 groupList + 末值 > x 第一维；950PR / CANN 9.2.0-beta.2 实测。
   discovery: 2026-10-26 每日扫描
+  notes:
+  - '2026-11-16 2026-11-16 回访：源 issue #6708 已 closed（2026-11-10），未见修复 MR（未核实），机制判定不变。'
 migration:
   method: scan
   scanned: '2026-10-26'
@@ -49,3 +51,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - original.notes

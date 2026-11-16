@@ -15,4 +15,6 @@
 | [DeepSpeed #8586](https://github.com/deepspeedai/DeepSpeed/issues/8586)（远程回填曾误列 OPT.16：重复清梯度导致静默漏更新） | 原 issue 明写 **“Numerics are unchanged”**：ZeRO-3 每个 sub-group 重复遍历全部参数并清理梯度引用，实测差异是优化器 step 耗时（GLM-4.5-Air 约 400→202 ms），不是已证实的梯度错值或漏更新；不得据远程速记推断静默训练错误。2026-09-24 跨分支合并时拒绝入主编目。 |
 | [DeepSpeed #8608](https://github.com/deepspeedai/DeepSpeed/issues/8608)（universal ckpt 转换只认 Adam state 键，Muon `momentum_buffer` 转换即 `KeyError: 'exp_avg'` 崩） | fail-fast：转换在写出任何文件**之前**抛 KeyError（`ds_to_universal.py:149`/`:191`），无静默错状态产出；即使担心错缩放，报告者的实现选择是「拒绝转换」而非静默 carry。功能缺口（其他优化器 ckpt 无法转 universal）真实但不属静默正确性故障。2026-09-26 每日扫描拒收。 |
 
+| [TRL #8352](https://github.com/huggingface/trl/issues/8352)（SDPO `--scale_rewards false` 字符串落入 group scaling）与 [#8344](https://github.com/huggingface/trl/issues/8344)（SDPO IterableDataset 不重复 `num_generations`） | 维护者 2026-11-14 明确以「批量代码扫描、没有真实运行命中」关闭（not_planned）并拒绝该类报告；#8344 的默认路径还是 TypeError fail-loud，只有 `dispatch_batches=False` 才静默不分组。2026-11-16 扫描拒收，不新建条目。 |
+
 种子期没有「引用被证伪后又恢复」的条目。出现时按日期追加。

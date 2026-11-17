@@ -30,14 +30,13 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7977
   kind: gitcode_issue
 relations: []
-pattern: PAT-TRN-0079
 original:
   mechanism: 'cann/ops-nn #7977（2026-11-02 open）。foreach_log1p.cpp:25-31 Log1pAdapter：Adds(dstLocal, srcLocal, 1) 后 Log<T>(dstLocal, srcLocal)，InnerComputer::Compute 传 op(dataLocal, dataLocal, count) 别名 dst==src，实际算 log(fl(x+1))。fl(1+x) 在 |x|<ulp(1)/2 恒为 1（fp32 ulp(1)=1.19e-7、fp16 4.88e-4）→ 输出 0。三条旁证证明是缺陷非设计取舍：foreach_log10 注释明示 log 系拒绝别名 dst/src 并写了 out-of-place 类；foreach_log2 用 Log2<T,false>；log1p 自己的 arch35 SIMT 路径用 log1pf 正确。PyTorch 触达面：torch.log1p（单算子）对同输入正确、torch._foreach_log1p 错——优化器多参数组/foreach 优化路径直接命中。同日 UT 失效 issue #7998 佐证：foreach_log/Log1p/Log2 的 compare_data.py 无条件打印 PASSED 且 log1p golden 用 np.log(x+1) 与错误实现同源，本缺陷在 UT 层不可见。'
   source: cann/ops-nn https://gitcode.com/cann/ops-nn/issues/7977（open）
   behavior: 通过 aclnnForeachLog1p 或 torch._foreach_log1p 对极小输入算 log1p 时：fp32 下 |x|<6e-8、fp16 下 |x|<2.4e-4 的输入直接返回 0（正确值≈x 本身，相对误差 100%）；略大输入也有最高 33% 的相对误差。同输入的 torch.log1p 单算子正确，两条 PyTorch 路径结果不一致。数值被 0 替代后无任何报错，下游（如按 log 域累积的统计/损失项）静默偏差。
   discovery: 2026-11-03 每日扫描
   notes:
-  - '2026-11-12 2026-11-12 回访：源 issue ops-nn #7977 已 closed（2026-11-06）；未见关联修复 MR，closed 原因未核实，机制判定不变。'
+  - '2026-11-12 回访：回访：源 issue ops-nn #7977 已 closed（2026-11-06）；未见关联修复 MR，closed 原因未核实，机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -55,5 +54,11 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-12'
+    fields:
+    - pattern
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - pattern

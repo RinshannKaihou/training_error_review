@@ -4,7 +4,7 @@ slug: celu_subnormal_ftz_expm1_rounding
 aliases: []
 title: Celu 次正规 FTZ 与近零 expm1 双舍入错值
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-08'
-remarks: ''
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8375
   kind: gitcode_issue
@@ -55,3 +55,7 @@ migration:
       visibility:
         from: 数值异常
         to: 静默错误
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

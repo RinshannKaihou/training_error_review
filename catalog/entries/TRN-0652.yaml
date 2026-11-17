@@ -22,7 +22,7 @@ mitigation:
 labels:
   stage:
   - shared
-  confidence: verified
+  confidence: documented
   coverage: var
   discovered: '2026-11-07'
 remarks: NPU Inductor 静默错值族（TRN-0280/0617/0623/0624/0638）另一成员：static launcher 运行时派发层（非编译期常量、非文本改写）；910B（A2）不受影响（dispatch 形态不同）。
@@ -42,7 +42,7 @@ original:
   trigger_surface: torch_npu 2.13 triton_experimental 后端 + static launcher + A5（Ascend950，soc>=250）one-program-per-tile + in-place pointwise kernel + 较大 shape（≥[4,12,128,64] 量级）；CANN 9.2.0
   discovery: 2026-11-07 每日扫描
   notes:
-  - 2026-11-08 2026-11-08 回访：#5920 open 无更新（快照 2026-11-06T06:07Z）；同族 !49246（repair triton-ex launchers and profiler autotune timing，open 2026-11-07）修复 A5 static launcher 的 dispatch 约束（普通 kernel 用 vector core 分组、避免逻辑 tile 数直接作物理 grid）——A5 launcher 面修复载体新增，未合。
+  - 2026-11-08 回访：回访：#5920 open 无更新（快照 2026-11-06T06:07Z）；同族 !49246（repair triton-ex launchers and profiler autotune timing，open 2026-11-07）修复 A5 static launcher 的 dispatch 约束（普通 kernel 用 vector core 分组、避免逻辑 tile 数直接作物理 grid）——A5 launcher 面修复载体新增，未合。
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -53,6 +53,12 @@ migration:
   - date: '2026-11-08'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence
   audit:
     round: daily-audit-2026-11-07
     base:

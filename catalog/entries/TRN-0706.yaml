@@ -43,7 +43,7 @@ original:
   trigger_surface: Megatron-LM；CP>1 + calculate_per_token_loss=False + 各 CP rank 有效 token 数不同；MTP + packed/masked 序列
   discovery: 2026-11-10 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：修复 PR #9048/#9042 closed 未标 merged（2026-11-06）；#8997（MTP 按主 loss token 全局归一的 opt-in 开关）已 merged 2026-11-08T07:04Z。'
+  - '2026-11-11 回访：回访：修复 PR #9048/#9042 closed 未标 merged（2026-11-06）；#8997（MTP 按主 loss token 全局归一的 opt-in 开关）已 merged 2026-11-08T07:04Z。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -52,6 +52,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-11'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

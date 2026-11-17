@@ -4,7 +4,7 @@ slug: msprobe_nan_check_backward_direction_swap
 aliases: []
 title: msprobe nan_check 反向方向搞反漏存误存
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 观测/评测
@@ -26,7 +26,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-05'
-remarks: 观测工具假信号：漏存让训练期新产生的 NaN 梯度无现场证据，误存把注意力引向错误层。同 B.6（msprobe 反号 Inf 归一化）工具族，但此条有真实训练监控语义且独立 issue 载体，按观测面收录。
+remarks: msprobe nan_check dump 工具缺陷，训练计算未受损（按口径归入 blindspots.md B.8）
 evidence:
 - url: https://gitcode.com/Ascend/msprobe/issues/669
   kind: gitcode_issue
@@ -40,7 +40,7 @@ original:
   trigger_surface: msProbe eager nan_check（check_mode=isnan，L1）+ 任意 NPU 训练反向；910B4/CANN 9.1.0/torch-npu 2.10.0.post4
   discovery: 2026-11-05 每日扫描
   notes:
-  - 2026-11-06 2026-11-06 回访：修复 MR !1138 批次快照 merged（2026-11-05T01:15Z）；发布版本未核实。
+  - 2026-11-06 回访：回访：修复 MR !1138 批次快照 merged（2026-11-05T01:15Z）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -55,3 +55,9 @@ migration:
   - date: '2026-11-06'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status

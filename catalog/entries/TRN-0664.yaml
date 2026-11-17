@@ -22,7 +22,6 @@ mitigation:
   fix: 修复 PR https://github.com/verl-project/verl/pull/8564（open 2026-11-05）：校验每个已记录轮次（finite kl/k3_kl + k3_kl<--max-k3-kl），任一轮失败即失败并报轮号与指标；29 项 CPU 回归（原始脚本 27 失败/2 过）。未合。
 labels:
   stage:
-  - shared
   - rl
   confidence: documented
   coverage: NEW
@@ -50,3 +49,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.stage

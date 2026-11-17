@@ -43,8 +43,8 @@ original:
   trigger_surface: CANN ApplyCamePart1 arch35 路径 + 直接归约/长归约/窄列场景；Ascend950 验证，CANN/Python 版本 PR 未提供
   discovery: 2026-11-07 每日扫描
   notes:
-  - '2026-11-08 2026-11-08 回访：issue #8291 closed、修复 #13736 状态 merged（快照 updated 2026-11-06T06:17Z）；发布未核实。'
-  - '2026-11-11 2026-11-11 回访：修复归档 issue #8545（open）确认 !13736 已合入 master 且 950 GEIR 三方精度对比三输出 PASS；golden FP64 化与 bf16 ST 用例随修复入库。'
+  - '2026-11-08 回访：回访：issue #8291 closed、修复 #13736 状态 merged（快照 updated 2026-11-06T06:17Z）；发布未核实。'
+  - '2026-11-11 回访：回访：修复归档 issue #8545（open）确认 !13736 已合入 master 且 950 GEIR 三方精度对比三输出 PASS；golden FP64 化与 bf16 ST 用例随修复入库。'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -74,4 +74,7 @@ migration:
   - date: '2026-11-11'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

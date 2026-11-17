@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 尾块行数 33~47 的用例与 fp64 CPU 参考逐行比值对拍（比值恒 = 1/scale 即命中）。
-  fix: 待定（issue open，未见修复 MR）。
+  fix: 已有修复 PR/MR：https://gitcode.com/cann/ops-transformer/pull/15605（发布状态待核实）
 labels:
   stage:
   - shared
@@ -40,7 +40,7 @@ original:
   trigger_surface: aclnnChunkKdaFwd，尾块长度 l_c∈(32,48)；A2 910B2 / CANN 9.2.0 实测，单 chunk 与全长+尾块排布均触发。
   discovery: 2026-10-25 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：修复 PR !15605（open，WIP）关联 #6356/#6657，修尾块缩放异常与宽 K 挂死（挂死为副线）。'
+  - '2026-11-11 回访：回访：修复 PR !15605（open，WIP）关联 #6356/#6657，修尾块缩放异常与宽 K 挂死（挂死为副线）。'
 migration:
   method: scan
   scanned: '2026-10-25'
@@ -61,3 +61,9 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix

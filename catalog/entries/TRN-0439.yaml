@@ -38,7 +38,7 @@ original:
   trigger_surface: aclnnGroupedMatmulV5，groupType=0 + Tensor 版 groupList + 末值 > x 第一维；950PR / CANN 9.2.0-beta.2 实测。
   discovery: 2026-10-26 每日扫描
   notes:
-  - '2026-11-16 2026-11-16 回访：源 issue #6708 已 closed（2026-11-10），未见修复 MR（未核实），机制判定不变。'
+  - '2026-11-16 回访：回访：源 issue #6708 已 closed（2026-11-10），未见修复 MR（未核实），机制判定不变。'
 migration:
   method: scan
   scanned: '2026-10-26'
@@ -59,3 +59,6 @@ migration:
   - date: '2026-11-16'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - original.notes

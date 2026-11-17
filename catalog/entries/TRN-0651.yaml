@@ -37,7 +37,7 @@ original:
   trigger_surface: Megatron-LM MoE + 单字符串 --moe-router-load-balancing-type seq_aux_loss/global_aux_loss；版本未列（main 行为）
   discovery: 2026-11-07 每日扫描
   notes:
-  - 2026-11-08 2026-11-08 轮巡：#8808 open（updated 2026-11-07T20:44Z、comments 1）；aux_loss 子串匹配缺陷维持。
+  - 2026-11-08 回访：轮巡：#8808 open（updated 2026-11-07T20:44Z、comments 1）；aux_loss 子串匹配缺陷维持。
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -53,5 +53,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-11-08'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

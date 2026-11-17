@@ -32,6 +32,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-transformer/merge_requests/15486
   kind: gitcode_pr
 relations: []
+pattern: PAT-TRN-0082
 original:
   mechanism: 'cann/ops-transformer #7226（2026-11-07 open）+ 修复 !15486（open）：Ascend950DT 上 FAG（FlashAttentionGrad）dropout 场景，seed 或 offset 大于 2^31 时存在精度问题（现象截图，无根因展开）。修复 PR !15486「preserve int64 dropout seed and offset on Ascend950」：修复方向为保留 int64 dropout seed/offset（推断截断为低 32 位导致 dropout 掩码与 forward 不一致——此为修复标题指向的推断，issue 未给出代码定位）；测试含二级冒烟+算子泛化。训练面：带 dropout 的 attention 反向（PEFT/正则化训练）使用大 seed/offset（如从 64 位 RNG 态派生）时梯度静默偏离。issue 证据薄（触发条件+截图），修复 PR 已定位修复方向——按 documented 收录，根因细节待上游补充。'
   source: https://gitcode.com/cann/ops-transformer/issues/7226 ｜修复 PR：https://gitcode.com/cann/ops-transformer/merge_requests/15486
@@ -39,7 +40,7 @@ original:
   trigger_surface: CANN ops-transformer FAG dropout + seed/offset>2^31；Ascend950DT 实测；修复 !15486 open 未合
   discovery: 2026-11-08 每日扫描
   notes:
-  - 2026-11-12 2026-11-12 回访：!15486 已 merged（批次索引 2026-11-10）。
+  - 2026-11-12 回访：回访：!15486 已 merged（批次索引 2026-11-10）。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -62,3 +63,9 @@ migration:
     fields:
     - mitigation.fix
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - pattern

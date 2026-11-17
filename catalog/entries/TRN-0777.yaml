@@ -4,7 +4,7 @@ slug: megatron_gdn_fused_pre_kernels_int32_overflow
 aliases: []
 title: GDN 融合 pre 核 32 位偏移溢出污染激活与梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,6 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review

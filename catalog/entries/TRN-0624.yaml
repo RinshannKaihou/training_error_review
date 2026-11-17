@@ -22,7 +22,7 @@ mitigation:
 labels:
   stage:
   - shared
-  confidence: documented
+  confidence: speculative
   coverage: var
   discovered: '2026-11-05'
 remarks: 与 TRN-0280/TRN-0617/TRN-0623 同 NPU 编译器静默错值族：此条是 triton-ascend 整数语义误编译，torch_npu 侧规避。
@@ -42,7 +42,7 @@ original:
   trigger_surface: triton-ascend（Triton Ascend 3.6）+ triton_experimental 后端 + i64//i32 混合整数 floor_divide（含 SymInt/sympy 整型）；正数操作数
   discovery: 2026-11-05 每日扫描
   notes:
-  - 2026-11-07 回访 2026-11-07：批次快照显示 !49022 已 closed（2026-11-06T02:34Z，未 merged），修复载体关闭，维持待新载体。
+  - 2026-11-07 回访：批次快照显示 !49022 已 closed（2026-11-06T02:34Z，未 merged），修复载体关闭，维持待新载体。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -53,6 +53,12 @@ migration:
   - date: '2026-11-07'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence
   audit:
     round: daily-audit-2026-11-05
     base:

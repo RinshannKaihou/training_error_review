@@ -22,8 +22,8 @@ mitigation:
   fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/14093 （open，未发布；CANN 内置预编译 .o 仍为旧版）
 labels:
   stage:
-  - sft
   - pretrain
+  - sft
   confidence: documented
   coverage: NEW
   discovered: '2026-11-11'
@@ -59,3 +59,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.stage

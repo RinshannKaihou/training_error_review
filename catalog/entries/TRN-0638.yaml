@@ -22,7 +22,7 @@ mitigation:
 labels:
   stage:
   - shared
-  confidence: verified
+  confidence: documented
   coverage: var
   discovered: '2026-11-07'
 remarks: NPU Inductor 代码生成静默错值族（TRN-0280/0617/0623/0624）另一成员：符号长度被具体值替换（范围树写回），非 ASTSource 常量烧入、非文本改写。
@@ -48,6 +48,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence
   audit:
     round: daily-audit-2026-11-07
     base:

@@ -4,7 +4,7 @@ slug: recurrent_kda_seq_len_over_limit_silent_zero
 aliases: []
 title: RecurrentKda 序列长度超 8 静默输出全 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -41,3 +41,6 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review

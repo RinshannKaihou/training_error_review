@@ -53,3 +53,7 @@
 ## B.11 torchair eager-override 对融合 kernel 喂零，精度对拍失去意义
 
 `Ascend/torchair !3823`（open，2026-10-09，基于 #3816）：AscendC 后端复用 inductor lowering 后，融合 kernel 的 aten 子图只能在 codegen 期用启发式从 `IR.origins` + `read_writes` 事后重建；`aggregate_origins` 跨 kernel 累积未 realize 输入、`origin_node` 多为 None 时退化为 `origins[0]` 猜测、matmul→epilogue 的寄存器内传递对 `read_writes` 不可见。`TORCHINDUCTOR_ASCENDC_EAGER_OVERRIDE` 还原不出的 fragment 输入会 `fabricate`（喂零），`eager_fn` 拿零当真实张量重放——精度对拍显示一致，但参考语义已错。PR 用 `traced_graph` 在 lowering 期记录精确 aten 子图，把“事后启发式”换成“编译期记录”。观测/验证工具假一致，按口径记盲区不占故障条目。
+
+## B.12 算子仓内部单测参考脚本（golden / UT）与 msprobe 对拍溢出假绿
+
+`cann/ops-nn #8064`（`tests/assets/golden.py` 标量 `IndexError` 与广播除数错，原 `TRN-0613`）、`foreach log` 族 UT 漏校验（原 `TRN-0600`）以及 `Ascend/msprobe` Cosine 比对大数溢出/`nan_check` 反向落盘方向错（原 `TRN-0576`、`TRN-0628`）：均为测试资产或离线诊断工具自身缺陷，模型训练前反向计算本身未受损，统一归入盲区记录（原条目已 `retired`）。另 `cann/runtime #1357`（`aicpu_sched` 死 worker 致同步挂死，原 `TRN-0713`）并入 `B.1` 编排层假活。

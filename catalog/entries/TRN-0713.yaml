@@ -4,7 +4,7 @@ slug: cann_aicpu_sched_dead_worker_fake_success
 aliases: []
 title: aicpu_sched 已死 worker 假成功任务静默卡死
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-11'
-remarks: ''
+remarks: aicpu_sched 死 worker 致同步超时挂起（归入 blindspots.md B.1 编排假活）
 evidence:
 - url: https://gitcode.com/cann/runtime/issues/1357
   kind: gitcode_issue
@@ -51,3 +51,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

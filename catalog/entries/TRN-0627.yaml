@@ -4,7 +4,7 @@ slug: pytorch_npu_index_kernel_seed_offset_constexpr_missing
 aliases: []
 title: Index 路径静态 1 参数缺常量绑定回退慢核
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 编译器
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-05'
-remarks: 静默回落类：checker 失败被吞、模型继续跑，性能掉 17 倍且无信号。边界：主危害是性能静默退化+回落路径与主路径语义分叉风险。
+remarks: 缺常量绑定回退慢速备用 kernel，精度完全正常（纯性能退化）
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5855
   kind: gitcode_issue
@@ -50,3 +50,7 @@ migration:
       visibility:
         from: 静默错误
         to: 性能退化
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

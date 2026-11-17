@@ -23,7 +23,7 @@ labels:
   stage:
   - shared
   confidence: documented
-  coverage: NEW
+  coverage: var
   discovered: '2026-11-04'
 remarks: ''
 evidence:
@@ -46,6 +46,9 @@ migration:
   - date: '2026-11-04'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - labels.coverage
   audit:
     round: daily-audit-2026-11-04
     base:

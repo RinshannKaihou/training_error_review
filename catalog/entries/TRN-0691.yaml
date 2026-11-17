@@ -46,7 +46,7 @@ original:
   trigger_surface: torch_npu master/dev（配套 PyTorch 2.13~2.16）inductor 路径；乘法取模索引、repeat 复合符号轴替换
   discovery: 2026-11-10 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 !49132 已 merged（2026-11-09T09:17Z，批次快照）；!49133 无更新，维持 open 待核。
+  - 2026-11-11 回访：回访：修复 !49132 已 merged（2026-11-09T09:17Z，批次快照）；!49133 无更新，维持 open 待核。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -55,6 +55,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-11'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

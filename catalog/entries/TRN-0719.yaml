@@ -34,6 +34,8 @@ evidence:
 relations:
 - kind: var
   target: TRN-0690
+- kind: cross
+  target: INF-2495
 pattern: PAT-TRN-0076
 original:
   mechanism: 'Ascend/pytorch #5990（2026-11-10，open）+ 修复 !49440。根因取证：triton.py 中 npu_rsplit_partial=True 共 4 处赋值（L5976 codegen_node_schedule 接 combine / L7139 _apply_linearize INNER / L7636-7638 promoted rtree 两处均不设 rsplit_kernel），走后三条路径的 kernel 写 ws_ptr 但 combine 完全不生成；生成代码实锤 out_ptr0 从未被写、全部 kernel 只有 2 个且无读 workspace 的 combine。与 TRN-0690 同族：NPU inductor rsplit partial/combine 配对不完整致归约输出错值——TRN-0690 为改写锚点漏匹配致 combine 重复加总（48 倍），本条为 combine 整段缺失（未初始化）。'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-11'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - relations
   audit:
     round: daily-audit-2026-11-11
     base:

@@ -22,8 +22,7 @@ mitigation:
 labels:
   stage:
   - rl
-  - shared
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-12'
 remarks: '仅输出头/embedding 梯度走该优化路径（#7573），其他层权重不受影响；与 #9134（GTP+PP 发散 tracking，机制未定位）是否同源未证实，不挂 var。'
@@ -52,3 +51,10 @@ migration:
     - qwen3.8-max
     uncertain:
     - subsystem
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.stage
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

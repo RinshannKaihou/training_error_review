@@ -42,7 +42,7 @@ original:
   trigger_surface: CANN BN3DTrainingReduce + FP16 + full-R 两槽合并 + Ascend950PR/CANN 9.3.0；NCDHW [83,6,46,34] 冻结输入
   discovery: 2026-11-05 每日扫描
   notes:
-  - 2026-11-06 2026-11-06 回访：修复 MR !13622 merged 状态维持（2026-11-04 快照）；发布版本未核实。
+  - 2026-11-06 回访：回访：修复 MR !13622 merged 状态维持（2026-11-04 快照）；发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -51,6 +51,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-06'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

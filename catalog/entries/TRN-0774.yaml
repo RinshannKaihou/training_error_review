@@ -4,7 +4,7 @@ slug: sparse_segment_mean_fp16_accumulation
 aliases: []
 title: SparseSegmentMean FP16 累加致长段均值错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,6 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review

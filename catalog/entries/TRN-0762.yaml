@@ -40,7 +40,7 @@ original:
   trigger_surface: DeepSpeed TiledFusedLogitsLoss，output_reduction='sum' + 外部归一化/加权；CPU FP64 复现。
   discovery: 2026-11-16 每日扫描
   notes:
-  - '2026-11-17 2026-11-17 回访：issue #9087 仍 open；同日出现修复 PR #9096（Fix external loss scaling in TiledFusedLogitsLoss），状态 open 未合入，机制判定不变。'
+  - '2026-11-17 回访：issue #9087 仍 open；同日出现修复 PR #9096（Fix external loss scaling in TiledFusedLogitsLoss），状态 open 未合入，机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-16'

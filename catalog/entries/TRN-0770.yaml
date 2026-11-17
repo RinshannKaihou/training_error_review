@@ -4,7 +4,7 @@ slug: verl_fused_linear_ppo_bf16_temperature_divide
 aliases: []
 title: verl FusedLinearForPPO 先 bf16 除温度再升 fp32
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,6 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review

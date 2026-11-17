@@ -44,7 +44,7 @@ original:
   trigger_surface: ms-swift glm5_next 模板（GLM-5.3-Flash）默认参数 SFT；main 680df5c6 与 v4.6.0
   discovery: 2026-11-04 每日扫描
   notes:
-  - '2026-11-05 2026-11-05：第二修复载体 !10509（fix #10506，set reasoning_effort_needs_thinking=False 对齐 GLM-5.3-Flash 发布模板）已于 2026-11-04T06:48Z merged；原载体 !10507 closed 未 merged。修复已合入 master，发布版本未核实。'
+  - '2026-11-05 回访：第二修复载体 !10509（fix #10506，set reasoning_effort_needs_thinking=False 对齐 GLM-5.3-Flash 发布模板）已于 2026-11-04T06:48Z merged；原载体 !10507 closed 未 merged。修复已合入 master，发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -61,6 +61,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - mitigation.fix
+  - date: '2026-11-17'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

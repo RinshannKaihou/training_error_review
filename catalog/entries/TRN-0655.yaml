@@ -41,8 +41,8 @@ original:
   trigger_surface: triton_experimental 后端 torch.compile + slice_scatter / 嵌套区域（regional compile）运行时输入写回 + 重复视图修改；Ascend 910B3、CANN 9.1.0、Triton 3.6.0/triton-ascend 3.6.0.post2 实测
   discovery: 2026-11-08 每日扫描
   notes:
-  - '2026-11-08 2026-11-08：issue #5946 closed（快照 2026-11-07T10:33Z）——由修复闭环（!49255 open）；closed 非 merged，fix 维持未发布。'
-  - '2026-11-09 回访 2026-11-09：修复载体 !49255 批次快照（2026-11-08T23:01Z）显示 closed（2026-11-07T10:32Z updated；merged 状态快照未标——与 11-08 报告『仍 open』不一致，以本批次为准）。issue #5946 已 closed 修复闭环；发布版本未核实。'
+  - '2026-11-08 回访：issue #5946 closed（快照 2026-11-07T10:33Z）——由修复闭环（!49255 open）；closed 非 merged，fix 维持未发布。'
+  - '2026-11-09 回访：修复载体 !49255 批次快照（2026-11-08T23:01Z）显示 closed（2026-11-07T10:32Z updated；merged 状态快照未标——与 11-08 报告『仍 open』不一致，以本批次为准）。issue #5946 已 closed 修复闭环；发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -51,6 +51,9 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-09'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

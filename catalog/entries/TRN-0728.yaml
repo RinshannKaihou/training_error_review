@@ -4,7 +4,7 @@ slug: lstm_backward_recompute_rounding_divergence
 aliases: []
 title: SingleLayerLstmGrad 反向重算前向门值舍入分叉
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-12'
-remarks: 精度证据来自仓内代码注释记录的历史实测；机制与 ACT 类『重算与前向分叉→静默错梯度』同构，但发生在算子 kernel 内部、成因为舍入而非 RNG/路由状态，不挂 var。
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8641
   kind: gitcode_issue
@@ -53,3 +53,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

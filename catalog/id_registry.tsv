@@ -774,3 +774,28 @@ TRN-0774
 TRN-0775	
 TRN-0776	
 TRN-0777	
+TRN-0778	op_plugin_moe_token_unpermute_grad_dtype_nan	2026-11-17	migrated_from_inference
+TRN-0779	ops_math_cdist_grad_exp_log_pow_precision	2026-11-17	migrated_from_inference
+TRN-0780	ms_masked_fill_backward_nan_mask_leak	2026-11-17	migrated_from_inference
+TRN-0781	ms_msa_pta_systematic_loss_offset	2026-11-17	migrated_from_inference
+TRN-0782	mindformers_load_balanced_resume_drops_optim_state	2026-11-17	migrated_from_inference
+TRN-0783	mindformers_old_gate_aclnn_cache_queue_indexer_drift	2026-11-17	migrated_from_inference
+TRN-0784	ms_pynative_lora_zero_b_grad_wrong	2026-11-17	migrated_from_inference
+TRN-0785	slikg_bf16_dq_unaligned_clear_skip	2026-11-17	migrated_from_inference
+TRN-0786	flexattention_uneven_causal_kv_tail_grad_uninit	2026-11-17	migrated_from_inference
+TRN-0787	ms_addmm_input_grad_shape_broadcast	2026-11-17	migrated_from_inference
+TRN-0788	ms_batchnormgradext_dtype_forced_f32	2026-11-17	migrated_from_inference
+TRN-0789	ms_pynative_int_output_grad_metadata	2026-11-17	migrated_from_inference
+TRN-0790	rope_grad_mode2_dcos_uses_rotated_x	2026-11-17	migrated_from_inference
+TRN-0791	ms_dvm_fusion_pp_mtp_step2_divergence	2026-11-17	migrated_from_inference
+TRN-0792	ops_nn_swiglu_group_quant_grad_ub_war_missing_reverse_sync	2026-11-17	migrated_from_inference
+TRN-0793	ops_nn_modulate_grad_missing_one_plus_scale	2026-11-17	migrated_from_inference
+TRN-0794	ops_nn_ctc_loss_v2_grad_missing_beta_term	2026-11-17	migrated_from_inference
+TRN-0795	reciprocal_backward_inf_huge_error_cann900	2026-11-17	migrated_from_inference
+TRN-0796	npu_sparse_mask_drops_explicit_zero_rows	2026-11-17	migrated_from_inference
+TRN-0797	npu_pack_padded_sequence_layout_mismatch_backward	2026-11-17	migrated_from_inference
+TRN-0798	npu_grad_and_value_logsumexp_kl_div_mismatch	2026-11-17	migrated_from_inference
+TRN-0799	mindformers_moe_aux_loss_tp_grad_scaling_overdivide	2026-11-17	migrated_from_inference
+TRN-0800	mindformers_dsv4_hash_seqaux_natural_topk	2026-11-17	migrated_from_inference
+TRN-0801	mindspore_grad_in_jit_returns_empty_tuple	2026-11-17	migrated_from_inference
+TRN-0802	mm_device_do_normalize_logprob_parity_break	2026-11-17	migrated_from_inference

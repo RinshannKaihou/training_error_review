@@ -30,7 +30,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7319
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: INF-2494
 original:
   mechanism: 'ops-transformer #7319（2026-11-10，open，910B3 / CANN 9.1.0-910b / master 00d581ae 比对）。aclnnLightningIndexerV2Metadata：源码 lightning_indexer_v2_metadata_aicpu.cpp L246 groupSize_=nhq/nhk 整除向零截断，L248-250（ASCEND910B 分支）mBaseSize_=s1BaseSize_*groupSize_ 变 0，后续调度计算全零。ctypes 直调两段接口复现：用例 E（nhq=1/nhk=2，seqused 真实非零）输出前 16 int 与用例 F（全零序列长度参照）完全一致，接口全 0；v9.1.0 与 master 文档参数表均无配比约束。同批 8 项互链（#7318~#7325），其余 7 项为崩溃/契约/文档面或另立条目。'
   source: https://gitcode.com/cann/ops-transformer/issues/7319
@@ -51,3 +53,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

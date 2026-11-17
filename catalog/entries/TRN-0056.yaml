@@ -61,7 +61,7 @@ original:
   behavior: 无报错、无日志差。ms-swift 侧训出的 MTP 结构与部署结构错位；verl 侧自定义 critic 引擎静默退化。同 CKPT.06：错在构建期，加载侧检查救不回。#7476 实例：SP 无效被误读成显存容量问题，浪费整簇排查。
   discovery: 2026-08-19 每日扫描（实例三/四/五 2026-08-20 补）
   notes:
-  - '2026-11-13 2026-11-13 新增同机制实例（Megatron-LM，open）：--rampup-batch-size 仍被 CLI 接受、文档也写明被 microbatch calculator 忽略，但 #4411 加的弃用警告永不触发——initialize_training_runtime_services() 从不把 cfg.train.rampup_batch_size 转发给 init_num_microbatches_calculator()。老启动脚本因此从第一步就按 --global-batch-size 全量跑，无任何日志提示。'
+  - '2026-11-13 回访：新增同机制实例（Megatron-LM，open）：--rampup-batch-size 仍被 CLI 接受、文档也写明被 microbatch calculator 忽略，但 #4411 加的弃用警告永不触发——initialize_training_runtime_services() 从不把 cfg.train.rampup_batch_size 转发给 init_num_microbatches_calculator()。老启动脚本因此从第一步就按 --global-batch-size 全量跑，无任何日志提示。'
 migration:
   extractor: opus v1.1
   method: extract
@@ -81,4 +81,7 @@ migration:
   - date: '2026-11-13'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

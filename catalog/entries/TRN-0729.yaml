@@ -40,7 +40,7 @@ original:
   trigger_surface: Ascend 950PR/950DT（arch35），CANN 9.0.0；尾块 rProd%8==0 且 rProd<64、超大 shape、group 分支 SyncAll；修复 !14145 open 未发布
   discovery: 2026-11-12 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：源 issue #8599 已 closed（2026-11-12 索引 state=closed），关联修复 !14145 未见 merged 标记；机制判定不变。'
+  - '2026-11-13 回访：回访：源 issue #8599 已 closed（2026-11-12 索引 state=closed），关联修复 !14145 未见 merged 标记；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -56,5 +56,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-11-13'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

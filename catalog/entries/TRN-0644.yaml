@@ -22,7 +22,7 @@ mitigation:
 labels:
   stage:
   - shared
-  confidence: verified
+  confidence: documented
   coverage: var
   discovered: '2026-11-07'
 remarks: 「有效块数为零→输出未写」与空输入早退族同属「快路径不写输出」机制（触发是掩码语义而非张量为空），故 var→TRN-0275；推理库 INF-1576 已收 V3 版同机制（#5718），V1 本轮推理侧未建、训练条目独立。
@@ -48,6 +48,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence
   audit:
     round: daily-audit-2026-11-07
     base:

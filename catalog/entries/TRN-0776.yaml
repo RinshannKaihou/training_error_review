@@ -4,7 +4,7 @@ slug: npu_fusion_attention_dropout_seed_offset_ignored
 aliases: []
 title: FA dropout seed 恒为 1、offset 进程级累加
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -35,6 +35,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0661
+pattern: PAT-TRN-0082
 original:
   mechanism: 'cann/ops-transformer issue #7733（2026-11-17，open），torch_npu 2.12.0.post3 + torch 2.12.0 + CANN 9.2.0，ops-transformer master 87663d62。torch_npu.npu_fusion_attention 与 npu_fusion_attention_v2 在 keep_prob<1（启用 dropout）时，传入的 seed 与 offset 参数不生效：seed 恒被改写为 1（传入 0/1/5/100/-1 返回均为 1），offset 被进程级全局计数器按 +12 递增，base 与 v2 共享同一个计数器（先调 base 4 次返回 0/12/24/36，再调 v2 返回 48/60/72/84）。资料 constraints 写明「默认确定性实现，keep_prob<1 时 dropout mask 由随机数生成，结果的确定性受 seed、offset 控制」，与官方 Philox 参考 tests/pytest/test_utils.py 的 gen_dropmask（seed 直接入 key、offset 按 16 对齐）不符：实测目标 hash 0e22c7baeb vs 官方 70c3e648fa，seed∈{0,1}×offset∈{0..16} 共 34 组命中 0。已排除 gen_mask_parallel/sync 设置、dropout 本体（显式传全 1 mask 时 hash 稳定）与 v2 专属路径（base 同样失效）。影响：训练不可复现；返回的 (1,0) 无法复现当前前向，反向据此重建的 mask 与前向不一致。'
   source: https://gitcode.com/cann/ops-transformer/issues/7733
@@ -44,3 +45,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - pattern

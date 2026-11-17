@@ -24,7 +24,7 @@ labels:
   stage:
   - pretrain
   confidence: documented
-  coverage: NEW
+  coverage: var
   discovered: '2026-11-09'
 remarks: 与 TRN-0286 共享『异步归约在飞时 buffer 被复用』机制；触发点不同（MFSDPv1 1F1B hook 流 vs ZeRO-2 IPG swap）
 evidence:
@@ -41,7 +41,7 @@ original:
   trigger_surface: Megatron-LM MFSDP v1 + overlap_moe_expert_parallel_comm（1F1B overlap schedule）+ optim_grads/optim_grads_params sharded gradients；含 MTP 时触发面更大
   discovery: 2026-11-09 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：源 issue #9114 已 closed（search 快照）；合并修复载体未逐条核验（core 配额受限）。'
+  - '2026-11-11 回访：回访：源 issue #9114 已 closed（search 快照）；合并修复载体未逐条核验（core 配额受限）。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -52,6 +52,12 @@ migration:
   - date: '2026-11-11'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.coverage
   audit:
     round: daily-audit-2026-11-09
     base:

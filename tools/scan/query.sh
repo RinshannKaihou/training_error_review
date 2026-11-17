@@ -25,6 +25,6 @@ PY
 
 gh_search megatron "repo%3ANVIDIA%2FMegatron-LM+NaN+OR+spike+created%3A%3E%3D${SINCE}"
 gh_search deepspeed "repo%3Adeepspeedai%2FDeepSpeed+checkpoint+OR+NaN+created%3A%3E%3D${SINCE}"
-gh_search verl "repo%3Avolcengine%2Fverl+mismatch+OR+logprob+created%3A%3E%3D${SINCE}"
+gh_search verl "repo%3Averl-project%2Fverl+mismatch+OR+logprob+created%3A%3E%3D${SINCE}"
 gh_search trl "repo%3Ahuggingface%2Ftrl+GRPO+created%3A%3E%3D${SINCE}"
 echo "raw -> $OUT"

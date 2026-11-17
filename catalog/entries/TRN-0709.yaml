@@ -41,7 +41,7 @@ original:
   trigger_surface: Megatron-LM RL refit + SequentialMLP（非 grouped GEMM MoE）+ 训练/推理 EP 尺寸不同
   discovery: 2026-11-10 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：修复 #9141 closed 未标 merged（2026-11-09T20:20Z），维持跟踪。'
+  - '2026-11-11 回访：回访：修复 #9141 closed 未标 merged（2026-11-09T20:20Z），维持跟踪。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -50,6 +50,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-11'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

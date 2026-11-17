@@ -54,7 +54,7 @@ original:
   trigger_surface: Atlas A2 910B2、CANN 9.3.0；aclnnMoeFusedTopk / MoeTokenPermuteWithRoutingMapGrad / LightningIndexerKLLoss / SoftmaxCrossEntropyWithLogits / EmbeddingBag 空输入（0 元素）+ 非空输出组合
   discovery: 2026-11-09 每日扫描
   notes:
-  - 2026-11-13 2026-11-13 新增同机制两例（ops-nn，910B3/CANN 9.2.0，均 open）：#8729 aclnnAddRmsNormDynamicQuantV2 的 y2Out 传空 tensor（文档明写支持空 Tensor）触发第一段早退（:378-383 判据含 y2Out 不含 y1Out），outputMask 路由出的 y1Out/scale1Out/xOut 或 y2Out/scale2Out/xOut 全部 canary 保留、两段 rc=0/0；#8743 aclnnAddRmsNorm 在 x1 非空时 gamma 传空 tensor（违反组合表约束，应 161002）两段 rc=0/0 且 yOut/xOut/rstdOut 全未写，根因是 CheckGammaAndRstdShape 只在 IsRegbase 分支调用、非 regbase 平台无此校验、gamma numel=0 使 numCol=0 无写出任务。
+  - 2026-11-13 回访：新增同机制两例（ops-nn，910B3/CANN 9.2.0，均 open）：#8729 aclnnAddRmsNormDynamicQuantV2 的 y2Out 传空 tensor（文档明写支持空 Tensor）触发第一段早退（:378-383 判据含 y2Out 不含 y1Out），outputMask 路由出的 y1Out/scale1Out/xOut 或 y2Out/scale2Out/xOut 全部 canary 保留、两段 rc=0/0；#8743 aclnnAddRmsNorm 在 x1 非空时 gamma 传空 tensor（违反组合表约束，应 161002）两段 rc=0/0 且 yOut/xOut/rstdOut 全未写，根因是 CheckGammaAndRstdShape 只在 IsRegbase 分支调用、非 regbase 平台无此校验、gamma numel=0 使 numCol=0 无写出任务。
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -69,6 +69,9 @@ migration:
   - date: '2026-11-14'
     fields:
     - relations
+  - date: '2026-11-17'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-09
     base:

@@ -18,7 +18,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 对负索引张量做 put_/take 后与 CPU 或 eager 结果比对梯度；检查是否有非零梯度落在预期位置
-  fix: 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49519 （open，只修编译路径根因一：index_select 重写前回绕负索引）；eager put_ 根因二未见修复 MR
+  fix: 已有修复 PR/MR：https://gitcode.com/Ascend/pytorch/merge_requests/49519（发布状态待核实）
 labels:
   stage:
   - shared
@@ -52,3 +52,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix

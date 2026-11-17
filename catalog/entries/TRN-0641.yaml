@@ -23,7 +23,7 @@ mitigation:
 labels:
   stage:
   - shared
-  confidence: verified
+  confidence: documented
   coverage: var
   discovered: '2026-11-07'
 remarks: TRN-0275 空输入早退族 2026-11-06 新增五实例（独立 issue 各带 950/A2 实测矩阵）：本批与既有证据链同构，按族建条引用，机制/受害面同 TRN-0275。
@@ -40,6 +40,12 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-math/issues/4617
   kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8374
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8385
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-math/merge_requests/7205
+  kind: gitcode_pr
 relations:
 - kind: var
   target: TRN-0275
@@ -51,7 +57,8 @@ original:
   trigger_surface: CANN aclnn 空输入快路径（BCEBackward/FastBatchNormBackward/Cat/TriangularSolve/MhcPreSinkhornPremixBackward）+ 空 self/gradOut/全空输入/空 batch；Ascend950PR/910B2、CANN 9.2.0-beta.2/9.2.0/9.3.0 实测，master（2026-11-06 拉取）缺陷仍在
   discovery: 2026-11-07 每日扫描
   notes:
-  - '2026-11-08 2026-11-08 补：同接口 TriangularSolve 二次实测单 #4617（A2/910B2、canary 7.0、0/9 元素改写、源码 :184-189 定位）与修复 !7205（open）——机制同本条 #4597 面，详见 TRN-0659。'
+  - '2026-11-08 回访：补：同接口 TriangularSolve 二次实测单 #4617（A2/910B2、canary 7.0、0/9 元素改写、源码 :184-189 定位）与修复 !7205（open）——机制同本条 #4597 面，详见 TRN-0659。'
+  - 2026-11-17 归并吸收 TRN-0659（aclnn 空输入早退不写非空出参又三例）：空输入快路径只置 workspaceSize=0 即返回 SUCCESS，不写与空输入无关的非空输出（三接口各带 A2 真机实测与源码行定位）。
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -63,6 +70,15 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - evidence
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence
   audit:
     round: daily-audit-2026-11-07
     base:

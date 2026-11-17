@@ -23,8 +23,8 @@ mitigation:
   fix: '修复 PR https://github.com/modelscope/ms-swift/pull/10490 （open）：为 hy_v3/flint/ling3/spark2_5/seed_oss 等接 supports_tool_schema 并传 tools schema（对齐 #10281/#10300 已修路径）；未核实合入'
 labels:
   stage:
-  - rl
   - sft
+  - rl
   confidence: documented
   coverage: NEW
   discovered: '2026-11-04'
@@ -63,3 +63,7 @@ migration:
         to: 输出内容
     uncertain:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.stage

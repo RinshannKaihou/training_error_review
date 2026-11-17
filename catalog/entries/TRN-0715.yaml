@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7324
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: INF-2493
 original:
   mechanism: 'ops-transformer #7324（2026-11-10，open，910B3 / CANN 9.1.0）。aclnnLightningIndexer：S2_BASE_SIZE=512，actS2>512 时逐行 SortAll+MergeSort 跨基块归并，等分候选间 (分数降序, 同分索引升序) 的 golden 契约（官方 golden lightning_indexer_golden.py 用 [-score,index] 字典序 stable sort）在跨块归并处丢失。张量级统计：23 失败用例 NPU 多出索引共 530,843 个、低于 512 的为 0（全部落在基块边界之后），被顶掉的 golden 索引集中首块前部；非等分行 0 失配。修复 PR !15685（open，WIP）。'
   source: https://gitcode.com/cann/ops-transformer/issues/7324
@@ -47,3 +49,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

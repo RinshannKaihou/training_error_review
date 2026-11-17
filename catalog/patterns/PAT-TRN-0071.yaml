@@ -1,6 +1,6 @@
 id: PAT-TRN-0071
-title: 待定
-shared_mechanism: 待定
+title: 分布式梯度归约通信与缓冲区释放复用缺少流同步
+shared_mechanism: ZeRO/FSDP 通信重叠路径在异步 reduce-scatter 尚未完成前提前释放或重用梯度桶内存，造成跨流写后读竞态与坏梯度。
 representative: TRN-0286
 members:
 - TRN-0286

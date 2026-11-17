@@ -39,7 +39,7 @@ original:
   trigger_surface: Ascend 950/960；HCCL CommInitRootInfo 分级建链多 root 并发；分布式训练通信域初始化。
   discovery: 2026-11-01 每日扫描
   notes:
-  - 2026-11-04 2026-11-04 回访：修复 MR !6394 已 closed 未合入（批次快照 2026-11-03T06:47）——线程安全修复未落地，条目维持；后续跟踪替代载体
+  - 2026-11-04 回访：回访：修复 MR !6394 已 closed 未合入（批次快照 2026-11-03T06:47）——线程安全修复未落地，条目维持；后续跟踪替代载体
 migration:
   method: scan
   scanned: '2026-11-01'
@@ -57,5 +57,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

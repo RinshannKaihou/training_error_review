@@ -4,7 +4,7 @@ slug: lightning_indexer_grad_empty_query_leaves_dkout_unwritten
 aliases: []
 title: LightningIndexerGrad 空 query 早退不写 dkOut
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0275
+pattern: PAT-TRN-0069
 original:
   mechanism: 'cann/ops-transformer issue #7743（2026-11-17，open）。aclnnLightningIndexerGrad 在 query 为空张量（S1=0）时走空输入早退：GetWorkspaceSize 与执行两段都返回 0，workspaceSize=0，host 侧没有建任何写 dkOut 的节点。但 op_host/lightning_indexer_grad_infershape.cpp L117 `*dkShape = *keyShape;` 决定 dkOut 形状只由 key 决定、与 query 无关，因此 dkOut=[1,2048,1,128] 仍有 262144 个元素需要写。资料 docs/aclnnLightningIndexerGrad.md L385 写明 S1 取值 1~128K，越界应在首段返回 161002；即便按空输入早退处理，也必须把非空输出写出来。实测（Atlas A2 910B2、CANN 9.2.0、ops-transformer 14d022b1）：合法对照 S1=2 时 canary_left=0.000、workspace=173018624，kernel 真跑并整块写出；S1=0 时两组互斥金丝雀（0xDEADBEEF / 0xC0FFEE01）均 100% 原样保留。与同接口 #7325（sparseMode=3 且 S1>S2 时死行 dweights 未零化）根因和触发条件不同。'
   source: https://gitcode.com/cann/ops-transformer/issues/7743
@@ -43,3 +44,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-17'
+  audit:
+    date: '2026-11-17'
+    method: manual_stewardship_review
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - pattern

@@ -4,7 +4,7 @@ slug: soft_margin_loss_log1p_small_e_zero
 aliases: []
 title: SoftMarginLoss log(1+e) 小值退化为 0
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -26,14 +26,13 @@ labels:
   confidence: documented
   coverage: var
   discovered: '2026-11-12'
-remarks: 与 TRN-0604（foreach_log1p 用 Adds+Log 致小输入返 0）同一机制在不同损失算子上的实例。
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8580
   kind: gitcode_issue
 relations:
 - kind: var
   target: TRN-0604
-pattern: PAT-TRN-0079
 original:
   mechanism: 'cann/ops-nn issue #8580（2026-11-11 open，Ascend 950）。aclnnSoftMarginLoss kernel 侧以 Adds(1)+Log 组合实现 log(1+exp(-x*y))：e 极小时 fl(1+e) 舍入为 1，log(1)=0，小值段精度损失明显且 e=inf 行为不正确。实测对照：x=1e-8、y=-1 时 ascend 输出 0.000000，numpy log1p(exp(-x*y)) 参考 1.000000e-08。同 issue 另报 reduction 属性未校验（0/1/2 外取值继续执行产生错误结果）与动态 shape 不支持（infershape/tiling 对未知秩/-1 直接失败，属 fail-loud 边界外）。与 TRN-0604 foreach_log1p 的 Adds(dst,src,1)+Log 别名同机制：本条是损失算子 soft_margin_loss 的实现。来源：https://gitcode.com/cann/ops-nn/issues/8580 。训练面：soft margin/logistic 类损失训练时易样本（-x*y 大、e 极小）贡献被清零，绝对误差 ~e 量级、系统性偏低。'
   source: https://gitcode.com/cann/ops-nn/issues/8580
@@ -41,7 +40,7 @@ original:
   trigger_surface: Ascend 950；aclnnSoftMarginLoss reduction=none 小值段与 e=inf；issue open 无修复 PR
   discovery: 2026-11-12 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：源 issue #8580 已 closed，未见关联修复 MR；机制判定不变。'
+  - '2026-11-13 回访：回访：源 issue #8580 已 closed，未见关联修复 MR；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -52,6 +51,15 @@ migration:
   - date: '2026-11-13'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status
+  - date: '2026-11-17'
+    fields:
+    - pattern
   audit:
     round: daily-audit-2026-11-12
     base:

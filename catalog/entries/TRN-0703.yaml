@@ -39,7 +39,7 @@ original:
   trigger_surface: torchtitan dsv4 HcSplitSinkhorn（mhc.py c62c6a7）；eps 加法位置与参考不一致
   discovery: 2026-11-10 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 !5999 merged。
+  - 2026-11-11 回访：回访：修复 !5999 merged。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -58,4 +58,7 @@ migration:
   - date: '2026-11-11'
     fields:
     - mitigation.fix
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

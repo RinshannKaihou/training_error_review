@@ -17,4 +17,8 @@
 | [TRL #8352](https://github.com/huggingface/trl/issues/8352)（SDPO `--scale_rewards false` 字符串落入 group scaling）与 [#8344](https://github.com/huggingface/trl/issues/8344)（SDPO IterableDataset 不重复 `num_generations`） | 维护者 2026-11-14 明确以「批量代码扫描、没有真实运行命中」关闭（not_planned）并拒绝该类报告；#8344 的默认路径还是 TypeError fail-loud，只有 `dispatch_batches=False` 才静默不分组。2026-11-16 扫描拒收，不新建条目。 |
 | [TRL #8356](https://github.com/huggingface/trl/issues/8356)（DPO/KTO `ref_model=None` 时按 config `_name_or_path` 重新加载参考模型，丢掉内存中对模型实例的改动）与 [#8359](https://github.com/huggingface/trl/issues/8359)（GRPO 带 `tools` 时 completion 被拆出 `reasoning_content`，`think_format_reward`/`reasoning_accuracy_reward` 恒返回 0） | 同一维护者 2026-11-14 以同一条理由关闭（not_planned）：「批量代码扫描开 issue、不是真实运行命中」，与 #8352/#8344 同批。沿用 2026-11-16 判定口径，不新建条目；若将来出现真实 run 复现或维护者自认，再按新证据重评。 |
 
-种子期没有「引用被证伪后又恢复」的条目。出现时按日期追加。
+| [cann/ops-transformer #6625](https://gitcode.com/cann/ops-transformer/issues/6625)（原 `TRN-0414` / `INF-2167`：SparseFlashMlaMetadata 丢弃 sequsedQ） | 上游报告者 2026-11-15 改标 `[已撤回]`：自建 C++ 探针脚本未将 `suVal` 与 `su=1` 开关联动，全部传入 `nullptr`；修正探针后分核与越界校验均正常。已将 `TRN-0414` 与 `INF-2167` 同步退役。 |
+| 纯编译融合未命中或回退慢速备用核（如 [cann/ops-nn #8308](https://gitcode.com/cann/ops-nn/issues/8308)、[Ascend/pytorch #5855](https://gitcode.com/Ascend/pytorch/issues/5855)） | 计算精度与梯度完全无损，仅耗时或融合覆盖率退化，按纯性能问题退役（`TRN-0647`、`TRN-0627`），不占静默正确性故障编号。 |
+| C++ `aclnn` 两段式直调契约外负向用例（如 `eps=-1`、`groupList` 负数、非大模型传统 CV/ML 算子） | 正常 PyTorch / LLM 训练路径在前端或契约层不可达的 GIGO 负向输入及脱离大模型训练路径的传统算子，2026-11-17 批量退役并不再收录。 |
+
+种子期没有「引用被证伪后又恢复」的条目。出现时按日期追加（须附完整规范 URL）。

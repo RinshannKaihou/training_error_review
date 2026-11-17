@@ -23,16 +23,13 @@ labels:
   stage:
   - shared
   confidence: documented
-  coverage: var
+  coverage: NEW
   discovered: '2026-11-10'
 remarks: 与 TRN-0669 同族（首段校验缺口放行），效应差异：放行后静默错算而非延迟报内部错
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7296
   kind: gitcode_issue
-relations:
-- kind: var
-  target: TRN-0669
-pattern: PAT-TRN-0072
+relations: []
 original:
   mechanism: 'cann/ops-transformer #7296+!15577（open，2026-11-09，源码 5adf800c91c9）：CheckCaseSplitK 在 Ascend950/960DT 上 x 只含一个 tensor 时立即返回成功，跳过必需的 transpose_x 检查与其后的 rank、shape 检查；group_type=2 的单 x split-K 路径要求转置输入，transpose_x=false 的非法组合被接受，进入通用 tiler 被按转置布局对待。回归用例（一个 x、group_type=2、transpose_x=false）基线返回 GRAPH_SUCCESS（用例期望 GRAPH_FAILED）；修复删除该早退成功返回，使既有 transpose/rank/shape 校验执行，ut GROUPED_MATMUL_INFERSHAPE_CSV nonquant_splitk_transposex_required_invalid_950 通过（outcome confirmed_bug）。与 TRN-0669（首段校验缺口放行）同族，差异在放行后 tiler 按转置解释静默错算。训练面：MoE/分组 GEMM split-K 训练图。'
   source: https://gitcode.com/cann/ops-transformer/issues/7296
@@ -44,6 +41,15 @@ migration:
   scanned: '2026-11-10'
   updates:
   - date: '2026-11-10'
+    fields:
+    - pattern
+  - date: '2026-11-17'
+    fields:
+    - relations
+  - date: '2026-11-17'
+    fields:
+    - labels.coverage
+  - date: '2026-11-17'
     fields:
     - pattern
   audit:

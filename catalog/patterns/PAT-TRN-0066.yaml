@@ -1,6 +1,6 @@
 id: PAT-TRN-0066
-title: 待定
-shared_mechanism: 待定
+title: NPU 图编译与 Triton 后端循环特化及低精度改写失真
+shared_mechanism: triton-ascend 与 TorchAir/Inductor 在编译期错误固化归约轴常量、漏处理嵌套循环边界或消除低精度舍入节点，静默产出错误张量。
 representative: TRN-0280
 members:
 - TRN-0280

@@ -41,7 +41,7 @@ original:
   trigger_surface: CANN 9.0.0 built-in 及仓 master（910_93 实测）；moe_token_unpermute / moe_token_permute_grad / moe_index_copy 三算子；sortedIndices 含负值（上游 moe_init_routing -1 padding）
   discovery: 2026-10-28 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：issue #6814 已 closed、修复 MR !14742 已 closed（未标 merged），合入状态未核实；机制判定不变。'
+  - '2026-11-13 回访：回访：issue #6814 已 closed、修复 MR !14742 已 closed（未标 merged），合入状态未核实；机制判定不变。'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -60,5 +60,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-13'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

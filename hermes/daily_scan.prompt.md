@@ -51,15 +51,15 @@ arXiv（使用 `curl -fsSL` 并检查有效返回）：`silent data corruption L
 
 **跨库关联**：同一来源或机制可能已在推理编目里。对“训推共有”仓库的候选和其他明显训推共有的底层问题，写入前用 `python3 /workspace/inference_error_review/tools/catalog_tool.py find '<规范URL>'` 查推理库；已收录且确属同一机制时，本库条目仍按训练范围单独写（须证实训练侧影响），并在 `relations` 加 `{"kind": "cross", "target": "<INF-xxxx>"}`（已有条目用 `update <编号> --relation cross:<INF-xxxx>`），核对回显里推理库条目的标题。只改本库；推理库一侧的反向关联由每日审计自动补上。
 
-fail-fast / 性能 / CI 不收录；论文仅证明检测方法有效、不证明训练侧 task-impacting 故障的，也不自动入故障目录。被拒的写 `catalog/rejected.md`，不确定的留观并交代缺什么证据。
-分别写已观察症状、源码/修复支持的机制、条件性训练后果和任务影响实测值（无实测则明说）；版本/配置不明写未知。`verified` 只覆盖本地复现或有源码定位且因果闭合的具体结论；仅有上游 issue 自述及日志的标 `documented`，机制未定位则留观而不是编造根因。不要推断未实验的检测器预测；区分来源事实与自己的推断。
+fail-fast / 纯性能回退（数值无损） / CI / 单测脚本自身缺陷 / C++ `aclnn` 契约外非法入参（如 `eps<=0`、非法枚举、调用方自造错误出参 shape/dtype 等 PyTorch 训练路径不可达的 GIGO 用例）以及纯 CV/传统 ML 非大模型算子不收录；观测/对拍工具（如 `msprobe`/`mssanitizer`）自身误报漏报记入 `catalog/blindspots.md`，不占主编目故障编号。被拒候选必须带**完整规范 URL** 追加写入 `catalog/rejected.md`（日报中也必须写完整 URL，禁止只写裸 `#数字`），不确定的留观并交代缺什么证据。同一仓库同一底层机制的新 issue 必须用 `update <编号> --add-evidence <URL>` 归并，禁止在同仓库拆出多条重复变体。`update --note "<日期以外的说明>"` 会自动前置当日日期，不要在说明开头重复手写日期。
+分别写已观察症状、源码/修复支持的机制、条件性训练后果和任务影响实测值（无实测则明说）；版本/配置不明写未知。`verified` 只覆盖本地实验室复现或源码逐行闭合验证的结论；仅有上游 issue/PR 描述与日志的一律标 `documented`；根因未定位者一律留观（确有端到端严重静默后果需先登记时只能标 `speculative`）。不要推断未实验的检测器预测；区分来源事实与自己的推断。
 
 新条目状态是 `pending_audit`，由每日审计任务（UTC 02:00）复核定稿，扫描不需要也不应自行改状态。
 
 ### 3. 生成视图与校验
 
 ```bash
-python3 tools/catalog_tool.py build      # views/CATALOG.zh.md、views/fault_catalog.csv（xlsx 生成但不入 Git）
+python3 tools/catalog_tool.py build      # 生成 views/CATALOG.zh.md、fault_catalog.csv、fault_catalog.xlsx
 python3 tools/catalog_tool.py validate   # 必须 "ok": true
 ```
 
@@ -68,8 +68,8 @@ validate 失败就修好再继续，不要手改 `views/`。另人工核对本�
 ### 4. 本库 Git 提交与远程核验（每日必做）
 
 - **扫描前置检查：**仅在 `/workspace/training_error_review` 操作。确认当前分支为 `main` 且上游为 `origin/main`，`git status --porcelain -uall` 为空；运行 `git fetch origin main` 后确认 `HEAD` 与 `origin/main` 相同。已有脏文件、暂存变更、本地待推提交、远程领先或 fetch 失败时，不要扫描、更不要自动覆盖/暂存/推送存量；立即报告阻塞。不得 `git pull`、`reset`、`push --force`。
-- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/entries/`（新增或修改的 YAML）、`catalog/id_registry.tsv`、`views/CATALOG.zh.md`、`views/fault_catalog.csv`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`；`views/fault_catalog.xlsx` 按 `.gitignore` 仅生成不入 Git；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/YAML 运行 `git diff --cached --check -- . ':!*.csv'`；无变更注明无需提交，不造空提交。
-- 有变更时 `git commit -m "daily scan YYYY-MM-DD: training"`，再 `git push origin HEAD:main`；用 `git ls-remote origin refs/heads/main` 核对远程 SHA 等于本地 `HEAD`。提交/推送/核验失败要明确报告本地 commit ID、错误及远程未同步事实，不强推、不追加重复提交。Git 操作在最终摘要前完成。
+- **验证通过后：**即使没有新条目也写当日有效扫描日报。检查本次 diff，只定向暂存本轮确有变更的 `catalog/entries/`（新增或修改的 YAML）、`catalog/id_registry.tsv`、`views/CATALOG.zh.md`、`views/fault_catalog.csv`、`views/fault_catalog.xlsx`、`catalog/rejected.md`、`catalog/blindspots.md`、`daily/reports/YYYY-MM-DD.md`；不要 `git add -A`，不要提交 `daily/raw/`、密钥、本地配置或用户无关修改。核对 `git diff --cached --name-only` 与暂存内容；对源码/Markdown/YAML 运行 `git diff --cached --check -- . ':!*.csv' ':!*.xlsx'`；无变更注明无需提交，不造空提交。
+- 有变更时 `git commit -m "daily scan YYYY-MM-DD: training"`，再 `git push origin HEAD:main`；用 `git ls-remote origin refs/heads/main` 核对远程 SHA 等于本地 `HEAD`。推送核验成功后，运行 `/usr/bin/python3 /root/.hermes/profiles/third/scripts/fault_scan_sources/collect.py ack --scope training --until <本批次generated_at>` 推进训练侧独立消费水位（未完成评估或推送失败不得推进水位）。提交/推送/核验失败要明确报告本地 commit ID、错误及远程未同步事实，不强推、不追加重复提交。Git 操作在最终摘要前完成。
 
 ### 5. 飞书摘要（中文，术语保留英文）
 

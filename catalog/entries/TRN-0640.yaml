@@ -4,7 +4,7 @@ slug: aclnn_norm_eps_negative_nan_family
 aliases: []
 title: norm 族 eps<0 放行静默输出全 NaN（三算子同型）
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -26,7 +26,7 @@ labels:
   confidence: verified
   coverage: NEW
   discovered: '2026-11-07'
-remarks: 与 TRN-0275「空输入早退」不同族：本条是标量属性值域校验缺失（host 侧 double 直接可得，校验成本为零），非空性联动问题。推理库 INF-2434 同源三单已收；本条为训练范围条目（LN/BN 为训练主干算子）。 本库内为新机制族（标量属性值域校验缺失），与推理库同源条目以 cross 关联。
+remarks: C++ aclnn 直调契约外非法入参（GIGO 负向测试），正常 PyTorch/LLM 框架路径不可达
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8304
   kind: gitcode_issue
@@ -60,3 +60,7 @@ migration:
       visibility:
         from: 静默错误
         to: 数值异常
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

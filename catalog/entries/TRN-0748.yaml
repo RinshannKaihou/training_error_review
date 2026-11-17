@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 保存后校验 tag 目录内各 rank 分片齐全再读 latest；跨 run 复用 tag 时比对 client_state 与分片内的 run 标识
-  fix: '修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9071 （open，fixes #9067：latest 写入前加 barrier 并改临时文件+replace；#9066 的原地重写未见修复）'
+  fix: 已有修复 PR/MR：https://github.com/deepspeedai/DeepSpeed/pull/9071（发布状态待核实）
 labels:
   stage:
   - shared
@@ -52,3 +52,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix

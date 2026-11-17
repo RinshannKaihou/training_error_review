@@ -34,7 +34,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-transformer/pull/15813
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: INF-2527
 original:
   mechanism: CANN ops-transformer 的 MoeInitRoutingV3/V4（Ascend950DT_9574、CANN 9.3.0、torch 2.14.0+cpu / torch_npu 2.14.0、TTK 3.0.0）在 INT8 动态量化（quant_mode=1）且传入按专家配置的 smooth scale 时，H 维分块路径读取 scale 遗漏 expertIdx * H 偏移，所有专家都读第 0 行 scale，导致 expandedX 精度失败；不分块路径写法正确，V3/V4 复用同一份 kernel 文件因此都受影响。issue 给出的定位用例：aclnnMoeInitRoutingV3_L1_0844，BF16 输入 x=(1,14788)、expertIdx=(1,7)、FP32 scale=(3775,14788)、expertNum=7758、有效专家区间 [2789,6564)、quantMode=1、expertTokensNumFlag=False，调用完成但 expandedX 精度失败，按 scale[0] 计算。修复把取址改为 expertIdx * H + j * perLoopCols，与不分块路径一致（INT4 共享 scale 路径 expertIdx 仍为 0）。同 issue 另两项属校验/标杆面：quant_mode=13 传 scale 时 GEIR 动态图把 scale 推成未知 rank {-2}，V3/V4 infershape 直接按二维 shape 报错（应为延后检查）；V3 标杆在 H=0 时对空数组 numpy.max 报错、FP8 非量化透传场景 dtype 提升/uint8 载体解释/4 位打包误触发/尾部落比较不一致。修复提交 b698ccaef64c7b567c757832acdd2fa8a99940b6，针对性复测通过后按当前提交回归：V3 Kernel 62/62、V3 E2E 62/62、V4 Kernel 32/32、V4 ACLNN 43/43，合计 199/199 PASS，内存越界检查全通过（本轮未重跑 GEIR 与 E2E 图模式）。
   source: https://gitcode.com/cann/ops-transformer/issues/7469 ｜修复 https://gitcode.com/cann/ops-transformer/pull/15813
@@ -62,3 +64,7 @@ migration:
       effect:
         from: 训练样本流
         to: 数值结果
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

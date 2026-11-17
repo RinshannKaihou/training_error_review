@@ -39,8 +39,8 @@ original:
   trigger_surface: DeepSpeed AutoTP（tensor_parallel.autotp_size>1）+ GPTBigCode multi_query=True（StarCoder/SantaCoder 类）；c_attn.weight/bias
   discovery: 2026-10-28 每日扫描
   notes:
-  - '2026-10-30 2026-10-30 回访：DeepSpeed #8927 open；共享 KV 梯度归约修复 PR 未出现（搜索窗口内无）'
-  - '2026-10-31 2026-10-31 回访：issue #8927 closed（2026-10-30T01:04:53Z）、修复 PR #8928 (Sum GPTBigCode''s shared key/value gradient across tensor-parallel ranks) 同刻 merged。修复合入主库；发布版本未核实。'
+  - '2026-10-30 回访：回访：DeepSpeed #8927 open；共享 KV 梯度归约修复 PR 未出现（搜索窗口内无）'
+  - '2026-10-31 回访：回访：issue #8927 closed（2026-10-30T01:04:53Z）、修复 PR #8928 (Sum GPTBigCode''s shared key/value gradient across tensor-parallel ranks) 同刻 merged。修复合入主库；发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -67,3 +67,6 @@ migration:
   - date: '2026-11-07'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - original.notes

@@ -1,6 +1,6 @@
 id: PAT-TRN-0058
-title: 待定
-shared_mechanism: 待定
+title: CANN 算子对非连续或形状不符的 out 出参静默错写越界
+shared_mechanism: 算子两段式接口未校验调用方传入的 out 张量连续性与容量，内核按紧凑布局盲写导致视图读回错乱或尾部越界踩写。
 representative: TRN-0524
 members:
 - TRN-0524
@@ -12,3 +12,4 @@ members:
 - TRN-0755
 - TRN-0756
 - TRN-0758
+- TRN-0773

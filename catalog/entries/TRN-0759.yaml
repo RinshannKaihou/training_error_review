@@ -4,7 +4,7 @@ slug: cann_ops_math_acosh_grad_wrong_formula
 aliases: []
 title: AcoshGrad 用错前向输入反向公式致梯度错
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-16'
-remarks: ''
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-math/merge_requests/7412
   kind: gitcode_pr
@@ -49,3 +49,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

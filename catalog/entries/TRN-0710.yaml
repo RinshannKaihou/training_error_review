@@ -41,7 +41,7 @@ original:
   trigger_surface: Megatron-LM；显式 padded_vocab_size < tokenizer.vocab_size（flag 或 ckpt 恢复）；TP>1
   discovery: 2026-11-10 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：修复 #9209 closed 未标 merged（2026-11-09T20:17Z），维持跟踪。'
+  - '2026-11-11 回访：回访：修复 #9209 closed 未标 merged（2026-11-09T20:17Z），维持跟踪。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -50,6 +50,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-11'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

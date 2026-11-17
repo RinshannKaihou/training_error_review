@@ -39,7 +39,7 @@ original:
   trigger_surface: Ascend950PR/9589、torch_npu 2.13.0、CANN 9.2.0-beta.2；SDPA dropout_p>0 + 反向 + torch.compile
   discovery: 2026-11-10 每日扫描
   notes:
-  - 2026-11-13 2026-11-13 回访：torch_npu 侧修复 MR !49537（open）出现，改 tensor-RNG 包装并接线 apply_sdpa_950_dropout_fix，安全子集（950+4D BNSD+fp16/bf16/fp32+无 mask+非 causal+dropout>0+grad）路由到 InductorNpuAttentionFunction，TORCH_NPU_SDPA_950_FIX=0 可关；op-plugin !6179 状态未变。机制判定不变。
+  - 2026-11-13 回访：回访：torch_npu 侧修复 MR !49537（open）出现，改 tensor-RNG 包装并接线 apply_sdpa_950_dropout_fix，安全子集（950+4D BNSD+fp16/bf16/fp32+无 mask+非 causal+dropout>0+grad）路由到 InductorNpuAttentionFunction，TORCH_NPU_SDPA_950_FIX=0 可关；op-plugin !6179 状态未变。机制判定不变。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -54,4 +54,7 @@ migration:
   - date: '2026-11-13'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

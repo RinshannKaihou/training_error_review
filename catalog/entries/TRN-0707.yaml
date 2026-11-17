@@ -38,7 +38,7 @@ original:
   trigger_surface: torchtitan async_mode=async_with_pinned_mem；ckpt 间隔步不触发 log（无 host 同步）时保存
   discovery: 2026-11-10 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 !5989 merged。
+  - 2026-11-11 回访：回访：修复 !5989 merged。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -56,4 +56,7 @@ migration:
   - date: '2026-11-11'
     fields:
     - mitigation.fix
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

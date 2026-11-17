@@ -4,7 +4,7 @@ slug: opsnn_add_rms_norm_eps_attr_float_truncation
 aliases: []
 title: AddRmsNorm epsilon attr 按 float 截断致 NaN
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -26,7 +26,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-13'
-remarks: 与 TRN-0397（AddRmsNormQuant 大 epsilon 下溢/大数溢出）机制不同：那条是 kernel 数值域，本条是 attr dtype 承载截断与校验门控缺失。
+remarks: C++ aclnn 直调契约外非法入参（GIGO 负向测试），正常 PyTorch/LLM 框架路径不可达
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8745
   kind: gitcode_issue
@@ -55,3 +55,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

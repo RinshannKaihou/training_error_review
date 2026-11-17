@@ -4,7 +4,7 @@ slug: aclgraph_wait_event_current_stream_guard
 aliases: []
 title: aclgraph 跨流 wait_event 守卫按当前流误判
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -19,14 +19,14 @@ effect:
   visibility: 挂起
 mitigation:
   detect: 多流捕获用例断言分配落在私有池（GRAPH-POOL 打印 match=1）；wait_event 写在 with 块外做对照。
-  fix: 方案在 issue 中给出（门槛改为设备级 num_active_captures_>0 或显式组合「目标流未捕获+设备有捕获」），未见修复 PR（2026-11-07）；规避：wait_event 写在进入 with torch.npu.stream(...) 之前。
+  fix: 已有修复 PR/MR：https://gitcode.com/Ascend/pytorch/pull/49378（发布状态待核实）
 labels:
   stage:
   - shared
   confidence: documented
   coverage: NEW
   discovered: '2026-11-08'
-remarks: ''
+remarks: aclgraph 流捕获重放地址报错挂死（fail-loud）
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5948
   kind: gitcode_issue
@@ -44,7 +44,7 @@ original:
   trigger_surface: torch_npu aclgraph 图捕获 + 多流 fork/join + TASK_QUEUE_ENABLE=1（默认开）+ wait_event 在 with stream 块内调用；torch_npu 2.14.0（796d887076fe 之后）、CANN 9.2.1 分析实测
   discovery: 2026-11-08 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 PR !49378（closed）/!49380（open）落地根因与修法——hasCapturesUnderway() 原按 TLS 当前流查 capture 状态（side 流尚未入 capture 时误答 NONE、不 drain 任务队列、下一笔分配落默认池 (0,0)），改判设备级 num_active_captures_>0；empty_cache 归还该块后 graph.replay() 写未映射地址。修复未发布。
+  - 2026-11-11 回访：回访：修复 PR !49378（closed）/!49380（open）落地根因与修法——hasCapturesUnderway() 原按 TLS 当前流查 capture 状态（side 流尚未入 capture 时误答 NONE、不 drain 任务队列、下一笔分配落默认池 (0,0)），改判设备级 num_active_captures_>0；empty_cache 归还该块后 graph.replay() 写未映射地址。修复未发布。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -70,3 +70,12 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix
+  - date: '2026-11-17'
+    fields:
+    - status

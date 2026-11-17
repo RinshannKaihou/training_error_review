@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8561
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: INF-2490
 original:
   mechanism: 'ops-nn #8561（2026-11-10，open，910B3 / CANN 9.2.0 / master e21941a02）。缺陷位置 index/gather_v3/op_host/op_api/gather_v3.cpp 只校验 dtype/shape；C++ repro（aclnnGatherGetWorkspaceSize/aclnnGather 直调）实测越界 index 返回 [100, 0.0]，kernel assert ''Index 99 out of range[0 4)'' 已触发并写 plog 但未拦截。上游索引越界在训练里常由配置/数据错位引入（如词表越界、路由错位），本缺陷使其以静默错值而非报错暴露。'
   source: https://gitcode.com/cann/ops-nn/issues/8561
@@ -48,3 +50,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

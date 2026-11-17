@@ -42,7 +42,7 @@ original:
   trigger_surface: torch_npu Inductor default 后端 + 含 NaN 输入的 max/min/argmax/argmin + online softmax 长归约；910B4/CANN 9.2.0-beta.2/triton-ascend 3.6.0
   discovery: 2026-11-05 每日扫描
   notes:
-  - '2026-11-07 回访 2026-11-07：批次快照显示 !49041 已 closed（2026-11-06T02:27Z，未 merged）；同日同族新 issue #5924（argmax/argmin 全 NaN 索引错）+ 修复 !49185（open）建 TRN-0639。'
+  - '2026-11-07 回访：批次快照显示 !49041 已 closed（2026-11-06T02:27Z，未 merged）；同日同族新 issue #5924（argmax/argmin 全 NaN 索引错）+ 修复 !49185（open）建 TRN-0639。'
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -51,6 +51,9 @@ migration:
     fields:
     - pattern
   - date: '2026-11-07'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

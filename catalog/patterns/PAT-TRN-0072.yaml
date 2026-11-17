@@ -1,10 +1,6 @@
 id: PAT-TRN-0072
 title: 待定
 shared_mechanism: 待定
-representative: TRN-0669
-members:
-- TRN-0669
-- TRN-0672
-- TRN-0676
-- TRN-0695
-- TRN-0700
+representative: null
+members: []
+status: retired

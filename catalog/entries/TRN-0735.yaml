@@ -39,7 +39,7 @@ original:
   trigger_surface: GEIR 图编译 infershape 路径；同形多输入且 desc 同源共享 Shape 对象；修复 !7301 open 未发布
   discovery: 2026-11-12 每日扫描
   notes:
-  - 2026-11-13 2026-11-13 回访：修复 MR !7301 已 merged（batch 索引 state=merged），#4685 仍 open；机制判定不变，发布版本未核实。
+  - 2026-11-13 回访：回访：修复 MR !7301 已 merged（batch 索引 state=merged），#4685 仍 open；机制判定不变，发布版本未核实。
 migration:
   method: scan
   scanned: '2026-11-12'
@@ -52,5 +52,8 @@ migration:
     panel: []
   updates:
   - date: '2026-11-13'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

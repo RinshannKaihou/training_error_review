@@ -3,16 +3,16 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 767 条；状态：active 767
+共 775 条；状态：active 767、pending_audit 8
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 231 |
+| 算子/内核 | 238 |
 | 编译器 | 43 |
 | 运行时/执行 | 19 |
 | 集合通信 | 14 |
-| 并行切分 | 40 |
+| 并行切分 | 41 |
 | KV缓存 | 2 |
 | 调度/服务 | 1 |
 | 输出解析 | 2 |
@@ -2775,6 +2775,86 @@
 - **改进措施**：检测 真 FLA 与 no-FLA 回退两条路径同输入对拍 loss/梯度；检查 packed 路径是否应用 Q/K L2 norm。；修复 修复 PR https://github.com/modelscope/ms-swift/pull/10567（open 2026-11-13，未合入）
 - **来源**：https://github.com/modelscope/ms-swift/pull/10567
 
+### TRN-0770 `verl_fused_linear_ppo_bf16_temperature_divide` verl FusedLinearForPPO 先 bf16 除温度再升 fp32
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / verl / FusedLinearForPPO torch
+- **原因行为**：torch 后端把 bf16 logits 先除以 temperature 再升到 fp32 算 logprob 与 entropy，除法舍入停在 bf16 精度上
+- **影响对象**：输出分布；训练信号（静默错误）
+- **影响详情**：T=0.7 时 logprob 与 rollout 采样器公式最大差 0.054（修复后 3.8e-6），entropy 仍以 bf16 返回；旧策略 logprob 偏差直接进入 importance ratio
+- **改进措施**：检测 同 batch 用 fused 与未融合路径（fp32 logits/T）对拍 logprob 与 entropy；temperature≠1 时差异随 bf16 量化步长放大；修复 修复 PR https://github.com/verl-project/verl/pull/8684（open，未合入）：先升 fp32 再除温度；H100 T=0.7 实测 logprob 与采样器公式差 3.8e-6（原 0.054）
+- **来源**：https://github.com/verl-project/verl/pull/8684
+
+### TRN-0772 `lightning_indexer_grad_empty_query_leaves_dkout_unwritten` LightningIndexerGrad 空 query 早退不写 dkOut
+
+`故障` · `pending_audit` · `pretrain；rl` · `documented` · `var` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / cann / aclnnLightningIndexerGrad
+- **原因行为**：query 为空（S1=0）时两段接口直接返回 0、workspaceSize=0，不构建任何写 dkOut 的节点；而 dkOut 形状只由 key 决定，本身非空
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：dkOut [1,2048,1,128] 共 262144 个元素保持调用方预填的未初始化显存（双金丝雀 100% 残留），随后作为 key 梯度送进优化器
+- **改进措施**：检测 对非空输出缓冲预填两种互斥金丝雀位型，用 S1=0 的空 query 调一次并回读；同探针在 S1=2 时应整块写出；修复 待定（issue open 2026-11-17；建议首段对 S1=0 返回 161002，或在早退前把 dkOut 零化）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7743
+- **关联**：var:TRN-0275
+
+### TRN-0773 `foreach_addcdiv_list_noncontiguous_out_partial_write` ForeachAddcdivList 非连续 out 只写一半
+
+`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `var` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / cann / aclnnForeachAddcdivList
+- **原因行为**：List 版既不校验 out 各 tensor 连续性，也不按 stride/storageDims 回写，直接按连续布局写 storage 前缀；同族 Scalar 版已有 stride 回写路径
+- **影响对象**：模型权重；优化器状态（静默错误）
+- **影响详情**：4 槽中 2 槽非连续时 48/80 元素未写、仅 2 个正确（连续槽 80/80 正确），两段仍返回 0/0，非连续槽保持调用方旧值
+- **改进措施**：检测 out 列表混入非连续 view（每槽独立 stride）并预填互斥金丝雀；读回统计未写元素数，同时保留连续槽作同调用对照；修复 待定（issue open 2026-11-17；建议首段校验 out 连续性返回 161002，或按 strides 回写；同族 Scalar 版可作参照）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8936
+- **关联**：var:TRN-0524
+
+### TRN-0774 `sparse_segment_mean_fp16_accumulation` SparseSegmentMean FP16 累加致长段均值错误
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / cann / sparse_segment_mean
+- **原因行为**：AICPU kernel 用 FP16 累加分段和再除以段长，长段的部分和在 2048 处停止增长，65536 的除数还会溢出为 inf
+- **影响对象**：数值结果；训练信号（静默错误）
+- **影响详情**：4096 个 1、单段输入返回 0.5；[65536,256] 分列路径返回 0；FP32/DOUBLE 路径正常，合法输入无报错
+- **改进措施**：检测 用全常量 1 的长分段输入（4096/65536 行、单段）检查输出是否恒为 1；或与 FP64 独立累加参考对拍；修复 修复提交 781f656aadc9（issue 给出）：为每个活跃列区间增加 FLOAT 暂存行，累加与除法都用 FLOAT，最后转回 FP16；是否已合入发布未核实
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8954
+
+### TRN-0775 `recurrent_kda_seq_len_over_limit_silent_zero` RecurrentKda 序列长度超 8 静默输出全 0
+
+`故障` · `pending_audit` · `pretrain；sft` · `documented` · `NEW` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / cann / aclnnRecurrentKda
+- **原因行为**：host 侧 CheckShape 不校验文档规定的单序列长度上限 8，kernel 在 T>8 时把 attnOut 写成全 0 仍返回成功
+- **影响对象**：隐状态；数值结果（静默错误）
+- **影响详情**：TND T=12/18 与 BSND T=16 时 attnOut 非零元素 0/6144、0/9216、0/8192，两段 rc=0/0；T≤8 与 fp64 标杆 matched_ratio=1.0
+- **改进措施**：检测 扫单序列长度 T=1..24，统计 attnOut 非零元素数并与 fp64 标杆比对；输出缓冲预填非零 canary 以区分「写成 0」与「未写」；修复 待定（issue open 2026-11-17；建议 CheckShape 增加 denseSeqLen 与 cuSeqlens 段长 ≤8 校验并返回 161002）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7749
+
+### TRN-0776 `npu_fusion_attention_dropout_seed_offset_ignored` FA dropout seed 恒为 1、offset 进程级累加
+
+`故障` · `pending_audit` · `pretrain；sft；rl` · `documented` · `var` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / torch_npu / npu_fusion_attention_v2
+- **原因行为**：keep_prob<1 时传入 seed 恒被改写为 1，offset 被进程级全局计数器按 +12 递增且 base/v2 共享，调用方传入值被忽略
+- **影响对象**：输出分布；梯度（不可复现）
+- **影响详情**：同 seed/offset 连调输出 hash 全不同；返回的 (1,0) 无法复现该次前向，反向据此重建 dropout mask 与前向不一致
+- **改进措施**：检测 固定 seed/offset 连续调用两次比较输出 hash；用官方 gen_dropmask(seed,offset) 生成 mask 显式传入对拍；修复 待定（issue open 2026-11-17；建议 seed 直接作 Philox key、offset 按算子参数而非进程级全局累加，并补确定性 UT）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7733
+- **关联**：var:TRN-0661
+
+### TRN-0777 `megatron_gdn_fused_pre_kernels_int32_overflow` GDN 融合 pre 核 32 位偏移溢出污染激活与梯度
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-17
+
+- **原因对象**：算子/内核 / megatron-lm / fused_pre_gated_delta
+- **原因行为**：Triton kernel 用 32 位整数计算 row*row_stride 与 batch*batch_stride，张量元素数超过 2^31 后行偏移回绕，前向读错行、反向写到缓冲区外
+- **影响对象**：隐状态；梯度（数值异常）
+- **影响详情**：qkvzba 宽度 16480（TP2 后 8240）时单 rank 序列超过 130308（260617）token 即触发；新进程首步 loss 仍有限，随后梯度错误、末尾 GDN 行先出现 NaN
+- **改进措施**：检测 对超 2^31 元素的输入比较最后若干行与单独小输入重算的结果；监控 GDN 输出尾部行的非有限值；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9470（open，未合入）：在 fused_pre_gated_delta_rule.py 与 fused_pre_kda.py 的 kernel 内把 row/batch 偏移乘积累加为 int64；新增两个 261376 行大输入测试
+- **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9470
+
 ## 编译器
 
 ### TRN-0016 `triton_autotune_rank_divergent_tiling` Triton autotune 使各 rank 归约 tiling 分叉
@@ -4092,6 +4172,18 @@
 - **影响详情**：GA 增大时在重叠 DDP 同步下发布不完整梯度（可多次 RS、DDP 梯度错），GA 减小时归约延迟到 finalization——RL+GTP 训练梯度静默错或同步退化。
 - **改进措施**：检测 外部改 GA 的回归（2→4 带重叠 DDP）比对梯度与逐份累积参考；GTP+RL 下监控每步 RS 次数；修复 修复 PR https://github.com/NVIDIA/Megatron-LM/pull/9349（open）：改为在当前累积窗口内正向计数，非流水 schedule 自动在最后一次 backward 前调 finish_gtp_wgrad_forward() 保早归约与重叠；含外部改 GA（2→4）回归测试
 - **来源**：https://github.com/NVIDIA/Megatron-LM/pull/9349
+
+### TRN-0771 `torchtitan_parallelize_unties_tied_embeddings` torchtitan 并行化拆开 tied 权重致 embedding 不更新
+
+`故障` · `pending_audit` · `pretrain` · `documented` · `var` · 发现 2026-11-17
+
+- **原因对象**：并行切分 / torchtitan / _spmd_distribute_state
+- **原因行为**：_spmd_distribute_state 注册 nn.Parameter，断开 tok_embeddings 与 lm_head 的别名；init_states 在 to_empty() 后才重新 tie，FSDP2 已按两份参数切分
+- **影响对象**：模型权重；梯度（静默错误）
+- **影响详情**：vocab/tp 不能被 dp_shard*cp 整除时两份 tied 权重各打 padding，优化器只更新 lm_head 副本，padded shard 上的 embedding 行永不更新；无 padding 时 tied 权重被 all-gather/reduce-scatter 两次
+- **改进措施**：检测 对比 embedding 与 lm_head 权重在若干 step 后是否仍逐位相同；检查 FSDPParam 数量（tied 组应为 2 而非 3）与 padded shard 行的更新情况；修复 修复 PR https://github.com/pytorch/torchtitan/pull/6144（open，未合入）：在 _parallelize 中保持 tie，使 FSDP2 只看到一个参数
+- **来源**：https://github.com/pytorch/torchtitan/pull/6144
+- **关联**：var:TRN-0237
 
 ## KV缓存
 
@@ -6757,8 +6849,8 @@
 - **原因行为**：前向用 sum 归约，反向对 LM-head 梯度按 tile 求和但未乘外部归一化系数，head 梯度被放大有效 token 数倍。
 - **影响对象**：梯度（静默错误）
 - **影响详情**：output_reduction=sum 后除以有效 token 数 11：loss 误差 0、hidden grad 误差 1e-17，但 head.weight.grad 范数比 11.0，20/20 元素不符；CPU FP64 可复现。
-- **改进措施**：检测 对 loss 归一化/加权后的 head.weight.grad 与单卡参考梯度逐元素对拍。；修复 待定（issue open 2026-11-15，无修复 PR）
-- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9087
+- **改进措施**：检测 对 loss 归一化/加权后的 head.weight.grad 与单卡参考梯度逐元素对拍。；修复 修复 PR https://github.com/deepspeedai/DeepSpeed/pull/9096（open，未合入）：把外部 loss 缩放一并作用到 LM-head 梯度；2026-11-17 回访新增
+- **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9087；https://github.com/deepspeedai/DeepSpeed/pull/9096
 
 ## MoE路由
 

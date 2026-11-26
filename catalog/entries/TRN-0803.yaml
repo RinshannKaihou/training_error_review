@@ -4,7 +4,7 @@ slug: batchnorm_backward_noncontig_gradinput_halfwrite
 aliases: []
 title: BatchNorm 反向非连续 gradInput 只写首块
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -34,6 +34,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0755
+pattern: PAT-TRN-0058
 original:
   mechanism: aclnnBatchNormBackward 在 op_host/op_api/aclnn_batch_norm_backward.cpp:453（2D-5D）/ :443（>5D）由 BatchNormPost 调 l0op::ViewCopy 把计算结果散写进用户 gradInput 视图；当视图的行 stride 非紧凑（如 strides=[32,16,2]、逻辑 (1,2,4)、底层 32 元素）时 ViewCopy 只拷首块就返回，后半视图位保留调用方旧值，函数仍返回成功。gradWeight 走 op::ResizeTo1D（:990），同场景 1D 非连续视图能写对，说明不是统一拒绝非连续出参。FastBatchNormBackward 的 FastBatchNormPost（>5D Reshape / 4D-5D ReFormat 两分支）同源：3D strides=[32,16,2] 视图 8 位只写对通道 0 的 4 位，通道 1 保留金丝雀 -55。两次执行位级一致，视图外无越界。非连续 view 是合法 ACL Tensor，接口应写满或显式返回不支持。
   source: 'cann/ops-nn issue #8814（open，2026-11-24；A2 910B3 / CANN 9.3.0 weekly / 2b606401）https://gitcode.com/cann/ops-nn/issues/8814 ；cann/ops-nn issue #8819（open，2026-11-24；fast 版同源）https://gitcode.com/cann/ops-nn/issues/8819'
@@ -42,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

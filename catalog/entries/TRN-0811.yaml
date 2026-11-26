@@ -4,7 +4,7 @@ slug: recurrent_gated_delta_rule_ub_tail_stale
 aliases: []
 title: RecurrentGatedDeltaRule 长序列尾部读陈旧值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0775
+pattern: PAT-TRN-0085
 original:
   mechanism: aclnnRecurrentGatedDeltaRule 的资料允许 0<Dk≤512、T>0 且 T≤BlockNum，但没有给 T×Dk 的上界。kernel 把 q/k 放进 4K 的 UB 缓冲，T×Dk>4096 时放不下整条序列，实现没有分段/回读，尾部 token 的上一步状态从缓冲区残留位置读取。host 侧 CheckShape 不做该组合校验，两段接口都返回 0。边界实测：16×256=4096 PASS、17×256=4097 FAIL、64×64 PASS、65×64 FAIL、8×512 PASS、9×512 FAIL；T=12、Dk=512、Nv=2、Dv=64 时 441/1536 元素超容差，max|out| 1e21 量级，fp64 参考 0.0476。对照组 0/1024 超差，golden 与文档公式互差 0.4%，排除夹具问题。
   source: 'cann/ops-transformer issue #8502（open，2026-11-24；Ascend 950PR / CANN 9.3.0.P009 / abec8775，含边界扫描与 fp64 参考）https://gitcode.com/cann/ops-transformer/issues/8502'
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - visibility

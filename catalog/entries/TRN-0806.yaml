@@ -4,7 +4,7 @@ slug: deepspeed_universal_ckpt_frozen_buffers_not_restored
 aliases: []
 title: universal ckpt 恢复漏冻结参数与 buffer
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - detail

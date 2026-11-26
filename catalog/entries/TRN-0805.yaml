@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   - 训练信号
-  detail: TP>1 且 tied embedding 时 rollout 正常返回，但 token 只来自 rank0 的词表前缀，其余 rank 记录的分片下标与实际 token 不符；Qwen3-0.6B/4B 等 tied 模型直接命中，温度>0 时同组 rank 还会采出不同 token。
+  detail: TP>1 且输入输出 tied 时 rollout 正常返回，但 token 只来自 rank0 词表前缀，其余 rank 记录分片下标；温度>0 且种子按 DP rank 偏移时，同 TP 组会采出不同 token。
   visibility: 静默错误
 mitigation:
   detect: 对比 rollout 返回 token 与 gather 后全词表 logits 的 argmax/采样结果；检查 VocabParallelLinear 的 gather_output 与各 rank 记录 token 的一致性
@@ -39,3 +39,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior
+    held:
+    - issue_unfixed
+    uncertain:
+    - subsystem

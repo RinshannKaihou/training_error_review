@@ -4,7 +4,7 @@ slug: torch_npu_triton_experimental_drops_user_kernel
 aliases: []
 title: triton_experimental 静默丢弃用户 triton kernel
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 训练轨迹
   detail: torch.compile 后返回未初始化张量：8192 元素两次编译分别 8192/8192、13/8192 错，两次结果 torch.equal=False；eager 正确，训练 loss 可有限但梯度已失真。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 用 run_and_get_code 检查生成 wrapper 是否包含 triton_kernel_wrapper_mutation；对比 eager 与编译输出的逐元素结果与重复运行一致性
   fix: '待定（issue #6413 open，2026-11-24；期望支持捕获、graph break 或显式报错）'
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现

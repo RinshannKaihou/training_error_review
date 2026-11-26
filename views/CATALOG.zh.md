@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 814 条；状态：active 764、merged 4、pending_audit 14、retired 32
+共 814 条；状态：active 777、merged 4、pending_audit 1、retired 32
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -22,12 +22,12 @@
 | 分词/模板 | 9 |
 | 模型定义 | 17 |
 | 权重/检查点 | 42 |
-| 数据管线 | 44 |
+| 数据管线 | 43 |
 | 优化器 | 48 |
 | 损失计算 | 32 |
 | MoE路由 | 30 |
 | 重计算/卸载 | 21 |
-| RL训练回路 | 103 |
+| RL训练回路 | 104 |
 | 观测/评测 | 23 |
 | 配置/参数 | 4 |
 | 构建/发布 | 1 |
@@ -3019,7 +3019,7 @@
 
 ### TRN-0803 `batchnorm_backward_noncontig_gradinput_halfwrite` BatchNorm 反向非连续 gradInput 只写首块
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / BatchNorm 反向 Post 散写
 - **原因行为**：BatchNormPost/FastBatchNormPost 用 l0op::ViewCopy 散写用户 gradInput 视图，行 stride 非紧凑时只拷首块即返回成功，不校验也不拒绝非连续出参。
@@ -3031,18 +3031,18 @@
 
 ### TRN-0804 `blocksparse_attention_v3_mask_oob_columns` BlockSparseAttentionV3 越界 mask 列算出错值
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / BlockSparseAttentionV3
 - **原因行为**：blockSparseMask 宽度按 max(actualSeqLengthsKv) 的块数定义，短 batch 的越界列被置 1 时 kernel 未按该 batch 自身块数截断，仍把对应块当有效块 gather。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：A3 910_93/CANN 9.3.0 上 mask 4 列中越界 2 列置 1，两段 rc=0/0，max|out-CPU| 0.0622（容差 1e-3 的 62 倍），另一 shape 出现 1920 个 NaN；同数据越界列清零后 7e-5。
 - **改进措施**：检测 按 max(actualSeqLengthsKv) 构造 mask 宽度、给短 batch 的越界列置 1，与按该 batch 自身块数截断的 CPU 参考对比；修复 待定（issue #8693 open，2026-11-25）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8693
 
 ### TRN-0811 `recurrent_gated_delta_rule_ub_tail_stale` RecurrentGatedDeltaRule 长序列尾部读陈旧值
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / RecurrentGatedDeltaRule
 - **原因行为**：q/k 的 4K UB 缓冲区放不下整条序列时 kernel 未分段，尾部 token 读到上一段残留数据；host 侧不校验 T×Dk 上限。
@@ -3574,11 +3574,11 @@
 
 ### TRN-0812 `torch_npu_triton_experimental_drops_user_kernel` triton_experimental 静默丢弃用户 triton kernel
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：编译器 / torch_npu / triton_experimental 后端
 - **原因行为**：后端未捕获 triton_kernel_wrapper_mutation，也不 graph break：生成的 wrapper 只 empty_strided 分配输出，用户 @triton.jit 启动既不在图里也不在生成代码里。
-- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响对象**：数值结果；训练轨迹（不可复现）
 - **影响详情**：torch.compile 后返回未初始化张量：8192 元素两次编译分别 8192/8192、13/8192 错，两次结果 torch.equal=False；eager 正确，训练 loss 可有限但梯度已失真。
 - **改进措施**：检测 用 run_and_get_code 检查生成 wrapper 是否包含 triton_kernel_wrapper_mutation；对比 eager 与编译输出的逐元素结果与重复运行一致性；修复 待定（issue #6413 open，2026-11-24；期望支持捕获、graph break 或显式报错）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6413
@@ -4928,11 +4928,11 @@
 
 ### TRN-0813 `torchtitan_nvfp4_mxfp8_fsdp_stacked_weight_reorder` NVFP4/MXFP8+FSDP 堆叠权重被二次重排
 
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：量化 / torchtitan / _ShardedFSDPTensor hook
 - **原因行为**：pre-hook 把非 0 shard 维移到最前，FSDP2 已按该维拼接；post-hook 又按 dim0 语义还原，[2,F,D] 的 w13 行被重排两次，shape 不变故不报错。
-- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响对象**：模型权重；数值结果；训练轨迹（质量退化）
 - **影响详情**：Shard(1) 的堆叠 gate/up 权重在多分片 rank 下被打乱（[2,8,4] 例：列 0 变成 [0,10,40,50,20,30,60,70]），NVFP4/MXFP8 线性层静默算错，loss 异常停滞；Shard(0) 权重不受影响。
 - **改进措施**：检测 对比 FSDP all-gather 后 w13 与未分片参考权重的逐元素顺序；对 Shard(1) 的量化 Linear 做单层数值对照；修复 issue #6258 closed 2026-11-19；PR #6259 已关闭未合入（merged_at=None），bot 复核指向 draft PR #5874（open，2026-11-06），修复未落地
 - **来源**：https://github.com/pytorch/torchtitan/issues/6258；https://github.com/pytorch/torchtitan/pull/6259；https://github.com/pytorch/torchtitan/pull/5874
@@ -5801,7 +5801,7 @@
 
 ### TRN-0806 `deepspeed_universal_ckpt_frozen_buffers_not_restored` universal ckpt 恢复漏冻结参数与 buffer
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：权重/检查点 / deepspeed / universal ckpt 加载分支
 - **原因行为**：load_universal 分支跳过 load_module_state_dict，权重只从 zero/<param>/fp32.pt 恢复；ds_to_universal 只为优化器拥有的参数写该文件，冻结参数与 buffer 无来源。
@@ -5812,11 +5812,11 @@
 
 ### TRN-0807 `megatron_tracker_empty_file_restart_no_train` Megatron tracker 半写空文件致重启不训练
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：权重/检查点 / megatron-lm / checkpointing tracker
-- **原因行为**：rank0 每次保存用 open(...,'w') 原地重写 tracker、shutil.copy 覆盖 latest_train_state.pt；崩溃留空文件后 read_metadata 打 ERROR 并 sys.exit()。
-- **影响对象**：可用性/进度；指标/日志（静默错误）
+- **原因行为**：rank0 每次保存后非原子重写 tracker、覆盖 latest_train_state.pt；0.20.1 的 read_metadata 读到空 tracker 时打印 ERROR 并 sys.exit()。
+- **影响对象**：可用性/进度；指标/日志（报错）
 - **影响详情**：0.20.1 上 tracker 为空时每次重启直接退出、11/12 次退出码 0，调度器当成功；main 上空 latest_train_state.pt 每次重启失败，--save-retain-interval 下后续保存报 ValueError。
 - **改进措施**：检测 保存后检查 tracker 与 latest_train_state.pt 的非空/可解析性；把作业退出码 0 但 step 未前进纳入健康检查；修复 draft PR #9717（open，2026-11-23）：temp+fsync+os.replace 原子写 tracker，read_metadata 不可读时 exit 1，--save-retain-interval 解析失败显式报错
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9713；https://github.com/NVIDIA/Megatron-LM/pull/9717
@@ -6301,7 +6301,7 @@
 
 ### TRN-0808 `msswift_dynamic_sample_resample_same_batch` dynamic_sample 重采样反复取同一批 prompt
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：数据管线 / ms-swift / GRPO 重采样 dataloader
 - **原因行为**：重采样流复用第二份 train dataloader，其 RepeatSampler 把每个 generation batch 连续重复 N 次；每次 resample 只取一次。
@@ -6309,17 +6309,6 @@
 - **影响详情**：开 gradient accumulation（steps_per_generation>1）时，std=0 的 prompt 被反复抽到、重试预算耗尽后回退原批；std>0 的 prompt 也连续占满多个 step，colocate TP>1 下同 seed 返回相同 completion。
 - **改进措施**：检测 记录每次 dynamic_sample 重采样拿到的 prompt id/数据索引，检查同一 batch 是否在连续 step 内重复；修复 待定（issue #10629 open，2026-11-25；建议重采样流使用 repeat_count=1 的独立 sampler）
 - **来源**：https://github.com/modelscope/ms-swift/issues/10629
-
-### TRN-0815 `trl_grpo_resume_buffer_slice_replay` GRPO resume 重放已用过的 buffer 切片
-
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-26
-
-- **原因对象**：数据管线 / trl / GRPOTrainer buffer 索引
-- **原因行为**：_step 只在 training_step 中递增，resume 时未恢复；generation buffer 不保存，重建后按 self._step % steps_per_generation 从 slice 0 开始读。
-- **影响对象**：训练样本流；训练轨迹（静默错误）
-- **影响详情**：save_steps 不是 generation interval 整数倍时，续跑在 step 2/3 重训已用 slice 0/1，第二次生成的 slice 2/3 永不使用；150 行复现中数据被重复与遗漏，无报错。
-- **改进措施**：检测 记录每个 global_step 实际训练的 buffer slice 与 prompt id，续跑后与不间断 run 的调度逐 step 对比；修复 待定（issue #8552 open，2026-11-24；作者提议 resume 时按 global_step*gradient_accumulation_steps 恢复 _step 并加对照测试）
-- **来源**：https://github.com/huggingface/trl/issues/8552
 
 ## 优化器
 
@@ -7412,6 +7401,7 @@
 - **影响详情**：Atlas A2 上无论三类 range 取何值（含非法 end<start、超上限、区间重叠）均 rc=0 且输出与不传完全相同，按普通专家累加；期望 100.0/114.0/120.0 的用例实测全为基线 97.41
 - **改进措施**：检测 传任一 range 后断言输出与不传时不同；非法区间（end<start/重叠）应报 161002；修复 待定（issue 建议补 A2 实现或把资料 A2 改不支持二选一，并加 A2 回归用例）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6549
+- **关联**：cross:INF-2590
 
 ### TRN-0391 `opstransformer_moe_token_unpermute_padded_false_outputs_unwritten` MoeUnpermute paddedMode=false 两输出从不写出
 
@@ -8927,13 +8917,13 @@
 - **原因对象**：RL训练回路 / deepspeed / HybridEngineRollout
 - **原因行为**：AutoTP 把 tied lm_head 换成 gather_output=False 的 VocabParallelLinear，rollout 调用它，每 rank 只拿到 vocab/tp_size 的 logits 取本地下标。
 - **影响对象**：输出内容；训练信号（静默错误）
-- **影响详情**：TP>1 且 tied embedding 时 rollout 正常返回，但 token 只来自 rank0 的词表前缀，其余 rank 记录的分片下标与实际 token 不符；Qwen3-0.6B/4B 等 tied 模型直接命中，温度>0 时同组 rank 还会采出不同 token。
+- **影响详情**：TP>1 且输入输出 tied 时 rollout 正常返回，但 token 只来自 rank0 词表前缀，其余 rank 记录分片下标；温度>0 且种子按 DP rank 偏移时，同 TP 组会采出不同 token。
 - **改进措施**：检测 对比 rollout 返回 token 与 gather 后全词表 logits 的 argmax/采样结果；检查 VocabParallelLinear 的 gather_output 与各 rank 记录 token 的一致性；修复 issue #9158 于 2026-11-25 closed（completed）；修复 PR 未核实
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9158
 
 ### TRN-0809 `msswift_gdpo_dynamic_sample_drops_signal_groups` GDPO dynamic_sample 按原始 reward 和错杀组
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：RL训练回路 / ms-swift / GRPO 动态采样过滤器
 - **原因行为**：DAPO 过滤器以 std(sum(w*r))>0 判组是否有梯度；GDPO 先按各 reward 组内归一化再加权，原始加权和 std=0 不代表 advantage 为 0。
@@ -8944,7 +8934,7 @@
 
 ### TRN-0810 `msswift_judge0_error_scores_zero_reward` Judge0 429/503 被当成 0 分 reward
 
-`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：RL训练回路 / ms-swift / CodeRewardByJudge0
 - **原因行为**：批量提交后读 error body 的 status 触发 KeyError，except 捕获所有异常并 return 0.0，只留一条 warning；没有重试或并发上限。
@@ -8956,7 +8946,7 @@
 
 ### TRN-0814 `trl_asyncgrpo_raw_logprobs_temperature_bias` AsyncGRPO 用 raw logprob 算 IS ratio 偏置
 
-`故障` · `pending_audit` · `rl` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：RL训练回路 / trl / AsyncGRPOTrainer
 - **原因行为**：score_centering=False 时 _check_sampling_replay 不检查 server 的 logprobs 模式；vLLM 默认 raw_logprobs 是温度缩放前的值，trainer 却按采样温度重算。
@@ -8966,13 +8956,24 @@
 - **来源**：https://github.com/huggingface/trl/issues/8555
 - **关联**：var:TRN-0229
 
+### TRN-0815 `trl_grpo_resume_buffer_slice_replay` GRPO resume 重放已用过的 buffer 切片
+
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：RL训练回路 / trl / GRPOTrainer buffer 索引
+- **原因行为**：_step 只在 training_step 中递增，resume 时未恢复；generation buffer 不保存，重建后按 self._step % steps_per_generation 从 slice 0 开始读。
+- **影响对象**：训练样本流；训练轨迹（静默错误）
+- **影响详情**：save_steps 不是 generation interval 整数倍时，续跑不报错、step 数和 loss 正常，但 step 2/3 重训已用 slice 0/1，第二次生成的 slice 2/3 不被使用，同一 prompt 重复训练、部分 prompt 被跳过。
+- **改进措施**：检测 记录每个 global_step 实际训练的 buffer slice 与 prompt id，续跑后与不间断 run 的调度逐 step 对比；修复 待定（issue #8552 open，2026-11-24；作者提议 resume 时按 global_step*gradient_accumulation_steps 恢复 _step 并加对照测试）
+- **来源**：https://github.com/huggingface/trl/issues/8552
+
 ### TRN-0816 `verl_advantage_whitening_scope_minibatch_mismatch` advantage 白化范围与 PPO 更新 chunk 不一致
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：RL训练回路 / verl / PPOTrainer/TrainingWorker
 - **原因行为**：advantage 在整批 sample 上只做一次 masked_whiten；actor 更新按 ppo_mini_batch_size 切成多个 optimizer chunk，worker 不按 chunk 重新归一化。
-- **影响对象**：训练信号；训练轨迹（静默错误）
+- **影响对象**：训练信号；训练轨迹（质量退化）
 - **影响详情**：同步 V1 + GAE、sampled batch 大于 actor mini-batch 时，全局 advantage 均值≈0 但各 chunk 均值非 0；ratio≈1 时 pg_loss≈-mean(A_chunk)，actor/loss 明显偏大、熵更快塌缩，无报错。
 - **改进措施**：检测 在每个 train_batch chunk 内记录 response_mask 加权 advantage 均值/方差，与整批统计对比；同时看 pg_loss 是否随 chunk 均值漂移；修复 待定（issue #8766 open，2026-11-19；未见修复 PR）
 - **来源**：https://github.com/verl-project/verl/issues/8766

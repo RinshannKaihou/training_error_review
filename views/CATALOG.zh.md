@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 823 条；状态：active 777、merged 4、pending_audit 10、retired 32
+共 823 条；状态：active 786、merged 4、pending_audit 1、retired 32
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 262 |
+| 算子/内核 | 260 |
 | 编译器 | 47 |
 | 运行时/执行 | 21 |
 | 集合通信 | 14 |
@@ -17,7 +17,7 @@
 | 调度/服务 | 2 |
 | 输出解析 | 2 |
 | 解码/采样 | 3 |
-| 量化 | 34 |
+| 量化 | 36 |
 | 位置编码 | 10 |
 | 分词/模板 | 9 |
 | 模型定义 | 17 |
@@ -998,6 +998,7 @@
 - **影响详情**：FFN worker 批处理算子在框架看不到内层缓冲的二级指针场景下静默产出空 token 批（actualTokenNum=0、空 groupList），接口成功返回；下游以为无活可干，训练 token 静默丢失或流水线空转。
 - **改进措施**：检测 actualTokenNum 与预期 token 数对账；二级指针非空断言。；修复 待定（issue open，未见修复 MR）。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6670
+- **关联**：cross:INF-2604
 
 ### TRN-0425 `ops_math_replication_pad_negative_padding_device_fault` ReplicationPad 负 padding 设备侧 507035 假绿
 
@@ -3054,7 +3055,7 @@
 
 ### TRN-0817 `rms_norm_grad_quant_tail_column_large_index_grad_wrong` RmsNormGradQuant 尾列与大索引梯度错算
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / RmsNormGradQuant regbase
 - **原因行为**：regbase 实现分段尾列的 Cast/Muls 未覆盖末列，FP32 中间乘加把交替大梯度压成饱和值，大张量 GM 元素地址按 uint32 截断（2^32 变 0）。
@@ -3065,41 +3066,18 @@
 
 ### TRN-0818 `col2_im_910b2_partial_output_unwritten` col2_im 910B2 部分输出未写含 NaN
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / col2_im tiling/kernel
-- **原因行为**：tiling 的 SetBlockDim(coreNum) 与每核像素范围同 kernel 实际写入范围不一致，部分输出未被任何核写入；另有 6 个元素算成 NaN、2 个元素保留 -3.4e38 未初始化残值。
-- **影响对象**：数值结果；梯度（静默错误）
+- **原因行为**：col2_im tiling 的 SetBlockDim(coreNum) 与每核像素范围同 kernel 实际写入范围可能不一致，部分输出像素未被任何核心写过。
+- **影响对象**：数值结果；梯度（数值异常）
 - **影响详情**：910B2/CANN 9.2.1，输入 [1,12,9] 全有限、输出预清零、两段均返回成功：48 个输出仅 10 个与 F.fold 一致，32 个错值、6 个 NaN、16 个应为非零却为 0。
 - **改进措施**：检测 对 col2_im 与 torch.nn.functional.fold 同形状逐元素对拍，检查 NaN/0/未初始化哨兵；先核对 CalculateIntraCoreTileSize 的 basePixelsPerCore/bigCoreNum 与 kernel block/core 索引；修复 待定（issue open 2026-11-26，报告附完整期望值与最小 C++ 复现，未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-math/issues/5305
 
-### TRN-0819 `gmsq_n_not_multiple_of_32_silent_wrong` GMSQ 非 32 对齐 N 输出静默错值
-
-`故障` · `pending_audit` · `pretrain` · `documented` · `NEW` · 发现 2026-11-27
-
-- **原因对象**：算子/内核 / cann / GMSQ Cast/ReduceMax
-- **原因行为**：CastFp32ToInt8Template 的 %32/%16 分支链缺 else 兜底，dstOffset 非 16 对齐时整段输出不写；ReduceMaxSmall 尾块把界外未初始化数据纳入归约；host 只校验 N 为偶数。
-- **影响对象**：数值结果；训练轨迹（静默错误）
-- **影响详情**：A8W8+NZ、N=2064/2104/2128/1072 时 int8 输出 16/16 行全错、每行 553~658/1032 元素超差；out_scale 错值或 NaN，无报错，同输入两次结果一致。
-- **改进措施**：检测 按 N%32!=0 构造 A8W8 grouped matmul，与 CPU 参考逐行比对 int8 输出与 out_scale，检查 out_scale 是否 NaN；修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/16506 merged（补 N%32 校验，改为拒绝）；PR 17330 open（升级为正确处理非对齐 N）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/8077；https://gitcode.com/cann/ops-transformer/merge_requests/16506；https://gitcode.com/cann/ops-transformer/merge_requests/17330
-
-### TRN-0820 `mc2_quant_bias_scaled_by_input_scales` MC2 pertensor 量化把 bias 乘输入 scale
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
-
-- **原因对象**：算子/内核 / cann / MatmulReduceScatterV2
-- **原因行为**：arch35 量化 kernel 让 biasGM_ 直接进 mmv3.Init，bias 在反量化前被 x1Scale*x2Scale 缩放；资料公式 bias 在括号外。A2/A3 量化路径则把 bias 排除在 matmul 外。
-- **影响对象**：数值结果；训练轨迹（静默错误）
-- **影响详情**：Ascend950PR：x1 全 0、s1=s2=2^-4、bias=8 时资料 16.0、实测 0.0625（差 256 倍）；真实 scale≈1/448 时 bias 被压到 1e-6，等于静默丢弃 bias，带 bias 的量化 MC2 全部受影响。
-- **改进措施**：检测 构造 x1 全 0、bias 非零的 pertensor 量化 MC2 用例，比对输出是否等于 bias；覆盖 950 与 A2/A3 两条量化路径；修复 待定（issue #8877 open，2026-11-26；三处 arch35 引用已按 master 48c47ea16 逐行核对，未见修复 MR）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/8877
-- **关联**：cross:INF-2601
-
 ### TRN-0822 `npu_combine_bn_params_nc1hwc0_zeroes_bias` BN 参数合并存储后 NC1HWC0 清零 bias
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / torch_npu / BatchNorm2d NC1HWC0 前向
 - **原因行为**：npu_combine_tensors 合并 BatchNorm weight/bias 存储后，FP16 NC1HWC0 训练态前向把 8 个 bias 元素写成 0；格式 2 或未合并存储不触发。
@@ -3110,7 +3088,7 @@
 
 ### TRN-0823 `batch_norm_grad_arch35_gm_offset_uint32_wrap` batch_norm_grad arch35 GM 偏移回绕
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / batch_norm_grad arch35
 - **原因行为**：gmOffset_ 成员为 uint32，SetGlobalBuffer 与块间步距用 uint32×uint32 中间乘法，元素总数超 2^32 即回绕；tiling 只校验各维为正、不限元素总量。
@@ -3122,7 +3100,7 @@
 
 ### TRN-0824 `regbase_rmsnorm_quant_family_large_finite_zero` RegBase RMSNorm 量化族大值输出归零
 
-`故障` · `pending_audit` · `shared` · `documented` · `var` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `var` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / RMSNorm 量化族 RegBase
 - **原因行为**：RegBase 归约在 FP32 中做平方/累加，有限大数使中间溢出、倒数下溢为 0，量化输出退化为 0 或零点；部分模板每核 9 行只申请 8 个 FP32 RMS 倒数槽。
@@ -3665,7 +3643,7 @@
 
 ### TRN-0821 `triton_ascend_math_subnormal_flush_zero` triton-ascend 数学函数次正规归零
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：编译器 / triton / triton-ascend 数学函数
 - **原因行为**：libdevice/tl 的 exp/exp2/div/sin/sqrt/atan/sinh/tanh/erf 在 lowering 时做 flush-to-zero：结果落次正规区间返回 0，部分先把次正规输入冲成 0 再计算。
@@ -4776,6 +4754,7 @@
 - **影响详情**：大 epsilon（如 FLT_MAX）时 y1/resOut 为 0（参考 5/5.421）；x1=1e20 级输入量化输出 0 或错值；dst_type int64 属性按 int32 读取、rstd 32B 缓冲区按每核行号索引越界等多重缺陷并存。
 - **改进措施**：检测 大 epsilon 与大数有限输入边界用例对拍 FP64 参考；dst_type 属性回读校验。；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/16338 open（2026-11-26，修正 RegBase AddRmsNormQuant 归约缓冲与有限大方差路径；未发布）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7272；https://gitcode.com/cann/ops-nn/issues/10337
+- **关联**：cross:INF-2608
 
 ### TRN-0420 `ops_transformer_gmsq_quant_param_validation` GMSQ 量化融合算子参数静默忽略与延迟异常
 
@@ -5028,6 +5007,29 @@
 - **影响详情**：Shard(1) 的堆叠 gate/up 权重在多分片 rank 下被打乱（[2,8,4] 例：列 0 变成 [0,10,40,50,20,30,60,70]），NVFP4/MXFP8 线性层静默算错，loss 异常停滞；Shard(0) 权重不受影响。
 - **改进措施**：检测 对比 FSDP all-gather 后 w13 与未分片参考权重的逐元素顺序；对 Shard(1) 的量化 Linear 做单层数值对照；修复 issue #6258 closed 2026-11-19；PR #6259 已关闭未合入（merged_at=None），bot 复核指向 draft PR #5874（open，2026-11-06），修复未落地
 - **来源**：https://github.com/pytorch/torchtitan/issues/6258；https://github.com/pytorch/torchtitan/pull/6259；https://github.com/pytorch/torchtitan/pull/5874
+
+### TRN-0819 `gmsq_n_not_multiple_of_32_silent_wrong` GMSQ 非 32 对齐 N 输出静默错值
+
+`故障` · `active` · `pretrain` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：量化 / cann / GMSQ Cast/ReduceMax
+- **原因行为**：CastFp32ToInt8Template%32/%16分支缺兜底，dstOffset非16对齐整段不写；ReduceMaxSmall尾块在tailNum非16倍数时让WholeReduceMax纳入界外未初始化数据；host只校验N偶数
+- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响详情**：A8W8+NZ、N=2064/2104/2128/1072 时 int8 输出 16/16 行全错、每行 553~658/1032 元素超差；out_scale 错值或 NaN，无报错，同输入两次结果一致。
+- **改进措施**：检测 按 N%32!=0 构造 A8W8 grouped matmul，与 CPU 参考逐行比对 int8 输出与 out_scale，检查 out_scale 是否 NaN；修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/16506 merged（补 N%32 校验，改为拒绝）；PR 17330 open（升级为正确处理非对齐 N）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8077；https://gitcode.com/cann/ops-transformer/merge_requests/16506；https://gitcode.com/cann/ops-transformer/merge_requests/17330
+
+### TRN-0820 `mc2_quant_bias_scaled_by_input_scales` MC2 pertensor 量化把 bias 乘输入 scale
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：量化 / cann / MatmulReduceScatterV2
+- **原因行为**：arch35 量化 kernel 让 biasGM_ 直接进 mmv3.Init，bias 在反量化前被 x1Scale*x2Scale 缩放；资料公式 bias 在括号外。A2/A3 量化路径则把 bias 排除在 matmul 外。
+- **影响对象**：数值结果；训练轨迹（静默错误）
+- **影响详情**：Ascend950PR：x1 全 0、s1=s2=2^-4、bias=8 时资料 16.0、实测 0.0625（差 256 倍）；真实 scale≈1/448 时 bias 被压到 1e-6，等于静默丢弃 bias，带 bias 的量化 MC2 全部受影响。
+- **改进措施**：检测 构造 x1 全 0、bias 非零的 pertensor 量化 MC2 用例，比对输出是否等于 bias；覆盖 950 与 A2/A3 两条量化路径；修复 待定（issue #8877 open，2026-11-26；三处 arch35 引用已按 master 48c47ea16 逐行核对，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8877
+- **关联**：cross:INF-2601
 
 ## 位置编码
 
@@ -6949,7 +6951,7 @@
 
 ### TRN-0825 `npu_grad_scaler_new_scale_tensor_alias_inplace_rewrite` GradScaler new_scale 别名致用户张量被改写
 
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：优化器 / torch_npu / torch_npu GradScaler
 - **原因行为**：GradScaler.update(new_scale=Tensor) 用 self._scale = new_scale 直接别名而非拷贝；溢出回退的 self._scale.mul_(backoff) 就地把结果写回调用方张量。

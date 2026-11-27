@@ -4,7 +4,7 @@ slug: regbase_rmsnorm_quant_family_large_finite_zero
 aliases: []
 title: RegBase RMSNorm 量化族大值输出归零
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -41,6 +41,7 @@ relations:
   target: TRN-0397
 - kind: cross
   target: INF-2608
+pattern: PAT-TRN-0086
 original:
   mechanism: cann/ops-nn 的 RegBase 系列归一化量化算子在 Ascend 950 上共用一套 FP32 归约实现，存在两类机制缺陷：一是归约容量缺口——NORMAL 的 9 行 tile 与 SPLIT 的每核 9 行都会访问第 9 个 RMS 倒数槽，而公共缓冲只有 8 个 FP32 槽，等于越界读/复用邻域数据；PERF 在 (129,257) 下申请 24 字节去记录 3 行部分和却按 FP32 元素寻址，修正后应为 96 字节；二是有限大方差下倒数下溢为 0：平方、累加或加 epsilon 在 FP32 中溢出/下溢后，归一化结果与量化输出退化为 0 或零点，而非报错。实测：RmsNormDynamicMxQuant 两个 1e20 bf16 输入得到 y=[0,0]、rstd=0（修正后 [1,1]），FP4 边界误差超限；RMSNormQuant 在 Ascend 950 上合法二维视图直接失败，大有限值量化错算；AddRmsNormDynamicQuant 在空输入、NZ 布局与 BF16 边界场景输出异常；AddRmsNormQuant 双路量化在 gamma=2^67、epsilon=FLT_MAX 时 y1 全 0、y2 全 5、V2 第四输出全 0（应为 ±8、1/9、±8），另有 PR !16338 修正归约缓冲与有限大方差路径。边界跟踪：当 FP32 平方、累加或加 epsilon 本身已溢出时，主线与部分仓内参考可能一致，但与高精度数学结果不同，该情形与本条的倒数下溢分开记录。
   source: 'cann/ops-nn issue #10332（RMSNormQuant 950 合法二维视图/大有限值）、#10334（AddRmsNormDynamicQuant 空输入/NZ/BF16）、#10335（RmsNormDynamicMxQuant 大 BF16/FP4 边界），均 open 2026-11-26 https://gitcode.com/cann/ops-nn/issues/10332 https://gitcode.com/cann/ops-nn/issues/10334 https://gitcode.com/cann/ops-nn/issues/10335 ；修复 PR https://gitcode.com/cann/ops-nn/pull/16338 （open）'
@@ -50,3 +51,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  updates:
+  - date: '2026-11-27'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem
+    - behavior

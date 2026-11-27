@@ -4,7 +4,7 @@ slug: batch_norm_grad_arch35_gm_offset_uint32_wrap
 aliases: []
 title: batch_norm_grad arch35 GM 偏移回绕
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: TRN-0271
+pattern: PAT-TRN-0013
 original:
   mechanism: cann/ops-nn 的 batch_norm_grad（arch35）在 RAR 全载（tilingKey 0x10000000）与 RAR 切 R1（0x31000000）两条路径中，把 GM 偏移放在 uint32 域计算：op_kernel/arch35/batch_norm_grad_full_load_regbase.h 的分核基址成员 gmOffset_ 为 uint32（int64 tiling 字段赋值即截断），Init 的 SetGlobalBuffer 处 gmOffset_*r0Dim_、Process 循环偏移 i*aDimPerLoop_*r0Dim_、CopyInRAR/CopyOutRAR 块间步距 (aDim_-1)*r0Dim_*sizeof(DY_TYPE) 都是 uint32×uint32 中间乘法；batch_norm_grad_split_r1_regbase.h 的 gmOffset_ 成员与两处 RAR 块间步距同模式。元素总数超过 2^32 即回绕，分核读错地址/越界。可达性：tiling 只校验各维为正、不限元素总量，RAR 全载门控（r1×r0 整块入 UB）把大维约束在 aDim 上，aDim×r0≥2^32 的输入合法可达，例 NCHW (1,2097152,64,64)≈8.6e9 元素。同族算子 batch_norm_grad_v3 的同类问题已由 c81cd93a02 修复，本算子未同步。
   source: 'cann/ops-nn issue #10316（open，2026-11-26，arch35，附 kernel 源码行级根因）https://gitcode.com/cann/ops-nn/issues/10316'
@@ -42,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  updates:
+  - date: '2026-11-27'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

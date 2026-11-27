@@ -4,19 +4,19 @@ slug: col2_im_910b2_partial_output_unwritten
 aliases: []
 title: col2_im 910B2 部分输出未写含 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: col2_im tiling/kernel
-  behavior: tiling 的 SetBlockDim(coreNum) 与每核像素范围同 kernel 实际写入范围不一致，部分输出未被任何核写入；另有 6 个元素算成 NaN、2 个元素保留 -3.4e38 未初始化残值。
+  behavior: col2_im tiling 的 SetBlockDim(coreNum) 与每核像素范围同 kernel 实际写入范围可能不一致，部分输出像素未被任何核心写过。
 effect:
   objects:
   - 数值结果
   - 梯度
   detail: 910B2/CANN 9.2.1，输入 [1,12,9] 全有限、输出预清零、两段均返回成功：48 个输出仅 10 个与 F.fold 一致，32 个错值、6 个 NaN、16 个应为非零却为 0。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 对 col2_im 与 torch.nn.functional.fold 同形状逐元素对拍，检查 NaN/0/未初始化哨兵；先核对 CalculateIntraCoreTileSize 的 basePixelsPerCore/bigCoreNum 与 kernel block/core 索引
   fix: 待定（issue open 2026-11-26，报告附完整期望值与最小 C++ 复现，未见修复 MR）
@@ -40,3 +40,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - behavior

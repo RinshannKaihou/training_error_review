@@ -40,7 +40,7 @@ migration:
   method: scan
   scanned: '2026-11-26'
   audit:
-    round: daily-audit-2026-11-26
+    round: daily-audit-2026-11-27
     base:
     - glm-5.3-flash
     - deepseek-v4.1-flash
@@ -49,8 +49,6 @@ migration:
     - kimi-k3.1-pro
     - glm-5.3
     - qwen3.8-max
-    rewritten:
-    - detail
     issue_unfixed:
     - behavior
     held:

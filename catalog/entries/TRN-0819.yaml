@@ -4,13 +4,13 @@ slug: gmsq_n_not_multiple_of_32_silent_wrong
 aliases: []
 title: GMSQ 非 32 对齐 N 输出静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: GMSQ Cast/ReduceMax
-  behavior: CastFp32ToInt8Template 的 %32/%16 分支链缺 else 兜底，dstOffset 非 16 对齐时整段输出不写；ReduceMaxSmall 尾块把界外未初始化数据纳入归约；host 只校验 N 为偶数。
+  behavior: CastFp32ToInt8Template%32/%16分支缺兜底，dstOffset非16对齐整段不写；ReduceMaxSmall尾块在tailNum非16倍数时让WholeReduceMax纳入界外未初始化数据；host只校验N偶数
 effect:
   objects:
   - 数值结果
@@ -44,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

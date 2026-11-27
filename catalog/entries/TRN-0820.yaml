@@ -4,10 +4,10 @@ slug: mc2_quant_bias_scaled_by_input_scales
 aliases: []
 title: MC2 pertensor 量化把 bias 乘输入 scale
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: MatmulReduceScatterV2
   behavior: arch35 量化 kernel 让 biasGM_ 直接进 mmv3.Init，bias 在反量化前被 x1Scale*x2Scale 缩放；资料公式 bias 在括号外。A2/A3 量化路径则把 bias 排除在 matmul 外。
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化

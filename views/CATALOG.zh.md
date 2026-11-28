@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 826 条；状态：active 786、merged 4、pending_audit 4、retired 32
+共 826 条；状态：active 789、merged 4、pending_audit 1、retired 32
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 261 |
+| 算子/内核 | 262 |
 | 编译器 | 47 |
-| 运行时/执行 | 22 |
+| 运行时/执行 | 21 |
 | 集合通信 | 14 |
 | 并行切分 | 41 |
 | KV缓存 | 2 |
@@ -3110,9 +3110,20 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/10332；https://gitcode.com/cann/ops-nn/issues/10334；https://gitcode.com/cann/ops-nn/issues/10335；https://gitcode.com/cann/ops-nn/pull/16338
 - **关联**：var:TRN-0397；cross:INF-2608
 
-### TRN-0828 `cann_tiling_u32_length_overflow_empty_tensor_branch` tiling 32 位长度溢出把大张量当空张量
+### TRN-0827 `torch_npu_fill_diagonal_autograd_grad_not_masked` torch_npu fill_diagonal_ 反向对角线梯度未清零
 
 `故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-28
+
+- **原因对象**：算子/内核 / torch_npu / fill_diagonal_ 注册
+- **原因行为**：op_plugin 把 fill_diagonal_ 注册到 AutogradPrivateUse1，绕过 CompositeImplicitAutograd 分解，未挂 CopySlices 反向节点，对角线梯度未被屏蔽。
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：对 requires_grad=True 的非叶张量执行 fill_diagonal_(0) 后反向，对角线位置梯度未置 0，与数学导数及 CPU 不一致；同一注册使 FakeTensor 入图报 ERR01003（fail-fast）。
+- **改进措施**：检测 对 requires_grad 的非叶方阵 fill_diagonal_(c) 后 sum().backward()，检查对角线梯度应恰为 0，并与 CPU eager 对拍；再用 aot_eager/fullgraph 捕获 FakeTensor 路径；修复 待定（issue #760 open，2026-11-27；正文给出修复方案：FakeTensor/Meta/Functionalize 与 GradMode+requires_grad 场景委托 at::native::fill_diagonal_，普通 eager 保留 aclnn 加速；未见关联 PR）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/760
+
+### TRN-0828 `cann_tiling_u32_length_overflow_empty_tensor_branch` tiling 32 位长度溢出把大张量当空张量
+
+`故障` · `active` · `shared` · `documented` · `NEW` · 发现 2026-11-28
 
 - **原因对象**：算子/内核 / cann / host tiling 长度计算
 - **原因行为**：HuberLossGrad 的 uint32 元素数乘 typeLength、EluGradV2 的 uint32 元素数在跨 2^32 时回绕为 0，tiling 走空张量分支、零工作量并返回成功。
@@ -3898,17 +3909,6 @@
 - **影响详情**：ops.sort 的 indices 显示 requires_grad=True 且 _output_index=1，整数输出被当成可求导；不可求导输出补位不当还会让多输出元数据索引错位。
 - **改进措施**：检测 PyNative 下对 ops.sort 等混合 dtype 多输出算子取 grad，打印 indices.requires_grad/_output_index；为 True 即命中；修复 issue 给出修复：SetTensorGradMetaData 只给 float/complex 输出挂反向节点，int/bool 输出保留默认 TensorMeta 占位以免索引错位（状态 open）
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29597
-
-### TRN-0827 `torch_npu_fill_diagonal_autograd_grad_not_masked` torch_npu fill_diagonal_ 反向对角线梯度未清零
-
-`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-28
-
-- **原因对象**：运行时/执行 / torch_npu / fill_diagonal_ 注册
-- **原因行为**：op_plugin 把 fill_diagonal_ 注册到 AutogradPrivateUse1，绕过 CompositeImplicitAutograd 分解，未挂 CopySlices 反向节点，对角线梯度未被屏蔽。
-- **影响对象**：梯度；模型权重（静默错误）
-- **影响详情**：对 requires_grad=True 的非叶张量执行 fill_diagonal_(0) 后反向，对角线位置梯度未置 0，与数学导数及 CPU 不一致；同一注册使 FakeTensor 入图报 ERR01003（fail-fast）。
-- **改进措施**：检测 对 requires_grad 的非叶方阵 fill_diagonal_(c) 后 sum().backward()，检查对角线梯度应恰为 0，并与 CPU eager 对拍；再用 aot_eager/fullgraph 捕获 FakeTensor 路径；修复 待定（issue #760 open，2026-11-27；正文给出修复方案：FakeTensor/Meta/Functionalize 与 GradMode+requires_grad 场景委托 at::native::fill_diagonal_，普通 eager 保留 aclnn 加速；未见关联 PR）
-- **来源**：https://gitcode.com/Ascend/op-plugin/issues/760
 
 ## 集合通信
 
@@ -5055,11 +5055,11 @@
 
 ### TRN-0826 `megatron_fp8_param_gather_round_to_nearest_update_stall` FP8 blockwise 参数舍入吞掉小更新
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-28
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-28
 
 - **原因对象**：量化 / megatron-lm / distributed optimizer
 - **原因行为**：distributed optimizer 每步把 FP32 master shard 按 round-to-nearest 舍入到 E4M3；master 由反量化 FP8 参数构建时所有权重落在网格点，step 位移小于半格即被丢弃。
-- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响对象**：模型权重；训练轨迹（质量退化）
 - **影响详情**：GRPO Qwen2.5-0.5B（MLP INT4）模拟：250 步 reward 0.194、bf16 0.342；master 由 bf16+2 幂 scale 构建时 1/16 权重在舍入平局，首步约 3% 权重整格跳变、KL 0.84–1.30 nats/token，3 次 1 次崩溃。
 - **改进措施**：检测 对 FP8 master 连续两步 dump 权重，统计 FP8 值未变化的参数比例；对比 bf16 基线的 reward 曲线与首步 KL；修复 待定（issue #9844 open，2026-11-27；作者提出 opt-in `--fp8-param-rounding fixed_threshold` 并称 PR 已就绪，未见合并）
 - **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9844
@@ -9050,11 +9050,11 @@
 
 ### TRN-0805 `deepspeed_hybrid_rollout_vocab_shard_token_pick` HybridEngineRollout 从词表分片取 token
 
-`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `rl` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：RL训练回路 / deepspeed / HybridEngineRollout
-- **原因行为**：AutoTP 把 tied lm_head 换成 gather_output=False 的 VocabParallelLinear，rollout 调用它，每 rank 只拿到 vocab/tp_size 的 logits 取本地下标。
-- **影响对象**：输出内容；训练信号（静默错误）
+- **原因行为**：输入embedding与输出头tied且未设tensor_parallel.vocab_parallel_lm_head时，AutoTP将lm_head换为gather_output=False的词表并行层，解码复用时每rank取本地下标。
+- **影响对象**：训练信号；输出内容（静默错误）
 - **影响详情**：TP>1 且输入输出 tied 时 rollout 正常返回，但 token 只来自 rank0 词表前缀，其余 rank 记录分片下标；温度>0 且种子按 DP rank 偏移时，同 TP 组会采出不同 token。
 - **改进措施**：检测 对比 rollout 返回 token 与 gather 后全词表 logits 的 argmax/采样结果；检查 VocabParallelLinear 的 gather_output 与各 rank 记录 token 的一致性；修复 issue #9158 于 2026-11-25 closed（completed）；修复 PR 未核实
 - **来源**：https://github.com/deepspeedai/DeepSpeed/issues/9158

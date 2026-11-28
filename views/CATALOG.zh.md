@@ -3,21 +3,21 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 823 条；状态：active 786、merged 4、pending_audit 1、retired 32
+共 826 条；状态：active 786、merged 4、pending_audit 4、retired 32
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 9 |
-| 算子/内核 | 260 |
+| 算子/内核 | 261 |
 | 编译器 | 47 |
-| 运行时/执行 | 21 |
+| 运行时/执行 | 22 |
 | 集合通信 | 14 |
 | 并行切分 | 41 |
 | KV缓存 | 2 |
 | 调度/服务 | 2 |
 | 输出解析 | 2 |
 | 解码/采样 | 3 |
-| 量化 | 36 |
+| 量化 | 37 |
 | 位置编码 | 10 |
 | 分词/模板 | 9 |
 | 模型定义 | 17 |
@@ -429,7 +429,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：F.gelu(none) 与 F.gelu(tanh) 在 NPU 逐位相同；4096 点 fp32 统计 |NPU(none)−CPU_erf|max=4.735e-4（vs CPU_tanh 仅 2.9e-7 噪声级）；fp16/bf16 同样按 tanh 式计算；无任何告警
 - **改进措施**：检测 对比 F.gelu(x, approximate='none') 与 F.gelu(x, approximate='tanh') 是否逐位相同（相同即中招）；x=2.0 处 erf 期望 1.9544998；修复 用户侧 workaround 已核实：torch_npu.npu_gelu(x, approximate='none') 走正确 erf 路径（vs CPU erf 4.8e-7）；根治=ATen gelu 分发按 approximate 路由到 aclnnGeluV2 TPL_NONE（未实施，闭源二进制分发无法直接落 PR）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/6841
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6841；https://gitcode.com/cann/ops-nn/issues/8962
 - **关联**：cross:INF-1439
 
 ### TRN-0314 `op_plugin_conv_family_hf32_silent_precision_loss` op-plugin fp32 conv 全族静默 HF32 降精度且污染梯度
@@ -544,7 +544,7 @@
 - **原因行为**：每核多次调用 CalNormalize 时 chunk 复用同一 x ping/pong UB 缓冲，但 V_MTE2 事件握手只在单次调用内配对，下一次调用的 MTE2 覆写与上一调用尾部 V 读并发。
 - **影响对象**：数值结果；隐状态（不可复现）
 - **影响详情**：N×G>114688 的大 shape（触发每核多次 CalNormalize）下 y 输出不确定：同输入多次执行二进制不一致，对 golden matched_ratio 约 98.99%（max_abs_err 5.74）；mean/rstd 不受影响。
-- **改进措施**：检测 固定 seed 多次执行比对输出 MD5（修复前 5 次全不同）；TTK 逐位比对。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12395（open）：新增 isFirstNormalizeCall/isLastNormalizeCall 使跨调用 V_MTE2 握手配对（Wait 侧与 SetFlag 侧成对修改）；修复后 5 次 MD5 全同、精度 PASS 100%（max_abs_err 0.00195），小 shape 零影响。
+- **改进措施**：检测 固定 seed 多次执行比对输出 MD5（修复前 5 次全不同）；TTK 逐位比对。；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12395（merged 2026-11-27）：新增 isFirstNormalizeCall/isLastNormalizeCall 使跨调用 V_MTE2 握手成对（Wait/SetFlag 两侧同改）；修复后 5 次 MD5 全同、精度 PASS 100%（max_abs_err 0.00195），小 shape 零影响。
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12395
 
 ### TRN-0360 `msllm_li_cp_kvallgather_double_transpose` CP 融合 LI 算子重复转置致 S/B 互换
@@ -3027,7 +3027,7 @@
 - **影响对象**：梯度（静默错误）
 - **影响详情**：gradInput 为 strides=[32,16,2] 的合法视图时两段 rc=0/0，8 个视图位只写对 4 个（fast 版通道 1 亦然），其余保留调用方旧值 -55；同调用 gradWeight 1D 非连续却写对，两次执行位级一致。
 - **改进措施**：检测 用双色金丝雀预填非连续 gradInput 视图，调用后统计未写视图位；对照连续出参与 1D gradWeight；修复 待定（#8814/#8819 open，2026-11-24；未见修复 MR）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8814；https://gitcode.com/cann/ops-nn/issues/8819
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8814；https://gitcode.com/cann/ops-nn/issues/8819；https://gitcode.com/cann/ops-math/issues/5310
 - **关联**：var:TRN-0755
 
 ### TRN-0804 `blocksparse_attention_v3_mask_oob_columns` BlockSparseAttentionV3 越界 mask 列算出错值
@@ -3093,7 +3093,7 @@
 - **原因对象**：算子/内核 / cann / batch_norm_grad arch35
 - **原因行为**：gmOffset_ 成员为 uint32，SetGlobalBuffer 与块间步距用 uint32×uint32 中间乘法，元素总数超 2^32 即回绕；tiling 只校验各维为正、不限元素总量。
 - **影响对象**：梯度；训练轨迹（静默错误）
-- **影响详情**：NCHW (1,2097152,64,64)≈8.6e9 元素：RAR 全载（0x10000000）与切 R1（0x31000000）路径分核读错地址/越界，dx 静默错数或越界访存；同族 batch_norm_grad_v3 已修复未同步。
+- **影响详情**：归一化反向元素太多（NCHW (1,2097152,64,64)≈8.6e9 元素）时，dx 梯度静默错或越界访存：RAR 全载（0x10000000）与切 R1（0x31000000）路径分核读错地址/越界；同族 batch_norm_grad_v3 已修复未同步。
 - **改进措施**：检测 构造元素总数 >2^32 的 NCHW BN 反向，与 64 位参考逐元素对拍 dx；静态检查 kernel 中 uint32 gmOffset_ 与 uint32×uint32 乘法；修复 待定（issue #10316 open，2026-11-26；仅给根因与期望，未见修复 MR；同族 batch_norm_grad_v3 已由 c81cd93a02 修复）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/10316
 - **关联**：var:TRN-0271
@@ -3109,6 +3109,17 @@
 - **改进措施**：检测 用 1e19~1e20 量级有限 bf16/fp16 输入、交替符号、空 batch、NZ 布局跑 RMSNorm 量化族，与 FP64 参考比对 y/rstd/scale；核对每核 9 行模板的倒数缓冲申请量；修复 待定（#10332/#10334/#10335 open；AddRmsNormQuant 侧修复 PR https://gitcode.com/cann/ops-nn/pull/16338 open）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/10332；https://gitcode.com/cann/ops-nn/issues/10334；https://gitcode.com/cann/ops-nn/issues/10335；https://gitcode.com/cann/ops-nn/pull/16338
 - **关联**：var:TRN-0397；cross:INF-2608
+
+### TRN-0828 `cann_tiling_u32_length_overflow_empty_tensor_branch` tiling 32 位长度溢出把大张量当空张量
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-28
+
+- **原因对象**：算子/内核 / cann / host tiling 长度计算
+- **原因行为**：HuberLossGrad 的 uint32 元素数乘 typeLength、EluGradV2 的 uint32 元素数在跨 2^32 时回绕为 0，tiling 走空张量分支、零工作量并返回成功。
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：HuberLossGrad FP32 [1073741824]（2^30×4B=2^32）inputLength 回绕 0，每核 0 tile，不写输出；EluGradV2 FP16 [65536,65536] totalLength=0 走空张量分支；两段均成功，输出保留旧值/未初始化。
+- **改进措施**：检测 构造元素数 ≥2^32 或 FP32 总字节数 ≥2^32 的合法输入，预填金丝雀并检查 host tiling 的 totalLength/inputLength 是否为 0，再与 64 位参考逐元素对拍；修复 待定（#10454/#10455 open，2026-11-27；报告建议用 uint64_t 计算总元素/字节数，下发 32 位 tiling 字段前检查并分块，或显式拒绝；未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/10454；https://gitcode.com/cann/ops-nn/issues/10455
 
 ## 编译器
 
@@ -3235,7 +3246,7 @@
 - **影响对象**：数值结果；梯度（静默错误）
 - **影响详情**：NPU 上用 torch.compile(backend=inductor) 训练 GPT2/BERT 时，均值、方差、bias 梯度等归约被 padding lane 非零中间值污染，或 bias 梯度按错误轴归约致维度语义丢失；训练不报错、loss 可能只轻微偏离，需 eager 对照才见差异。
 - **改进措施**：检测 编译前后 amax/amin/bias-grad 与 eager 对账；dump Triton 源码检查归约 mask 处理。；修复 修复 PR https://gitcode.com/Ascend/pytorch/pull/48448（merged 2026-10-23）：保留不能证明恒真的轴 mask 并在融合表达式计算后选择归约单位元；多轴 reduction 只压平 reduction axes；负索引/Load 生存期/tiling 搜索/符号 group 匹配/stride 证明/range 拆分拒绝协议共八类修复（issue !48387 关联）
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5625；https://gitcode.com/Ascend/pytorch/pull/48448
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5625；https://gitcode.com/Ascend/pytorch/pull/48448；https://gitcode.com/Ascend/pytorch/issues/6509
 - **关联**：cross:INF-2198
 
 ### TRN-0401 `triton_ascend_onehot_gather_fold_masked_max_wrong_value` triton-ascend one-hot gather 折叠错值
@@ -3887,6 +3898,17 @@
 - **影响详情**：ops.sort 的 indices 显示 requires_grad=True 且 _output_index=1，整数输出被当成可求导；不可求导输出补位不当还会让多输出元数据索引错位。
 - **改进措施**：检测 PyNative 下对 ops.sort 等混合 dtype 多输出算子取 grad，打印 indices.requires_grad/_output_index；为 True 即命中；修复 issue 给出修复：SetTensorGradMetaData 只给 float/complex 输出挂反向节点，int/bool 输出保留默认 TensorMeta 占位以免索引错位（状态 open）
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29597
+
+### TRN-0827 `torch_npu_fill_diagonal_autograd_grad_not_masked` torch_npu fill_diagonal_ 反向对角线梯度未清零
+
+`故障` · `pending_audit` · `shared` · `documented` · `NEW` · 发现 2026-11-28
+
+- **原因对象**：运行时/执行 / torch_npu / fill_diagonal_ 注册
+- **原因行为**：op_plugin 把 fill_diagonal_ 注册到 AutogradPrivateUse1，绕过 CompositeImplicitAutograd 分解，未挂 CopySlices 反向节点，对角线梯度未被屏蔽。
+- **影响对象**：梯度；模型权重（静默错误）
+- **影响详情**：对 requires_grad=True 的非叶张量执行 fill_diagonal_(0) 后反向，对角线位置梯度未置 0，与数学导数及 CPU 不一致；同一注册使 FakeTensor 入图报 ERR01003（fail-fast）。
+- **改进措施**：检测 对 requires_grad 的非叶方阵 fill_diagonal_(c) 后 sum().backward()，检查对角线梯度应恰为 0，并与 CPU eager 对拍；再用 aot_eager/fullgraph 捕获 FakeTensor 路径；修复 待定（issue #760 open，2026-11-27；正文给出修复方案：FakeTensor/Meta/Functionalize 与 GradMode+requires_grad 场景委托 at::native::fill_diagonal_，普通 eager 保留 aclnn 加速；未见关联 PR）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/760
 
 ## 集合通信
 
@@ -5030,6 +5052,17 @@
 - **改进措施**：检测 构造 x1 全 0、bias 非零的 pertensor 量化 MC2 用例，比对输出是否等于 bias；覆盖 950 与 A2/A3 两条量化路径；修复 待定（issue #8877 open，2026-11-26；三处 arch35 引用已按 master 48c47ea16 逐行核对，未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8877
 - **关联**：cross:INF-2601
+
+### TRN-0826 `megatron_fp8_param_gather_round_to_nearest_update_stall` FP8 blockwise 参数舍入吞掉小更新
+
+`故障` · `pending_audit` · `rl` · `documented` · `NEW` · 发现 2026-11-28
+
+- **原因对象**：量化 / megatron-lm / distributed optimizer
+- **原因行为**：distributed optimizer 每步把 FP32 master shard 按 round-to-nearest 舍入到 E4M3；master 由反量化 FP8 参数构建时所有权重落在网格点，step 位移小于半格即被丢弃。
+- **影响对象**：模型权重；训练轨迹（静默错误）
+- **影响详情**：GRPO Qwen2.5-0.5B（MLP INT4）模拟：250 步 reward 0.194、bf16 0.342；master 由 bf16+2 幂 scale 构建时 1/16 权重在舍入平局，首步约 3% 权重整格跳变、KL 0.84–1.30 nats/token，3 次 1 次崩溃。
+- **改进措施**：检测 对 FP8 master 连续两步 dump 权重，统计 FP8 值未变化的参数比例；对比 bf16 基线的 reward 曲线与首步 KL；修复 待定（issue #9844 open，2026-11-27；作者提出 opt-in `--fp8-param-rounding fixed_threshold` 并称 PR 已就绪，未见合并）
+- **来源**：https://github.com/NVIDIA/Megatron-LM/issues/9844
 
 ## 位置编码
 
@@ -6955,7 +6988,7 @@
 
 - **原因对象**：优化器 / torch_npu / torch_npu GradScaler
 - **原因行为**：GradScaler.update(new_scale=Tensor) 用 self._scale = new_scale 直接别名而非拷贝；溢出回退的 self._scale.mul_(backoff) 就地把结果写回调用方张量。
-- **影响对象**：优化器状态；训练信号（静默错误）
+- **影响对象**：训练信号；优化器状态（静默错误）
 - **影响详情**：update(new_scale=1024 tensor) 后用户 mul_(2) 会把 scaler scale 带到 2048；一次溢出回退后 scaler 与用户张量同为 512，用户张量被原地改写，全程无异常。
 - **改进措施**：检测 update(new_scale=tensor) 后原地改该张量看 get_scale() 是否变化；再触发一次溢出回退，比较用户张量前后值；修复 待定（issue #6438 closed，2026-11-25，正文给最小修复 self._scale.copy_(new_scale) 并对照 sharded_grad_scaler.py:371，但未见关联 PR；master b707a3665 仍有缺陷）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6438
@@ -8608,7 +8641,7 @@
 - **影响对象**：训练样本流（静默错误）
 - **影响详情**：resume 后奇数 optimizer step 训练的是上一块的 prompt（prompt 0,1 被第三次训练、最后一块只得一次更新），与不中断 run 的每步 prompt 集合从第 3 步起持续不同；无报错，loss 表面正常
 - **改进措施**：检测 固定 shuffle_dataset=False、逐 optimizer step 记录 prompt id 集合，对比中断/连续 run（repro 脚本 exit 1 on mismatch）；resume 于块边界（checkpoint-2 对照）则完全一致可作判别；修复 待定（issue open 2026-10-18，无评论；报告者含 CPU repro：8 prompts、num_iterations=2、steps_per_generation=1、Qwen2 tiny）
-- **来源**：https://github.com/huggingface/trl/issues/7787
+- **来源**：https://github.com/huggingface/trl/issues/7787；https://github.com/huggingface/trl/issues/8552
 
 ### TRN-0325 `trl_accuracy_reward_text_unit_false_equation_full_credit` trl accuracy_reward 对否定句与假等式给满分
 
@@ -9056,8 +9089,8 @@
 - **原因对象**：RL训练回路 / trl / AsyncGRPOTrainer
 - **原因行为**：score_centering=False 时 _check_sampling_replay 不检查 server 的 logprobs 模式；vLLM 默认 raw_logprobs 是温度缩放前的值，trainer 却按采样温度重算。
 - **影响对象**：训练信号（静默错误）
-- **影响详情**：temperature=0.7 时逐 token IS ratio min 0.182/median 1.045/max 2.038，3.0% token 落到 clip 0.5 以下被丢出 loss；日志只显示 ratio 略噪声，策略更新已带系统偏置。
-- **改进措施**：检测 启动时校验 vLLM 是否为 processed_logprobs；对同一批 token 比较 trainer 重算 logprob 与 server 返回值，ratio 不应随 temperature 系统漂移；修复 待定（issue #8555 open，2026-11-24；建议把 _check_sampling_replay 扩到所有启用 IS 修正的运行）
+- **影响详情**：异步强化训练中重要性比值（IS ratio）偏移：temperature=0.7 时逐 token ratio 0.18~2.04（中位 1.05），3.0% 样本落到 clip 0.5 以下被静默丢出 loss；日志只显示 ratio 略噪声，策略更新已带系统偏置。
+- **改进措施**：检测 启动时校验 vLLM 是否为 processed_logprobs；对同一批 token 比较 trainer 重算 logprob 与 server 返回值，ratio 不应随 temperature 系统漂移；修复 修复 PR #8556（merged 2026-11-26 到 main）：score_centering=False 时也校验 vLLM server 的 logprobs mode，并要求 processed_logprobs。
 - **来源**：https://github.com/huggingface/trl/issues/8555
 - **关联**：var:TRN-0229
 
@@ -9069,8 +9102,9 @@
 - **原因行为**：_step 只在 training_step 中递增，resume 时未恢复；generation buffer 不保存，重建后按 self._step % steps_per_generation 从 slice 0 开始读。
 - **影响对象**：训练样本流；训练轨迹（静默错误）
 - **影响详情**：save_steps 不是 generation interval 整数倍时，续跑不报错、step 数和 loss 正常，但 step 2/3 重训已用 slice 0/1，第二次生成的 slice 2/3 不被使用，同一 prompt 重复训练、部分 prompt 被跳过。
-- **改进措施**：检测 记录每个 global_step 实际训练的 buffer slice 与 prompt id，续跑后与不间断 run 的调度逐 step 对比；修复 待定（issue #8552 open，2026-11-24；作者提议 resume 时按 global_step*gradient_accumulation_steps 恢复 _step 并加对照测试）
+- **改进措施**：检测 记录每个 global_step 实际训练的 buffer slice 与 prompt id，续跑后与不间断 run 的调度逐 step 对比；修复 待定（#8552 于 2026-11-26 作为 #7787 的重复关闭；修复补丁在 #7787 跟踪，未合并）
 - **来源**：https://github.com/huggingface/trl/issues/8552
+- **关联**：var:TRN-0316
 
 ### TRN-0816 `verl_advantage_whitening_scope_minibatch_mismatch` advantage 白化范围与 PPO 更新 chunk 不一致
 

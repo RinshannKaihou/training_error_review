@@ -1,0 +1,42 @@
+id: TRN-0827
+legacy_ids: []
+slug: torch_npu_fill_diagonal_autograd_grad_not_masked
+aliases: []
+title: torch_npu fill_diagonal_ 反向对角线梯度未清零
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 运行时/执行
+    stack: torch_npu
+    component: fill_diagonal_ 注册
+  behavior: op_plugin 把 fill_diagonal_ 注册到 AutogradPrivateUse1，绕过 CompositeImplicitAutograd 分解，未挂 CopySlices 反向节点，对角线梯度未被屏蔽。
+effect:
+  objects:
+  - 梯度
+  - 模型权重
+  detail: 对 requires_grad=True 的非叶张量执行 fill_diagonal_(0) 后反向，对角线位置梯度未置 0，与数学导数及 CPU 不一致；同一注册使 FakeTensor 入图报 ERR01003（fail-fast）。
+  visibility: 静默错误
+mitigation:
+  detect: 对 requires_grad 的非叶方阵 fill_diagonal_(c) 后 sum().backward()，检查对角线梯度应恰为 0，并与 CPU eager 对拍；再用 aot_eager/fullgraph 捕获 FakeTensor 路径
+  fix: '待定（issue #760 open，2026-11-27；正文给出修复方案：FakeTensor/Meta/Functionalize 与 GradMode+requires_grad 场景委托 at::native::fill_diagonal_，普通 eager 保留 aclnn 加速；未见关联 PR）'
+labels:
+  stage:
+  - shared
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-11-28'
+remarks: ''
+evidence:
+- url: https://gitcode.com/Ascend/op-plugin/issues/760
+  kind: gitcode_issue
+relations: []
+original:
+  mechanism: PyTorch 原生 `aten::fill_diagonal_` 是 CompositeImplicitAutograd 算子（as_strided_symint + fill_ 组合）。Ascend/op-plugin 在 op_plugin_functions.yaml 注册后，torchnpugen 同时把它注册到 PrivateUse1 与 AutogradPrivateUse1；AutogradPrivateUse1 的分发优先级高于 ADInplaceOrView、Functionalize 和 Python（FakeTensorMode）。两条后果：(1) `torch.compile(backend="aot_eager", fullgraph=True)` 捕获阶段，FakeTensor(device='npu:0') 尚未进入 FakeTensorMode 就被 AutogradPrivateUse1 拦截，调用 op_api::fill_diagonal_ → EXEC_NPU_CMD(aclnnInplaceFillDiagonal) → CheckNpuTensorValid，因 FakeTensor 无物理存储抛 RuntimeError ERR01003（fail-fast，另一条问题）；(2) NPU Eager 下对 requires_grad=True 的非叶子张量执行 fill_diagonal_，AutogradPrivateUse1 直接调 aclnnInplaceFillDiagonal，绕过 as_strided_+fill_ 的复合分解，未挂 CopySlices 反向节点，反向时被常数覆盖的对角线位置梯度没有被置 0，与数学导数和 CPU 行为不一致，且全程无报错。Issue 给出的修复方案是在 op_api::fill_diagonal_ 与 acl_op::fill_diagonal_ 入口检测 FakeTensor/Meta/Functionalize 以及 GradMode::is_enabled() && self.requires_grad()，前者委托 at::native::fill_diagonal_ 走原生分解，后者保留 aclnn/acl_op 硬件加速路径；环境未在 issue 中完整给出，正文只给注册与分发链路的源码定位。
+  source: 'Ascend/op-plugin issue #760（open，2026-11-27；含 op_plugin_functions.yaml 注册、AutogradPrivateUse1 优先级与 aclnnInplaceFillDiagonal 调用链定位）https://gitcode.com/Ascend/op-plugin/issues/760'
+  behavior: 在 NPU 上训练时，对 requires_grad=True 的方阵（常见于注意力 mask、单位阵初始化或对角线置零）调用 fill_diagonal_(0) 再反传，训练不报错，但对角线位置本该为 0 的梯度没有被清零，而是按常数覆盖前的路径继续回传；与 CPU eager 对拍才能看出这一行梯度不对，错误会随权重更新累积。附带地，同一注册让 torch.compile 在捕获 FakeTensor 时直接报 ERR01003，无法编译该子图。
+  trigger_surface: torch_npu Eager；requires_grad=True 的非叶子方阵；调用 fill_diagonal_ 后反向；torch.compile FakeTensor/Functionalize 路径报 ERR01003
+  discovery: 2026-11-28 每日扫描
+migration:
+  method: scan
+  scanned: '2026-11-28'
